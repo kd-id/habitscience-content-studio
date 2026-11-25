@@ -5,6 +5,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from src.broll_fetcher import fetch_pexels_broll_clip
+from src.motion_engine import render_motion_scene_segment
 from src.voiceover import TrackAudioBundle
 
 
@@ -115,12 +117,59 @@ def _prepare_mixed_audio(
     return master_voice
 
 
+def _build_graded_broll_segment(
+    raw_clip: Path,
+    seg_dur: float,
+    width: int,
+    height: int,
+    fps: int,
+    out_mp4: Path,
+) -> Path:
+    fade_out_st = max(seg_dur - 0.35, 0.2)
+    # Cohesive moody cinematic teal-amber dark color grade so B-roll matches Motion Graphics seamlessly
+    vf = (
+        f"scale={width}:{height}:force_original_aspect_ratio=increase,"
+        f"crop={width}:{height},"
+        "eq=brightness=-0.09:contrast=1.12:saturation=0.80,"
+        "vignette=PI/4,"
+        f"fade=t=in:st=0:d=0.35,fade=t=out:st={fade_out_st:.2f}:d=0.35,"
+        "format=yuv420p"
+    )
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-stream_loop",
+        "-1",
+        "-i",
+        str(raw_clip),
+        "-t",
+        f"{seg_dur:.3f}",
+        "-vf",
+        vf,
+        "-r",
+        str(fps),
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "20",
+        "-pix_fmt",
+        "yuv420p",
+        "-an",
+        str(out_mp4),
+    ]
+    subprocess.run(cmd, capture_output=True, text=True, check=True)
+    return out_mp4
+
+
 def build_video_from_scenes(
     scene_images: list[Path],
     audio_bundle: TrackAudioBundle,
     out_video_path: Path,
     config: dict[str, Any],
     is_short: bool = False,
+    scenes_meta: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     video_root = config.get("video", {})
     vid_cfg = video_root.get("shorts" if is_short else "youtube_long", {})
@@ -128,94 +177,75 @@ def build_video_from_scenes(
     height = int(vid_cfg.get("height", 1920 if is_short else 1080))
     fps = int(vid_cfg.get("fps", 30))
     burn_subs = bool(vid_cfg.get("burn_subtitles", True))
-    pause_sec = float(vid_cfg.get("padding_after_audio_sec", 0.35 if is_short else 0.55))
+    pause_sec = float(vid_cfg.get("padding_after_audio_sec", 0.30 if is_short else 0.45))
     ken_burns = bool(video_root.get("ken_burns_motion", True))
+    # Video engine mode:
+    #   "motion_hybrid" (default v4): True 30fps Programmatic Motion Graphics + FREE Pexels HD B-Roll video!
+    #   "motion_graphics": 100% True 30fps Programmatic Motion Graphics
+    #   "ken_burns_images": Illustrated AI artwork with Ken Burns camera motion
+    video_mode = str(video_root.get("engine_mode", "motion_hybrid")).lower().strip()
 
     out_dir = out_video_path.parent
     segments_dir = out_dir / "_segments"
     segments_dir.mkdir(parents=True, exist_ok=True)
 
+    total_scenes = len(audio_bundle.scene_results)
+    used_broll_ids: set[int] = set()
     segment_paths: list[Path] = []
-    for idx, (img_path, scene_audio) in enumerate(zip(scene_images, audio_bundle.scene_results), start=1):
+
+    for idx, scene_audio in enumerate(audio_bundle.scene_results, start=1):
         seg_dur = max(scene_audio.duration_sec + pause_sec, 1.0)
-        total_frames = max(int(round(seg_dur * fps)), fps)
         seg_out = segments_dir / f"seg_{idx:02d}.mp4"
-        fade_out_start = max(seg_dur - 0.35, 0.2)
+        s_meta = (scenes_meta[idx - 1] if scenes_meta and idx - 1 < len(scenes_meta) else {"visual_headline": f"Part {idx}", "narration": scene_audio.text})
 
-        if ken_burns:
-            # Smooth documentary Ken Burns motion (alternating subtle zoom-in and zoom-out, zero jitter)
-            zoom_span = 0.065
-            step = zoom_span / max(total_frames, 1)
-            if idx % 2 == 1:
-                z_expr = f"min(1.0+{step:.6f}*on,1.07)"
+        rendered = False
+
+        # In motion_hybrid mode, alternate real Pexels HD B-Roll (even scenes if PEXELS_API_KEY set) with True 30fps Motion Graphics!
+        if video_mode == "motion_hybrid" and (idx % 2 == 0):
+            raw_broll = segments_dir / f"broll_{idx:02d}.mp4"
+            fetched = fetch_pexels_broll_clip(s_meta, raw_broll, is_short=is_short, used_ids=used_broll_ids)
+            if fetched is not None:
+                _build_graded_broll_segment(fetched, seg_dur, width, height, fps, seg_out)
+                raw_broll.unlink(missing_ok=True)
+                rendered = True
+
+        if not rendered and video_mode in ("motion_hybrid", "motion_graphics"):
+            print(f"[video] Rendering true 30fps motion graphics segment {idx}/{total_scenes} ({'9:16' if is_short else '16:9'})...", flush=True)
+            render_motion_scene_segment(
+                scene=s_meta,
+                scene_idx=idx,
+                total_scenes=total_scenes,
+                duration_sec=seg_dur,
+                width=width,
+                height=height,
+                fps=fps,
+                out_mp4=seg_out,
+                config=config,
+                is_short=is_short,
+            )
+            rendered = True
+
+        if not rendered:
+            img_path = scene_images[min(idx - 1, len(scene_images) - 1)]
+            total_frames = max(int(round(seg_dur * fps)), fps)
+            fade_out_start = max(seg_dur - 0.35, 0.2)
+            if ken_burns:
+                zoom_span = 0.065
+                step = zoom_span / max(total_frames, 1)
+                z_expr = f"min(1.0+{step:.6f}*on,1.07)" if idx % 2 == 1 else f"max(1.065-{step:.6f}*on,1.0)"
+                up_w, up_h = int(width * 1.25), int(height * 1.25)
+                vf = (
+                    f"scale={up_w}:{up_h}:force_original_aspect_ratio=increase,"
+                    f"crop={up_w}:{up_h},"
+                    f"zoompan=z='{z_expr}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={total_frames}:s={width}x{height}:fps={fps},"
+                    f"fade=t=in:st=0:d=0.35,fade=t=out:st={fade_out_start:.2f}:d=0.35,format=yuv420p"
+                )
+                cmd = ["ffmpeg", "-y", "-i", str(img_path), "-vf", vf, "-t", f"{seg_dur:.3f}", "-r", str(fps), "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-an", str(seg_out)]
             else:
-                z_expr = f"max(1.065-{step:.6f}*on,1.0)"
-            up_w = int(width * 1.25)
-            up_h = int(height * 1.25)
-            vf = (
-                f"scale={up_w}:{up_h}:force_original_aspect_ratio=increase,"
-                f"crop={up_w}:{up_h},"
-                f"zoompan=z='{z_expr}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={total_frames}:s={width}x{height}:fps={fps},"
-                f"fade=t=in:st=0:d=0.35,"
-                f"fade=t=out:st={fade_out_start:.2f}:d=0.35,"
-                "format=yuv420p"
-            )
-            cmd = [
-                "ffmpeg",
-                "-y",
-                "-i",
-                str(img_path),
-                "-vf",
-                vf,
-                "-t",
-                f"{seg_dur:.3f}",
-                "-r",
-                str(fps),
-                "-c:v",
-                "libx264",
-                "-preset",
-                "veryfast",
-                "-crf",
-                "20",
-                "-pix_fmt",
-                "yuv420p",
-                "-an",
-                str(seg_out),
-            ]
-        else:
-            vf = (
-                f"scale={width}:{height}:force_original_aspect_ratio=increase,"
-                f"crop={width}:{height},"
-                f"fade=t=in:st=0:d=0.30,"
-                f"fade=t=out:st={fade_out_start:.2f}:d=0.30,"
-                "format=yuv420p"
-            )
-            cmd = [
-                "ffmpeg",
-                "-y",
-                "-loop",
-                "1",
-                "-t",
-                f"{seg_dur:.3f}",
-                "-i",
-                str(img_path),
-                "-vf",
-                vf,
-                "-r",
-                str(fps),
-                "-c:v",
-                "libx264",
-                "-preset",
-                "veryfast",
-                "-crf",
-                "20",
-                "-pix_fmt",
-                "yuv420p",
-                "-an",
-                str(seg_out),
-            ]
+                vf = f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},fade=t=in:st=0:d=0.30,fade=t=out:st={fade_out_start:.2f}:d=0.30,format=yuv420p"
+                cmd = ["ffmpeg", "-y", "-loop", "1", "-t", f"{seg_dur:.3f}", "-i", str(img_path), "-vf", vf, "-r", str(fps), "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-an", str(seg_out)]
+            subprocess.run(cmd, capture_output=True, text=True, check=True)
 
-        subprocess.run(cmd, capture_output=True, text=True, check=True)
         segment_paths.append(seg_out)
 
     concat_txt = segments_dir / "concat_video.txt"

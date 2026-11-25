@@ -118,9 +118,23 @@ def run_pipeline(
     short_video_path = shorts_dir / "video_9x16.mp4"
 
     if not skip_video:
-        print("[5/7] Merender video HD YouTube Long (16:9) & Shorts/Reels/TikTok (9:16) via FFmpeg...", flush=True)
-        long_video_info = build_video_from_scenes(long_scene_imgs, long_audio, long_video_path, config, is_short=False)
-        short_video_info = build_video_from_scenes(short_scene_imgs, short_audio, short_video_path, config, is_short=True)
+        print("[5/7] Merender True Motion Video 30fps YouTube Long (16:9) & Shorts/Reels/TikTok (9:16)...", flush=True)
+        long_video_info = build_video_from_scenes(
+            long_scene_imgs,
+            long_audio,
+            long_video_path,
+            config,
+            is_short=False,
+            scenes_meta=blueprint["youtube_long"]["scenes"],
+        )
+        short_video_info = build_video_from_scenes(
+            short_scene_imgs,
+            short_audio,
+            short_video_path,
+            config,
+            is_short=True,
+            scenes_meta=blueprint["shorts_reels_tiktok"]["scenes"],
+        )
     else:
         print("[5/7] Melewati render video (--skip-video aktif).", flush=True)
 

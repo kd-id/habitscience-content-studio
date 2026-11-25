@@ -74,6 +74,8 @@ voiceover:
   pitch: "+0Hz"
 
 video:
+  # Engine mode: "motion_hybrid" (True 30fps Motion Graphics + FREE Pexels HD B-Roll!) | "motion_graphics" | "ken_burns_images"
+  engine_mode: "motion_hybrid"
   ken_burns_motion: true
   # Subtle calm warm ambient drone/pad behind voiceover (-27 dB, 100% royalty-free)
   # Put your own track at assets/bgm.mp3 to override the built-in ambient pad!
