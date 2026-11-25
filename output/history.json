@@ -30,5 +30,21 @@
       "failed": 0
     },
     "report_md": "C:\\Users\\Administrator\\.gemini\\antigravity\\scratch\\content-automation-studio\\output\\2026-11-25_161017_why-15-minutes-of-scrolling-destroys\\PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-25_173340_the-23-minute-rule-what-multitasking",
+    "slug": "the-23-minute-rule-what-multitasking-does-to-you",
+    "topic": "The 23-Minute Rule: What Multitasking Does to Your Brain",
+    "generated_at_wib": "2026-11-25 17:36:34 WIB",
+    "publish_mode": "dry-run",
+    "counts": {
+      "total": 8,
+      "published": 0,
+      "drafted": 0,
+      "dry_run_ready": 8,
+      "pending_setup": 0,
+      "failed": 0
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-25_173340_the-23-minute-rule-what-multitasking/PUBLISH_REPORT.md"
   }
 ]
