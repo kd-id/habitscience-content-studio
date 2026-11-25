@@ -46,5 +46,21 @@
       "failed": 0
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-25_173340_the-23-minute-rule-what-multitasking/PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-25_175958_the-90-minute-ultradian-cycle-how-to",
+    "slug": "the-90-minute-ultradian-cycle-how-top-performers",
+    "topic": "The 90-Minute Ultradian Cycle: How Top Performers Work Less and Produce More",
+    "generated_at_wib": "2026-11-25 18:02:46 WIB",
+    "publish_mode": "draft",
+    "counts": {
+      "total": 8,
+      "published": 0,
+      "drafted": 2,
+      "dry_run_ready": 0,
+      "pending_setup": 6,
+      "failed": 0
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-25_175958_the-90-minute-ultradian-cycle-how-to/PUBLISH_REPORT.md"
   }
 ]
