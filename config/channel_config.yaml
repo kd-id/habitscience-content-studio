@@ -74,8 +74,14 @@ voiceover:
   pitch: "+0Hz"
 
 video:
-  # Engine mode: "flat_vector_2d" (Kurzgesagt/TED-Ed 30fps True Motion!) | "motion_hybrid" | "motion_graphics" | "ken_burns_images"
-  engine_mode: "flat_vector_2d"
+  # Engine mode:
+  #   "cinema_broll_html" (v6 flagship): Real HD/4K B-Roll fast 4-5s cuts + HTML5 Frosted-Glass Vox & Bento Overlays + SFX
+  #   "flat_vector_2d"    (v5): Kurzgesagt/TED-Ed 30fps Flat Vector 2D
+  #   "motion_hybrid"     (v4): Programmatic Motion Graphics + B-Roll
+  #   "ken_burns_images"  (v3): Illustrated AI art + Ken Burns
+  engine_mode: "cinema_broll_html"
+  broll_cut_interval_sec: 4.5
+  cinema_sfx: true
   ken_burns_motion: true
   # Subtle calm warm ambient drone/pad behind voiceover (-27 dB, 100% royalty-free)
   # Put your own track at assets/bgm.mp3 to override the built-in ambient pad!

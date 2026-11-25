@@ -9,3 +9,4 @@ config/youtube_client_secret.json
 config/youtube_token.json
 .agents/
 workflows/
+assets/broll_cache/
