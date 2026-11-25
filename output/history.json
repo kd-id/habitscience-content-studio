@@ -94,5 +94,21 @@
       "failed": 0
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-25_181616_the-neuroscience-of-boring-tasks-tra/PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-25_184525_why-your-morning-routine-is-secretly",
+    "slug": "why-your-morning-routine-is-secretly-draining-yo",
+    "topic": "Why Your Morning Routine Is Secretly Draining Your Dopamine Before 9 AM",
+    "generated_at_wib": "2026-11-25 18:48:13 WIB",
+    "publish_mode": "draft",
+    "counts": {
+      "total": 8,
+      "published": 0,
+      "drafted": 2,
+      "dry_run_ready": 0,
+      "pending_setup": 6,
+      "failed": 0
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-25_184525_why-your-morning-routine-is-secretly/PUBLISH_REPORT.md"
   }
 ]
