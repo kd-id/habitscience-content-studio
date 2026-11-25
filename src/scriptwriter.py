@@ -211,30 +211,58 @@ def _generate_with_gemini(idea: TopicIdea, config: dict[str, Any]) -> tuple[dict
 
     client = genai.Client(api_key=api_key)
     ai_cfg = config.get("ai", {})
-    primary_model = str(ai_cfg.get("text_model", "gemini-2.5-flash")).strip()
-    candidate_models = list(dict.fromkeys([primary_model, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]))
+    primary_model = str(ai_cfg.get("text_model", "gemini-3.8-flash")).strip()
+    candidate_models = list(dict.fromkeys([primary_model, "gemini-3.8-flash", "gemini-3.0-flash", "gemini-2.5-flash"]))
     prompt = _build_gemini_prompt(idea, config)
     temp = float(ai_cfg.get("temperature", 0.7))
 
+    def _try_model(model_name: str) -> dict[str, Any] | None:
+        resp = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=temp,
+            ),
+        )
+        cleaned = _strip_json_fences(resp.text or "")
+        parsed = json.loads(cleaned)
+        if all(k in parsed for k in ("youtube_long", "shorts_reels_tiktok", "carousel_social")):
+            return parsed
+        print(f"[scriptwriter] Gemini model {model_name} returned incomplete keys: {list(parsed.keys())}", flush=True)
+        return None
+
     for model_name in candidate_models:
         try:
-            resp = client.models.generate_content(
-                model=model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    temperature=temp,
-                ),
-            )
-            cleaned = _strip_json_fences(resp.text or "")
-            parsed = json.loads(cleaned)
-            if all(k in parsed for k in ("youtube_long", "shorts_reels_tiktok", "carousel_social")):
+            parsed = _try_model(model_name)
+            if parsed is not None:
                 print(f"[scriptwriter] Gemini API succeeded with model: {model_name}", flush=True)
                 return parsed, model_name
-            print(f"[scriptwriter] Gemini model {model_name} returned incomplete keys: {list(parsed.keys())}", flush=True)
         except Exception as exc:
             print(f"[scriptwriter] Gemini model {model_name} failed ({type(exc).__name__}): {exc}", flush=True)
             continue
+
+    # Auto-discover latest available Gemini Flash model if hardcoded names ever deprecate
+    try:
+        discovered = []
+        for m in client.models.list():
+            mname = getattr(m, "name", "") or ""
+            methods = getattr(m, "supported_actions", None) or getattr(m, "supported_generation_methods", None) or []
+            if "gemini" in mname.lower() and "flash" in mname.lower() and (not methods or any("generateContent" in str(a) for a in methods)):
+                discovered.append(mname.replace("models/", ""))
+        for model_name in reversed(discovered[-4:]):
+            if model_name in candidate_models:
+                continue
+            try:
+                parsed = _try_model(model_name)
+                if parsed is not None:
+                    print(f"[scriptwriter] Gemini API succeeded with auto-discovered model: {model_name}", flush=True)
+                    return parsed, model_name
+            except Exception as exc:
+                print(f"[scriptwriter] Auto-discovered model {model_name} failed ({type(exc).__name__}): {exc}", flush=True)
+    except Exception as exc:
+        print(f"[scriptwriter] Model discovery failed: {exc}", flush=True)
+
     return None, ""
 
 

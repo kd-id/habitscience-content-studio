@@ -21,7 +21,7 @@ branding:
   font_regular: "segoeui.ttf"
 
 ai:
-  text_model: "gemini-2.5-flash"
+  text_model: "gemini-3.8-flash"
   image_model: "imagen-3.0-generate-002"
   use_gemini_images: false
   temperature: 0.7
