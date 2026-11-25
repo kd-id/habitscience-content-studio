@@ -188,30 +188,54 @@ Aturan penting:
 """
 
 
-def _generate_with_gemini(idea: TopicIdea, config: dict[str, Any]) -> dict[str, Any] | None:
+def _strip_json_fences(raw_text: str) -> str:
+    txt = (raw_text or "").strip()
+    if txt.startswith("```"):
+        lines = txt.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        txt = "\n".join(lines).strip()
+    return txt
+
+
+def _generate_with_gemini(idea: TopicIdea, config: dict[str, Any]) -> tuple[dict[str, Any] | None, str]:
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
-        return None
-    try:
-        from google import genai
-        from google.genai import types
+        print("[scriptwriter] GEMINI_API_KEY not set; using local fallback.", flush=True)
+        return None, ""
 
-        client = genai.Client(api_key=api_key)
-        ai_cfg = config.get("ai", {})
-        resp = client.models.generate_content(
-            model=ai_cfg.get("text_model", "gemini-2.5-flash"),
-            contents=_build_gemini_prompt(idea, config),
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                temperature=float(ai_cfg.get("temperature", 0.7)),
-            ),
-        )
-        parsed = json.loads(resp.text)
-        if all(k in parsed for k in ("youtube_long", "shorts_reels_tiktok", "carousel_social")):
-            return parsed
-        return None
-    except Exception:
-        return None
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=api_key)
+    ai_cfg = config.get("ai", {})
+    primary_model = str(ai_cfg.get("text_model", "gemini-2.5-flash")).strip()
+    candidate_models = list(dict.fromkeys([primary_model, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]))
+    prompt = _build_gemini_prompt(idea, config)
+    temp = float(ai_cfg.get("temperature", 0.7))
+
+    for model_name in candidate_models:
+        try:
+            resp = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=temp,
+                ),
+            )
+            cleaned = _strip_json_fences(resp.text or "")
+            parsed = json.loads(cleaned)
+            if all(k in parsed for k in ("youtube_long", "shorts_reels_tiktok", "carousel_social")):
+                print(f"[scriptwriter] Gemini API succeeded with model: {model_name}", flush=True)
+                return parsed, model_name
+            print(f"[scriptwriter] Gemini model {model_name} returned incomplete keys: {list(parsed.keys())}", flush=True)
+        except Exception as exc:
+            print(f"[scriptwriter] Gemini model {model_name} failed ({type(exc).__name__}): {exc}", flush=True)
+            continue
+    return None, ""
 
 
 def _truncate_words(text: str, max_len: int) -> str:
@@ -222,7 +246,215 @@ def _truncate_words(text: str, max_len: int) -> str:
     return (clipped or clean[: max_len - 3]) + "..."
 
 
+def _build_english_fallback(idea: TopicIdea, config: dict[str, Any]) -> dict[str, Any]:
+    channel = config.get("channel", {})
+    topic = idea.topic
+    cta_yt = channel.get("cta_youtube", "Subscribe for science-backed focus and habit protocols every week.")
+    cta_soc = channel.get("cta_social", "Save this post and comment 'PROTOCOL' for the checklist.")
+    short_title = _truncate_words(topic, 58)
+    short_sub = _truncate_words(topic, 48)
+    keywords = idea.keywords or ["neuroscience", "focus", "habits", "deep work", "productivity"]
+    hashtags_list = [f"#{slugify(k, 22).replace('-', '')}" for k in keywords[:4] if slugify(k, 22)]
+    for tag in ("#Neuroscience", "#Focus", "#HabitScience"):
+        if tag not in hashtags_list:
+            hashtags_list.append(tag)
+
+    return {
+        "youtube_long": {
+            "title": f"{short_title} (Science Explained)",
+            "alt_titles": [
+                f"The Neuroscience Behind {short_sub}",
+                f"{short_title} — The 3-Step Protocol",
+                f"Why Most People Miss This: {short_sub}",
+            ],
+            "description": (
+                f"{idea.hook}\n\n"
+                f"In this episode of {channel.get('name', 'HabitScience Lab')}, we break down {topic} through a practical, science-backed lens for {channel.get('target_audience', 'ambitious learners')}.\n\n"
+                "Chapters:\n"
+                "00:00 The Core Problem\n"
+                "00:18 Part 1: The Brain Mechanism\n"
+                "00:38 Part 2: The Hidden Trap\n"
+                "00:58 Part 3: The 3-Step Lab Protocol\n"
+                "01:18 Your 7-Day Experiment\n\n"
+                f"{cta_yt}\n\n"
+                + " ".join(hashtags_list)
+            ),
+            "tags": list(dict.fromkeys(keywords + ["neuroscience of focus", "habit science", "deep work", "brain performance"])),
+            "thumbnail": {
+                "badge": "NEUROSCIENCE LAB",
+                "headline": _truncate_words(topic, 26).upper(),
+                "subheadline": short_sub,
+                "visual_prompt": f"Dark editorial neuroscience illustration about {topic}, glowing teal neural geometry, amber highlight",
+            },
+            "scenes": [
+                {
+                    "scene_no": 1,
+                    "section": "HOOK",
+                    "visual_headline": short_sub,
+                    "bullet_points": [
+                        "Why willpower alone keeps failing",
+                        "What cognitive neuroscience actually shows",
+                        "A 3-step protocol you can test today",
+                    ],
+                    "on_screen_callout": "Work with your brain's biology instead of fighting it",
+                    "narration": f"{idea.hook} In the next two minutes, we break down the brain mechanism behind {topic} and the practical three-step protocol to fix it.",
+                    "visual_prompt": f"Minimalist dark editorial neuroscience intro visual about {topic}",
+                },
+                {
+                    "scene_no": 2,
+                    "section": "PART 1 • THE BRAIN MECHANISM",
+                    "visual_headline": "What Happens Inside Your Brain",
+                    "bullet_points": [
+                        "Prefrontal cortex fatigue under constant switching",
+                        "Neurochemical rhythms govern peak alertness",
+                        "Attention recovers only in protected blocks",
+                    ],
+                    "on_screen_callout": "Your nervous system runs in measurable biological cycles",
+                    "narration": f"When you examine {topic} through behavioral neuroscience, a clear pattern emerges. Your prefrontal cortex has a finite daily bandwidth for deep analytical work, and ignoring biological rhythms quietly drains your focus.",
+                    "visual_prompt": "Glowing teal neural wave cycles on midnight navy grid",
+                },
+                {
+                    "scene_no": 3,
+                    "section": "PART 2 • THE HIDDEN TRAP",
+                    "visual_headline": "Why Standard Advice Backfires",
+                    "bullet_points": [
+                        "Pushing harder increases mental friction",
+                        "High-novelty breaks disrupt cognitive recovery",
+                        "Unstructured schedules invite constant drift",
+                    ],
+                    "on_screen_callout": "Effort without recovery design leads straight to burnout",
+                    "narration": "Most productivity advice tells you to grind longer with brute discipline. Yet without managing stimulation and deliberate recovery, longer hours produce lower quality thinking and faster mental exhaustion.",
+                    "visual_prompt": "Dark contrast chart of erratic fatigue spikes versus steady rhythmic flow",
+                },
+                {
+                    "scene_no": 4,
+                    "section": "PART 3 • 3-STEP PROTOCOL",
+                    "visual_headline": "The 3-Step HabitScience Protocol",
+                    "bullet_points": [
+                        "Protect one distraction-free morning deep block",
+                        "Use deliberate low-stimulation recovery intervals",
+                        "Remove physical friction triggers before starting",
+                    ],
+                    "on_screen_callout": "Design your environment so deep focus becomes the default",
+                    "narration": "Apply three concrete shifts starting tomorrow. Protect one uninterrupted morning focus block, take true low-stimulation breaks between sessions, and remove visual phone triggers before you sit down.",
+                    "visual_prompt": "Three luminous concentric teal lenses focusing warm light into clarity",
+                },
+                {
+                    "scene_no": 5,
+                    "section": "7-DAY EXPERIMENT",
+                    "visual_headline": "Run the 7-Day Lab Challenge",
+                    "bullet_points": [
+                        "Test one protected session daily for 7 days",
+                        "Log energy and clarity scores each afternoon",
+                        "Keep the exact routine that works for you",
+                    ],
+                    "on_screen_callout": "Small repeatable protocols compound into lasting focus",
+                    "narration": f"Treat this week as a personal seven-day lab experiment and track how your clarity shifts by day four. {cta_yt}",
+                    "visual_prompt": "Clean calm 7-day progress nodes glowing in teal and amber",
+                },
+            ],
+        },
+        "shorts_reels_tiktok": {
+            "title": _truncate_words(topic, 56),
+            "hook_text": "STOP FIGHTING YOUR BRAIN BIOLOGY",
+            "caption_yt_shorts": f"{idea.hook} Full breakdown on {channel.get('name', 'HabitScience Lab')}! {' '.join(hashtags_list[:4])} #Shorts",
+            "caption_tiktok": f"Most people approach {topic} backward. Here is the 3-step neuroscience protocol! {cta_soc} {' '.join(hashtags_list[:5])}",
+            "caption_ig_reels": f"Save this for your next deep-work block! {idea.hook} {cta_soc} {' '.join(hashtags_list[:5])}",
+            "hashtags": hashtags_list,
+            "scenes": [
+                {
+                    "scene_no": 1,
+                    "badge": "01 • HOOK",
+                    "visual_headline": _truncate_words(topic, 34),
+                    "narration": f"{idea.hook}",
+                    "visual_prompt": "Vertical dark editorial neuroscience hook graphic",
+                },
+                {
+                    "scene_no": 2,
+                    "badge": "02 • SCIENCE",
+                    "visual_headline": "Focus Runs in Biological Cycles",
+                    "narration": "Your brain cannot sustain peak output nonstop—ignoring cognitive cycles multiplies mental friction and destroys clarity.",
+                    "visual_prompt": "Vertical glowing teal brain rhythm waveform",
+                },
+                {
+                    "scene_no": 3,
+                    "badge": "03 • PROTOCOL",
+                    "visual_headline": "Protect. Recover. Repeat.",
+                    "narration": "Protect one morning deep-work block, take genuine screen-free recovery breaks, and remove distractions before you start.",
+                    "visual_prompt": "Vertical luminous teal triad protocol visual",
+                },
+                {
+                    "scene_no": 4,
+                    "badge": "04 • 7-DAY TEST",
+                    "visual_headline": "Try It for 7 Days",
+                    "narration": f"Test this protocol for seven days and feel the difference in your energy. {cta_soc}",
+                    "visual_prompt": "Vertical calm summary CTA graphic",
+                },
+            ],
+        },
+        "carousel_social": {
+            "title": short_title,
+            "slides": [
+                {
+                    "slide_no": 1,
+                    "badge": "SLIDE 1/5 • COVER",
+                    "headline": short_title,
+                    "body": "Stop fighting your brain with brute willpower. Use science-backed rhythms to unlock deeper clarity.",
+                    "highlight": "Swipe for the 3-step neuroscience protocol ->",
+                    "visual_prompt": "Editorial dark teal neuroscience cover",
+                },
+                {
+                    "slide_no": 2,
+                    "badge": "SLIDE 2/5 • MECHANISM",
+                    "headline": "Your Brain Runs in Cycles",
+                    "body": "Peak cognitive performance rises and dips in measurable biological waves rather than flat linear hours.",
+                    "highlight": "Aligning with biology beats forcing longer hours",
+                    "visual_prompt": "Minimalist neural cycle card",
+                },
+                {
+                    "slide_no": 3,
+                    "badge": "SLIDE 3/5 • THE TRAP",
+                    "headline": "Fake Breaks Drain Recovery",
+                    "body": "Switching from work straight to rapid feeds keeps working memory overloaded instead of restoring attention.",
+                    "highlight": "Low-stimulation pauses actually reset focus",
+                    "visual_prompt": "Contrast recovery infographic card",
+                },
+                {
+                    "slide_no": 4,
+                    "badge": "SLIDE 4/5 • PROTOCOL",
+                    "headline": "The 3-Step Focus Reset",
+                    "body": "1) Guard one morning deep block. 2) Take 10-15 min screen-free recovery. 3) Keep your phone out of sight.",
+                    "highlight": "Environment beats willpower every time",
+                    "visual_prompt": "Clean 3-step teal protocol visual",
+                },
+                {
+                    "slide_no": 5,
+                    "badge": "SLIDE 5/5 • ACTION",
+                    "headline": "Run the 7-Day Lab Test",
+                    "body": "Track one protected deep-work session each morning for seven days and measure how fast mental friction fades.",
+                    "highlight": cta_soc,
+                    "visual_prompt": "Calm 7-day CTA summary slide",
+                },
+            ],
+            "caption_instagram": f"Working longer hours rarely produces better thinking.\n\nSwipe through this 5-slide neuroscience breakdown of {topic} and the 3-step protocol you can test this week.\n\n{cta_soc}\n\n{' '.join(hashtags_list)}",
+            "caption_linkedin": f"Most high performers don't need more hours—they need better biological alignment.\n\nHere is a 3-step framework from {topic}:\n• Protect one uninterrupted morning deep-work block\n• Replace scroll breaks with genuine low-stimulation recovery\n• Remove phone friction triggers before starting complex work\n\nWhich shift makes the biggest difference in your workday?\n\n{' '.join(hashtags_list)}",
+            "thread_x": [
+                f"1/5 Most people approach {topic} backward—and burn out before noon.\n\nHere is the neuroscience breakdown + 3-step protocol 🧵",
+                "2/5 Your prefrontal cortex operates in measurable biological cycles, not flat 8-hour blocks.",
+                "3/5 Scrolling during breaks feels relaxing, yet floods working memory with attention residue instead of letting focus recover.",
+                "4/5 The 3-Step Reset:\n• One protected morning deep block\n• Screen-free recovery intervals\n• Phone in another room",
+                f"5/5 Test this for 7 days and track your clarity by Day 4. Follow {channel.get('handle', '@habitsciencelab')} for weekly science-backed protocols.",
+            ],
+            "post_threads": f"Science-backed reminder on {topic}: you don't need harsher discipline—you need protected deep blocks paired with genuine screen-free recovery.",
+            "post_facebook": f"Ever feel exhausted after working all day yet struggle to finish your most important task?\n\nExplore our science-backed breakdown of {topic} and test the 3-step HabitScience protocol over the next 7 days.\n\n{cta_soc}\n{' '.join(hashtags_list)}",
+            "hashtags": hashtags_list,
+        },
+    }
+
+
 def _build_structured_fallback(idea: TopicIdea, config: dict[str, Any]) -> dict[str, Any]:
+    if config.get("channel", {}).get("language", "en") == "en":
+        return _build_english_fallback(idea, config)
     channel = config.get("channel", {})
     topic = idea.topic
     cta_yt = channel.get("cta_youtube", "Subscribe untuk strategi automasi konten lainnya!")
@@ -488,10 +720,10 @@ def generate_content_blueprint(
         loaded["meta"]["generator_mode"] = "external_brief_json"
         return loaded
 
-    gemini_result = _generate_with_gemini(idea, config)
+    gemini_result, used_model = _generate_with_gemini(idea, config)
     if gemini_result is not None:
         blueprint = gemini_result
-        mode = f"gemini_api:{config.get('ai', {}).get('text_model', 'gemini-2.5-flash')}"
+        mode = f"gemini_api:{used_model}"
     else:
         blueprint = _build_structured_fallback(idea, config)
         mode = "structured_local_template"

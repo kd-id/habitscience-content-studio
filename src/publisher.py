@@ -112,6 +112,7 @@ def _upload_youtube_video(
 
     video_id = response["id"]
     thumb_uploaded = False
+    thumb_note = ""
     if thumbnail_path and thumbnail_path.exists():
         try:
             service.thumbnails().set(
@@ -119,8 +120,9 @@ def _upload_youtube_video(
                 media_body=MediaFileUpload(str(thumbnail_path), mimetype="image/png"),
             ).execute()
             thumb_uploaded = True
-        except Exception:
+        except Exception as exc:
             thumb_uploaded = False
+            thumb_note = f" (thumbnail dilewati — pastikan verifikasi nomor HP di YouTube Studio: {type(exc).__name__})"
 
     return {
         "video_id": video_id,
@@ -128,6 +130,7 @@ def _upload_youtube_video(
         "watch_url": f"https://youtu.be/{video_id}",
         "privacy_status": privacy_status,
         "thumbnail_uploaded": thumb_uploaded,
+        "thumb_note": thumb_note,
     }
 
 
@@ -231,7 +234,7 @@ def publish_all_platforms(
                     "target_privacy": privacy,
                     "external_id": up["video_id"],
                     "url": up["studio_url"] if mode == "draft" else up["watch_url"],
-                    "notes": f"Upload sukses (privacy={privacy}, thumbnail={up['thumbnail_uploaded']}).",
+                    "notes": f"Upload sukses (privacy={privacy}, thumbnail={up['thumbnail_uploaded']}){up.get('thumb_note', '')}.",
                 })
             except Exception as exc:
                 results.append({

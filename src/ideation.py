@@ -167,8 +167,18 @@ def select_topic(
     channel = config.get("channel", {})
     niche = channel.get("niche", "AI & Produktivitas")
 
+    lang = channel.get("language", "en")
     if manual_topic and manual_topic.strip():
         clean_topic = manual_topic.strip()
+        if lang == "en":
+            return TopicIdea(
+                topic=clean_topic,
+                angle=(manual_angle or f"Science-backed breakdown and actionable 3-step protocol for {channel.get('target_audience', 'knowledge workers')}").strip(),
+                hook=f"Most people misunderstand {clean_topic}—and it quietly drains hours of focus every single week.",
+                source="manual_input",
+                keywords=[w for w in slugify(clean_topic).split("-") if len(w) > 2][:6] + ["neuroscience", "focus"],
+                discovered_at=now_iso,
+            )
         return TopicIdea(
             topic=clean_topic,
             angle=(manual_angle or f"Blueprint praktis dan strategi eksekusi cepat untuk {channel.get('target_audience', 'kreator')}").strip(),
