@@ -62,5 +62,21 @@
       "failed": 0
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-25_175958_the-90-minute-ultradian-cycle-how-to/PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-25_180951_procrastination-is-not-laziness-the",
+    "slug": "procrastination-is-not-laziness-the-emotional-re",
+    "topic": "Procrastination Is Not Laziness: The Emotional Regulation Loop",
+    "generated_at_wib": "2026-11-25 18:10:17 WIB",
+    "publish_mode": "dry-run",
+    "counts": {
+      "total": 8,
+      "published": 0,
+      "drafted": 0,
+      "dry_run_ready": 8,
+      "pending_setup": 0,
+      "failed": 0
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-25_180951_procrastination-is-not-laziness-the/PUBLISH_REPORT.md"
   }
 ]
