@@ -31,11 +31,13 @@ class TrackAudioBundle:
     voice: str
     scene_results: list[SceneAudioResult]
     provider: str = "edge_tts"
+    ass_path: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "master_audio_path": self.master_audio_path,
             "srt_path": self.srt_path,
+            "ass_path": self.ass_path,
             "total_duration_sec": round(self.total_duration_sec, 3),
             "voice": self.voice,
             "provider": self.provider,
@@ -236,18 +238,120 @@ def _create_fallback_silent_audio(out_mp3: Path, duration_sec: float = 4.0) -> N
     subprocess.run(cmd, capture_output=True, check=True)
 
 
-def _chunk_text_into_captions(text: str, start_offset: float, duration: float, words_per_chunk: int = 6) -> list[tuple[float, float, str]]:
+def _format_ass_time(seconds: float) -> str:
+    cs_total = max(int(round(seconds * 100)), 0)
+    hours, rem = divmod(cs_total, 360000)
+    minutes, rem = divmod(rem, 6000)
+    secs, cs = divmod(rem, 100)
+    return f"{hours}:{minutes:02d}:{secs:02d}.{cs:02d}"
+
+
+POWER_WORDS = {
+    "brain", "focus", "dopamine", "habit", "habits", "minutes", "minute", "hours",
+    "hour", "secret", "trap", "reset", "neuroscience", "attention", "residue",
+    "protocol", "biology", "willpower", "scroll", "scrolling", "clarity", "sleep",
+    "deep", "never", "stop", "truth", "actually", "science", "energy", "morning",
+    "cycle", "cycles", "fog", "boredom", "crave", "rewire", "shield", "downshift",
+}
+
+
+def _style_ass_caption_text(text: str, accent_bgr: str = "&H000B9EF5&", primary_bgr: str = "&H00FCF8F5&", is_short: bool = False) -> str:
+    """Highlight numbers or high-impact science/story words in warm amber gold with crisp pop-in."""
+    safe = text.replace("{", "(").replace("}", ")").replace("\\", "")
+    words = safe.split()
+    styled: list[str] = []
+    highlighted_any = False
+    for w in words:
+        bare = re.sub(r"[^a-zA-Z0-9]", "", w).lower()
+        is_num = any(ch.isdigit() for ch in bare)
+        if (is_num or bare in POWER_WORDS) and not highlighted_any:
+            styled.append(f"{{\\c{accent_bgr}}}{w}{{\\c{primary_bgr}}}")
+            highlighted_any = True
+        else:
+            styled.append(w)
+
+    # Highlight the punchiest long word in short-form captions if none matched
+    if is_short and not highlighted_any and len(styled) >= 2:
+        longest_idx = max(range(len(styled)), key=lambda i: len(re.sub(r"[^a-zA-Z]", "", styled[i])))
+        w = styled[longest_idx]
+        styled[longest_idx] = f"{{\\c{accent_bgr}}}{w}{{\\c{primary_bgr}}}"
+
+    pop_tag = "{\\fscx88\\fscy88\\t(0,85,\\fscx100\\fscy100)}" if is_short else "{\\fscx95\\fscy95\\t(0,75,\\fscx100\\fscy100)}"
+    return pop_tag + " ".join(styled)
+
+
+def _write_animated_ass_file(
+    srt_entries: list[tuple[float, float, str]],
+    out_ass: Path,
+    is_short: bool,
+) -> Path:
+    play_x, play_y = (1080, 1920) if is_short else (1920, 1080)
+    font_size = 76 if is_short else 56
+    outline = 5.0 if is_short else 3.8
+    shadow = 3.0 if is_short else 2.2
+    margin_v = 360 if is_short else 72
+    margin_lr = 68 if is_short else 140
+
+    header = f"""[Script Info]
+ScriptType: v4.00+
+PlayResX: {play_x}
+PlayResY: {play_y}
+ScaledBorderAndShadow: yes
+WrapStyle: 2
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,{font_size},&H00FCF8F5,&H000B9EF5,&H00141009,&H80000000,-1,0,0,0,100,100,0.4,0,1,{outline},{shadow},2,{margin_lr},{margin_lr},{margin_v},1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"""
+    lines = [header]
+    for st, en, raw_text in srt_entries:
+        # Ensure clean non-overlapping cues
+        clean_en = max(en, st + 0.30)
+        styled = _style_ass_caption_text(raw_text, is_short=is_short)
+        lines.append(f"Dialogue: 0,{_format_ass_time(st)},{_format_ass_time(clean_en)},Default,,0,0,0,,{styled}\n")
+
+    out_ass.write_text("".join(lines), encoding="utf-8")
+    return out_ass
+
+
+def _chunk_text_into_captions(text: str, start_offset: float, duration: float, words_per_chunk: int = 5) -> list[tuple[float, float, str]]:
+    """Split text into punchy readable chunks weighted by character length + punctuation pauses."""
     words = text.split()
     if not words:
         return []
-    chunks = [" ".join(words[i : i + words_per_chunk]) for i in range(0, len(words), words_per_chunk)]
-    total_chars = max(sum(len(c) for c in chunks), 1)
+    chunks: list[str] = []
+    buf: list[str] = []
+    for w in words:
+        buf.append(w)
+        ends_clause = w.endswith((".", "!", "?", "—", ";")) or (len(buf) >= max(words_per_chunk - 1, 2) and w.endswith(","))
+        if len(buf) >= words_per_chunk or ends_clause:
+            chunks.append(" ".join(buf))
+            buf = []
+    if buf:
+        if chunks and len(buf) == 1 and len(chunks[-1].split()) <= words_per_chunk:
+            chunks[-1] = chunks[-1] + " " + buf[0]
+        else:
+            chunks.append(" ".join(buf))
+
+    def _weight(c: str) -> float:
+        base = max(len(c), 4)
+        if c.endswith((".", "!", "?")):
+            base += 5
+        elif c.endswith((",", "—", ";", ":")):
+            base += 3
+        return float(base)
+
+    weights = [_weight(c) for c in chunks]
+    total_w = max(sum(weights), 1.0)
     cursor = start_offset
     entries: list[tuple[float, float, str]] = []
-    for c in chunks:
-        seg_dur = max(duration * (len(c) / total_chars), 0.45)
+    for c, wt in zip(chunks, weights):
+        seg_dur = max(duration * (wt / total_w), 0.42)
         end_t = min(start_offset + duration, cursor + seg_dur)
-        entries.append((cursor, max(end_t, cursor + 0.25), c))
+        entries.append((cursor, max(end_t, cursor + 0.28), c))
         cursor = end_t
     return entries
 
@@ -362,8 +466,8 @@ async def _generate_track_async(
     edge_voice = vo_cfg.get("voice_shorts" if is_short else "voice_long", "en-US-BrianNeural")
     edge_rate = vo_cfg.get("rate_shorts" if is_short else "rate_long", "+0%")
     edge_pitch = vo_cfg.get("pitch", "+0Hz")
-    pause_sec = float(vid_cfg.get("padding_after_audio_sec", 0.35 if is_short else 0.55))
-    words_per_chunk = 4 if is_short else 7
+    pause_sec = float(vid_cfg.get("padding_after_audio_sec", 0.30 if is_short else 0.45))
+    words_per_chunk = 3 if is_short else 5
 
     gemini_voice = vo_cfg.get("gemini_voice_shorts" if is_short else "gemini_voice_long", "Charon")
     gemini_style = vo_cfg.get("style_prompt_shorts" if is_short else "style_prompt_long", "")
@@ -450,6 +554,8 @@ async def _generate_track_async(
     srt_path = out_dir / "subtitles.srt"
     srt_path.write_text("\n".join(srt_lines), encoding="utf-8")
 
+    ass_path = _write_animated_ass_file(srt_entries, out_dir / "subtitles.ass", is_short=is_short)
+
     display_voice = f"{gemini_voice} ({active_gemini_model})" if active_gemini_model else edge_voice
     provider_label = "gemini_tts" if active_gemini_model else "edge_tts"
 
@@ -457,6 +563,7 @@ async def _generate_track_async(
     bundle = TrackAudioBundle(
         master_audio_path=str(master_mp3),
         srt_path=str(srt_path),
+        ass_path=str(ass_path),
         total_duration_sec=total_dur,
         voice=display_voice,
         scene_results=scene_results,

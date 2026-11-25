@@ -14,8 +14,8 @@ def _build_gemini_prompt(idea: TopicIdea, config: dict[str, Any]) -> str:
     channel = config.get("channel", {})
     lang = channel.get("language", "en")
     if lang == "en":
-        return f"""You are a Lead Creative Director, Science-Backed YouTube Scriptwriter, and Multi-Platform Growth Strategist.
-Create an original, high-retention Master Content Blueprint in natural, crisp English that repurposes 1 validated idea across ALL platforms while strictly avoiding generic or repetitive templates.
+        return f"""You are a Lead YouTube Creative Director, Charismatic Science Presenter Scriptwriter (think Johnny Harris meets Kurzgesagt and Ali Abdaal), and Multi-Platform Growth Strategist.
+Create an original, high-retention Master Content Blueprint in vivid, conversational spoken English that repurposes 1 validated idea across ALL platforms while strictly avoiding robotic or repetitive templates.
 
 Channel Profile:
 - Name: {channel.get('name')} ({channel.get('handle')})
@@ -31,34 +31,39 @@ Core Idea:
 - Opening Hook: {idea.hook}
 - Keywords: {", ".join(idea.keywords or [])}
 
+Storytelling & Narration Rules (CRITICAL):
+- Write as a charismatic human presenter talking directly to ONE viewer ("you"), using rhetorical questions, vivid relatable scenarios, short punchy rhythm changes, and natural pauses.
+- NEVER write stiff textbook prose or dry bullet readings.
+- Every scene MUST have a completely distinct, vivid, dramatic visual storytelling metaphor in `visual_prompt` (objects, characters, lighting, symbolic environments — strictly NO text/letters).
+
 Return ONLY valid JSON with this exact schema:
 {{
   "youtube_long": {{
-    "title": "High-CTR SEO main title (max 70 chars)",
+    "title": "High-CTR curiosity + benefit title (max 68 chars)",
     "alt_titles": ["A/B Alt 1", "A/B Alt 2", "A/B Alt 3"],
-    "description": "Full YouTube description with hook, key science takeaways, chapter timestamps, CTA, and hashtags",
+    "description": "Engaging YouTube description with story hook, research takeaways, chapter timestamps, CTA, and hashtags",
     "tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8"],
     "thumbnail": {{
       "badge": "SHORT BADGE (2-3 words)",
-      "headline": "PUNCHY THUMBNAIL TEXT (3-5 words)",
-      "subheadline": "Short crisp subtitle (4-7 words)",
-      "visual_prompt": "Cinematic dark editorial illustration prompt, no text"
+      "headline": "PUNCHY THUMBNAIL TEXT (2-4 words)",
+      "subheadline": "Short curiosity subtitle (4-7 words)",
+      "visual_prompt": "Dramatic cinematic illustrated storytelling thumbnail concept placed on the RIGHT half, rich volumetric lighting, strictly NO text"
     }},
     "scenes": [
       {{
         "scene_no": 1,
-        "section": "HOOK / THE BRAIN MECHANISM / THE HIDDEN TRAP / 3-STEP PROTOCOL / 7-DAY CHALLENGE",
-        "visual_headline": "Crisp on-screen headline (max 8 words)",
+        "section": "HOOK / THE STORY / BRAIN MECHANISM / HIDDEN TRAP / SHIFT 1 / SHIFT 2 / SHIFT 3 / 7-DAY CHALLENGE",
+        "visual_headline": "Crisp short editorial title (max 6 words)",
         "bullet_points": ["Point 1", "Point 2", "Point 3"],
-        "on_screen_callout": "1-line memorable science takeaway",
-        "narration": "Natural spoken documentary voiceover narration, 2-4 engaging sentences.",
-        "visual_prompt": "Vivid, unique minimalist hand-drawn ink-sketch visual metaphor for this scene (objects/people/diagrams, strictly NO text/letters)"
+        "on_screen_callout": "1-line punchy insight",
+        "narration": "Engaging presenter storytelling narration, 2-3 vivid spoken sentences (~12-16 seconds when spoken).",
+        "visual_prompt": "Distinct cinematic illustrated storytelling metaphor for this exact beat (Kurzgesagt / Johnny Harris / Aperture art vibe, strictly NO text/letters)"
       }}
     ]
   }},
   "shorts_reels_tiktok": {{
-    "title": "Punchy vertical title",
-    "hook_text": "3-second visual hook text",
+    "title": "Punchy curiosity vertical title",
+    "hook_text": "3-second visual hook",
     "caption_yt_shorts": "YouTube Shorts caption + hashtags",
     "caption_tiktok": "TikTok caption + comment trigger + hashtags",
     "caption_ig_reels": "Instagram Reels caption + save/share CTA + hashtags",
@@ -67,9 +72,9 @@ Return ONLY valid JSON with this exact schema:
       {{
         "scene_no": 1,
         "badge": "01 • HOOK",
-        "visual_headline": "Punchy vertical headline",
-        "narration": "Fast, crisp 1-2 sentence spoken narration.",
-        "visual_prompt": "Unique vertical 9:16 minimalist hand-drawn ink-sketch visual metaphor (strictly NO text/letters)"
+        "visual_headline": "Short punchy vertical hook (max 5 words)",
+        "narration": "Fast, charismatic 1-2 sentence spoken beat (~6-8 seconds).",
+        "visual_prompt": "Distinct vertical 9:16 cinematic illustrated storytelling scene (strictly NO text/letters)"
       }}
     ]
   }},
@@ -82,7 +87,7 @@ Return ONLY valid JSON with this exact schema:
         "headline": "High-curiosity cover headline",
         "body": "Concise 1-2 sentence insight",
         "highlight": "Key takeaway or metric",
-        "visual_prompt": "Slide illustration concept"
+        "visual_prompt": "Dramatic editorial illustration concept for this slide"
       }}
     ],
     "caption_instagram": "Storytelling Instagram carousel caption + save CTA + hashtags",
@@ -94,9 +99,9 @@ Return ONLY valid JSON with this exact schema:
   }}
 }}
 
-Strict rules:
-- youtube_long.scenes MUST have 5 original scenes (Hook, Brain Mechanism, Hidden Trap, 3-Step Protocol, 7-Day Reset & CTA).
-- shorts_reels_tiktok.scenes MUST have 4 fast scenes (~35-50 seconds total spoken duration).
+Strict beat counts for fast, engaging visual pacing:
+- youtube_long.scenes MUST have 8 distinct visual beats (~12-16s each, total ~2 minutes of captivating storytelling).
+- shorts_reels_tiktok.scenes MUST have 6 punchy vertical beats (~6-8s each, total ~38-48 seconds, strictly under 58 seconds).
 - carousel_social.slides MUST have exactly 5 slides (Cover, 3 Core Science Insights, Actionable CTA).
 """
 

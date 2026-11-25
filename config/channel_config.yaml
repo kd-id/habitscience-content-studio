@@ -4,77 +4,95 @@ channel:
   niche: "Science-Backed Focus, Habits & Cognitive Performance"
   target_audience: "Ambitious professionals, founders, students, and lifelong learners worldwide"
   language: "en"
-  tone: "calm, authoritative, science-backed, deeply practical, zero fluff"
+  tone: "charismatic storyteller, warm science presenter, vivid metaphors, intriguing hooks, zero fluff"
   cta_youtube: "Subscribe to HabitScience Lab and grab the free 7-Day Focus Reset Protocol in the description to rewire your attention."
   cta_social: "Save this for your next deep-work session and comment 'RESET' to get the 7-Day Protocol checklist."
 
 branding:
-  # Minimalist Hand-Drawn / Ink Sketch Editorial Palette (Matte Charcoal Notebook)
-  primary_color: "#2DD4BF"
+  # Cinematic Illustrated Storytelling Palette (Kurzgesagt / Johnny Harris / Aperture vibe)
+  primary_color: "#14B8A6"
   secondary_color: "#38BDF8"
   accent_color: "#F59E0B"
-  bg_dark: "#111317"
-  bg_card: "#191C22"
-  text_primary: "#F5F2EB"
-  text_muted: "#B8B5AD"
+  bg_dark: "#09131B"
+  bg_card: "#11212E"
+  text_primary: "#F8FAFC"
+  text_muted: "#CBD5E1"
   watermark_text: "@habitsciencelab"
   font_bold: "bahnschrift.ttf"
   font_regular: "segoeui.ttf"
 
 visual:
-  style: "minimalist_ink_sketch"
+  style: "cinematic_illustrated"
   cinematic_full_bleed: true
+  # Hide heavy lower-third when full-bleed art is active so animated .ASS captions shine unobstructed
+  minimal_chapter_overlay: true
   prompt_prefix: >-
-    Minimalist hand-drawn white chalk and ink editorial line-art illustration on
-    matte dark charcoal sketchbook paper (#111317), refined Dan Koe and New Yorker
-    visual-note aesthetic, clean uncluttered negative space, single subtle teal
-    (#2DD4BF) and warm amber (#F59E0B) chalk highlighter accent, strictly NO text,
-    NO letters, NO words, NO numbers anywhere in the image.
+    Rich cinematic illustrated storytelling artwork inspired by Kurzgesagt, Johnny
+    Harris, and high-budget science documentary illustration. Dramatic volumetric
+    lighting, expressive visual storytelling metaphor, deep midnight indigo shadows
+    balanced with luminous teal (#14B8A6), electric cyan (#38BDF8), and warm amber
+    gold (#F59E0B) highlights, crisp editorial composition with subtle darker space
+    near the bottom edge for subtitles. Strictly NO text, NO letters, NO words, NO
+    numbers, NO watermarks anywhere in the image.
 
 ai:
   text_model: "gemini-3.8-flash"
-  image_model: "gemini-3.1-flash-image"
+  # Free Cloud Image Generation order:
+  # 1) Antigravity --custom-assets (100% Free locally)
+  # 2) Cloudflare Workers AI FLUX.1-schnell (100% Free tier in Cloud / GitHub Actions!)
+  # 3) Gemini Image API (if billing enabled)
+  use_cloudflare_flux: true
+  cloudflare_image_model: "@cf/black-forest-labs/flux-1-schnell"
   use_gemini_images: true
-  temperature: 0.7
+  image_model: "gemini-3.1-flash-image"
+  temperature: 0.78
 
 voiceover:
-  # Primary: Gemini Native Studio TTS (falls back to edge_tts only if API unavailable)
   provider: "gemini_tts"
   gemini_tts_model: "gemini-3.8-flash-tts"
-  gemini_voice_long: "Charon"
-  gemini_voice_shorts: "Aoede"
+  # Expressive Presenter / Storyteller voices
+  gemini_voice_long: "Puck"
+  gemini_voice_shorts: "Zephyr"
   style_prompt_long: >-
-    Speak as a warm, calm, authoritative science documentary narrator (similar in
-    energy to Veritasium or Kurzgesagt). Use natural human cadence, thoughtful
-    micro-pauses between key ideas, subtle natural breath, and crisp clarity—never
-    rushed or robotic. Read ONLY the narration script below:
+    Speak as a charismatic, warm, captivating YouTube science host and master
+    storyteller (similar in vocal energy to Johnny Harris meets Ali Abdaal and
+    Veritasium). Vary your pitch and rhythm naturally: open with genuine intrigue,
+    lean in on surprising discoveries, add crisp conversational micro-pauses before
+    key twists, and sound warm and encouraging on practical takeaways—never flat,
+    never monotone, never robotic. Read ONLY the spoken transcript below naturally:
   style_prompt_shorts: >-
-    Speak as an articulate, warm, engaging modern science storyteller with clean
-    pacing, natural conversational inflection, and subtle emphasis on key insights.
-    Read ONLY the narration script below:
+    Speak as a magnetic, expressive science storyteller and presenter for short-form
+    video. Hook attention in the first second with curiosity, use lively dynamic
+    inflection, punch key numbers and turning points, and keep natural human flow.
+    Read ONLY the spoken transcript below naturally:
   loudnorm: true
-  # Edge TTS fallback settings
+  # Edge TTS fallback
   voice_long: "en-US-BrianNeural"
   voice_shorts: "en-US-AvaNeural"
-  rate_long: "+0%"
-  rate_shorts: "+6%"
+  rate_long: "+2%"
+  rate_shorts: "+8%"
   pitch: "+0Hz"
 
 video:
   ken_burns_motion: true
+  # Subtle calm warm ambient drone/pad behind voiceover (-27 dB, 100% royalty-free)
+  # Put your own track at assets/bgm.mp3 to override the built-in ambient pad!
+  ambient_bgm: true
+  ambient_bgm_volume_db: -27
+  animated_ass_subtitles: true
   youtube_long:
     width: 1920
     height: 1080
     fps: 30
     burn_subtitles: true
-    padding_after_audio_sec: 0.55
+    padding_after_audio_sec: 0.45
   shorts:
     width: 1080
     height: 1920
     fps: 30
     burn_subtitles: true
     max_duration_sec: 59
-    padding_after_audio_sec: 0.35
+    padding_after_audio_sec: 0.30
 
 platforms:
   youtube_long:

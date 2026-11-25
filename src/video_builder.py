@@ -41,6 +41,80 @@ def probe_video_info(video_path: Path) -> dict[str, Any]:
     return info
 
 
+def _prepare_mixed_audio(
+    master_voice: Path,
+    duration_sec: float,
+    out_audio: Path,
+    config: dict[str, Any],
+) -> Path:
+    """Optionally blend a very subtle, calm royalty-free ambient pad behind the presenter voice."""
+    video_root = config.get("video", {})
+    if not video_root.get("ambient_bgm", False):
+        return master_voice
+
+    vol_db = float(video_root.get("ambient_bgm_volume_db", -27))
+    project_root = Path(__file__).resolve().parent.parent
+    custom_bgm = project_root / "assets" / "bgm.mp3"
+    fade_out_st = max(duration_sec - 2.0, 0.5)
+
+    try:
+        if custom_bgm.exists():
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(master_voice),
+                "-stream_loop",
+                "-1",
+                "-i",
+                str(custom_bgm),
+                "-filter_complex",
+                f"[1:a]atrim=0:{duration_sec:.2f},volume={vol_db}dB,afade=t=in:st=0:d=1.2,afade=t=out:st={fade_out_st:.2f}:d=1.8[bgm];"
+                "[0:a][bgm]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[out]",
+                "-map",
+                "[out]",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "192k",
+                str(out_audio),
+            ]
+        else:
+            # Synthesize a warm, subtle low-passed Cmaj9 ambient pad (100% original, zero copyright risk)
+            pad_expr = (
+                "0.30*sin(2*PI*130.81*t)+0.22*sin(2*PI*196.00*t)+0.18*sin(2*PI*246.94*t)"
+                "+0.14*sin(2*PI*293.66*t)+0.10*sin(2*PI*329.63*t)*(0.85+0.15*sin(2*PI*0.18*t))"
+            )
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(master_voice),
+                "-f",
+                "lavfi",
+                "-t",
+                f"{duration_sec + 0.5:.2f}",
+                "-i",
+                f"aevalsrc='{pad_expr}':s=44100:c=stereo",
+                "-filter_complex",
+                f"[1:a]lowpass=f=480,volume={vol_db}dB,afade=t=in:st=0:d=1.5,afade=t=out:st={fade_out_st:.2f}:d=1.8[bgm];"
+                "[0:a][bgm]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[out]",
+                "-map",
+                "[out]",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "192k",
+                str(out_audio),
+            ]
+        subprocess.run(cmd, capture_output=True, text=True, check=True)
+        if out_audio.exists() and out_audio.stat().st_size > 1024:
+            return out_audio
+    except Exception:
+        pass
+    return master_voice
+
+
 def build_video_from_scenes(
     scene_images: list[Path],
     audio_bundle: TrackAudioBundle,
@@ -169,10 +243,47 @@ def build_video_from_scenes(
     )
 
     srt_file = Path(audio_bundle.srt_path)
+    ass_file = Path(audio_bundle.ass_path) if getattr(audio_bundle, "ass_path", "") else None
     master_audio = Path(audio_bundle.master_audio_path)
+    mixed_audio_path = segments_dir / "mixed_audio.m4a"
+    final_audio = _prepare_mixed_audio(master_audio, audio_bundle.total_duration_sec, mixed_audio_path, config)
 
-    if burn_subs and srt_file.exists() and srt_file.stat().st_size > 0:
-        # Clean documentary captions (crisp shadow outline, no clunky opaque box)
+    use_ass = (
+        bool(video_root.get("animated_ass_subtitles", True))
+        and ass_file is not None
+        and ass_file.exists()
+        and ass_file.stat().st_size > 0
+    )
+
+    if burn_subs and use_ass and ass_file is not None:
+        cmd_final = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(merged_silent),
+            "-i",
+            str(final_audio),
+            "-vf",
+            f"ass={ass_file.name}",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "20",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-movflags",
+            "+faststart",
+            "-shortest",
+            str(out_video_path.name),
+        ]
+        subprocess.run(cmd_final, cwd=str(out_dir), capture_output=True, text=True, check=True)
+    elif burn_subs and srt_file.exists() and srt_file.stat().st_size > 0:
         if is_short:
             style = (
                 "FontName=Arial,FontSize=16,Bold=1,PrimaryColour=&H00EBF2F5,"
@@ -191,7 +302,7 @@ def build_video_from_scenes(
             "-i",
             str(merged_silent),
             "-i",
-            str(master_audio),
+            str(final_audio),
             "-vf",
             f"subtitles={srt_file.name}:force_style='{style}'",
             "-c:v",
@@ -219,7 +330,7 @@ def build_video_from_scenes(
             "-i",
             str(merged_silent),
             "-i",
-            str(master_audio),
+            str(final_audio),
             "-c:v",
             "copy",
             "-c:a",
@@ -236,6 +347,7 @@ def build_video_from_scenes(
     for p in segment_paths:
         p.unlink(missing_ok=True)
     merged_silent.unlink(missing_ok=True)
+    mixed_audio_path.unlink(missing_ok=True)
     concat_txt.unlink(missing_ok=True)
     try:
         segments_dir.rmdir()

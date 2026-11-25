@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import base64
 import os
 import random
 from io import BytesIO
 from pathlib import Path
 from typing import Any
 
+import requests
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from src.config_loader import resolve_font_path
@@ -219,7 +221,68 @@ def _create_studio_backdrop(
     return Image.alpha_composite(base, glow)
 
 
+def _try_cloudflare_flux_image(prompt: str, aspect_ratio: str, config: dict[str, Any], out_path: Path) -> Path | None:
+    """FREE Cloud AI image generator via Cloudflare Workers AI (FLUX.1-schnell — 10,000 free neurons/day)."""
+    ai_cfg = config.get("ai", {})
+    if not ai_cfg.get("use_cloudflare_flux", True):
+        return None
+    account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
+    api_token = os.getenv("CLOUDFLARE_API_TOKEN", "").strip()
+    if not account_id or not api_token:
+        return None
+
+    visual_cfg = config.get("visual", {})
+    prefix = str(visual_cfg.get("prompt_prefix", "")).strip()
+    full_prompt = f"{prefix} Visual subject ({aspect_ratio} composition): {prompt}".strip() if prefix else prompt
+
+    model = str(ai_cfg.get("cloudflare_image_model", "@cf/black-forest-labs/flux-1-schnell")).strip()
+    url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/{model}"
+
+    if aspect_ratio == "9:16":
+        w, h = 768, 1344
+    elif aspect_ratio == "3:4":
+        w, h = 896, 1152
+    else:
+        w, h = 1344, 768
+
+    try:
+        resp = requests.post(
+            url,
+            headers={"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"},
+            json={"prompt": full_prompt[:2000], "num_steps": 6, "width": w, "height": h},
+            timeout=90,
+        )
+        if resp.status_code != 200:
+            print(f"[media] Cloudflare FLUX HTTP {resp.status_code}: {resp.text[:160]}", flush=True)
+            return None
+
+        ctype = (resp.headers.get("Content-Type") or "").lower()
+        img_bytes: bytes | None = None
+        if "image/" in ctype:
+            img_bytes = resp.content
+        else:
+            data = resp.json()
+            b64 = (data.get("result") or {}).get("image")
+            if b64:
+                img_bytes = base64.b64decode(b64)
+
+        if img_bytes:
+            img = Image.open(BytesIO(img_bytes))
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            img.save(out_path, format="PNG")
+            print(f"[media] Generated FREE Cloudflare FLUX artwork -> {out_path.name}", flush=True)
+            return out_path
+    except Exception as exc:
+        print(f"[media] Cloudflare FLUX failed ({type(exc).__name__}): {str(exc)[:140]}", flush=True)
+    return None
+
+
 def _try_gemini_image(prompt: str, aspect_ratio: str, config: dict[str, Any], out_path: Path) -> Path | None:
+    # 1. Try FREE Cloudflare Workers AI FLUX first if configured
+    cf_img = _try_cloudflare_flux_image(prompt, aspect_ratio, config, out_path)
+    if cf_img is not None:
+        return cf_img
+
     if not config.get("ai", {}).get("use_gemini_images", False):
         return None
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
@@ -464,29 +527,41 @@ def generate_long_scene_images(
         callout = str(scene.get("on_screen_callout") or "").strip()
 
         if use_cinematic and bg_override is not None:
-            # Clean editorial lower-third ONLY (artwork stays 100% unobstructed in center!)
-            y_base = 735
-            h_lines = _wrap_text(draw, headline, f_head, max_width=w - 220, max_lines=1)
-            c_lines = _wrap_text(draw, callout, f_sub, max_width=w - 220, max_lines=1) if callout else []
-            max_tw = 0
-            for line in h_lines:
-                b = draw.textbbox((0, 0), line, font=f_head)
-                max_tw = max(max_tw, b[2] - b[0])
-            for cl in c_lines:
-                b = draw.textbbox((0, 0), cl, font=f_sub)
-                max_tw = max(max_tw, b[2] - b[0])
-            box_h = 136 if c_lines else 92
-            draw.rounded_rectangle(
-                (56, y_base - 18, min(140 + max_tw, w - 56), y_base - 18 + box_h),
-                radius=18,
-                fill=(17, 19, 23, 210),
-            )
-            draw.rounded_rectangle((74, y_base - 4, 84, y_base - 4 + (box_h - 28)), radius=5, fill=(*accent, 255))
-            for line in h_lines:
-                draw.text((108, y_base + 2), line, font=f_head, fill=(0, 0, 0, 210))
-                draw.text((105, y_base), line, font=f_head, fill=(*text_primary, 255))
-            for cl in c_lines:
-                draw.text((106, y_base + 74), cl, font=f_sub, fill=(*text_muted, 250))
+            # When minimal_chapter_overlay is enabled, keep artwork 100% pure & uncluttered
+            # so the animated .ASS captions at bottom command focus like a real documentary!
+            minimal_overlay = bool(visual_cfg.get("minimal_chapter_overlay", True))
+            if not minimal_overlay:
+                y_base = 735
+                h_lines = _wrap_text(draw, headline, f_head, max_width=w - 220, max_lines=1)
+                c_lines = _wrap_text(draw, callout, f_sub, max_width=w - 220, max_lines=1) if callout else []
+                max_tw = 0
+                for line in h_lines:
+                    b = draw.textbbox((0, 0), line, font=f_head)
+                    max_tw = max(max_tw, b[2] - b[0])
+                for cl in c_lines:
+                    b = draw.textbbox((0, 0), cl, font=f_sub)
+                    max_tw = max(max_tw, b[2] - b[0])
+                box_h = 136 if c_lines else 92
+                draw.rounded_rectangle(
+                    (56, y_base - 18, min(140 + max_tw, w - 56), y_base - 18 + box_h),
+                    radius=18,
+                    fill=(17, 19, 23, 210),
+                )
+                draw.rounded_rectangle((74, y_base - 4, 84, y_base - 4 + (box_h - 28)), radius=5, fill=(*accent, 255))
+                for line in h_lines:
+                    draw.text((108, y_base + 2), line, font=f_head, fill=(0, 0, 0, 210))
+                    draw.text((105, y_base), line, font=f_head, fill=(*text_primary, 255))
+                for cl in c_lines:
+                    draw.text((106, y_base + 74), cl, font=f_sub, fill=(*text_muted, 250))
+            elif idx == 1:
+                # Subtle opening hook editorial title card only on Beat 1 (upper-left, well above captions)
+                h_lines = _wrap_text(draw, headline, f_head, max_width=int(w * 0.68), max_lines=2)
+                y_top = 128
+                for line in h_lines:
+                    draw.text((75, y_top + 4), line, font=f_head, fill=(0, 0, 0, 210))
+                    draw.text((72, y_top), line, font=f_head, fill=(*text_primary, 255))
+                    y_top += 76
+                draw.rounded_rectangle((72, y_top + 6, 250, y_top + 14), radius=4, fill=(*accent, 255))
         else:
             # Clean minimalist editorial visual-note layout (no heavy PowerPoint box!)
             h_lines = _wrap_text(draw, headline, _load_font(branding.get("font_bold"), 76, bold=True), max_width=w - 200, max_lines=2)
