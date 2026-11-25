@@ -1,0 +1,513 @@
+from __future__ import annotations
+
+import json
+import os
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from src.config_loader import slugify
+from src.ideation import TopicIdea
+
+
+def _build_gemini_prompt(idea: TopicIdea, config: dict[str, Any]) -> str:
+    channel = config.get("channel", {})
+    lang = channel.get("language", "en")
+    if lang == "en":
+        return f"""You are a Lead Creative Director, Science-Backed YouTube Scriptwriter, and Multi-Platform Growth Strategist.
+Create an original, high-retention Master Content Blueprint in natural, crisp English that repurposes 1 validated idea across ALL platforms while strictly avoiding generic or repetitive templates.
+
+Channel Profile:
+- Name: {channel.get('name')} ({channel.get('handle')})
+- Niche: {channel.get('niche')}
+- Target Audience: {channel.get('target_audience')}
+- Tone: {channel.get('tone')}
+- YouTube CTA: {channel.get('cta_youtube')}
+- Social CTA: {channel.get('cta_social')}
+
+Core Idea:
+- Topic: {idea.topic}
+- Unique Angle: {idea.angle}
+- Opening Hook: {idea.hook}
+- Keywords: {", ".join(idea.keywords or [])}
+
+Return ONLY valid JSON with this exact schema:
+{{
+  "youtube_long": {{
+    "title": "High-CTR SEO main title (max 70 chars)",
+    "alt_titles": ["A/B Alt 1", "A/B Alt 2", "A/B Alt 3"],
+    "description": "Full YouTube description with hook, key science takeaways, chapter timestamps, CTA, and hashtags",
+    "tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8"],
+    "thumbnail": {{
+      "badge": "SHORT BADGE (2-3 words)",
+      "headline": "PUNCHY THUMBNAIL TEXT (3-5 words)",
+      "subheadline": "Short crisp subtitle (4-7 words)",
+      "visual_prompt": "Cinematic dark editorial illustration prompt, no text"
+    }},
+    "scenes": [
+      {{
+        "scene_no": 1,
+        "section": "HOOK / THE BRAIN MECHANISM / THE HIDDEN TRAP / 3-STEP PROTOCOL / 7-DAY CHALLENGE",
+        "visual_headline": "Crisp on-screen headline (max 8 words)",
+        "bullet_points": ["Point 1", "Point 2", "Point 3"],
+        "on_screen_callout": "1-line memorable science takeaway",
+        "narration": "Natural spoken documentary voiceover narration, 2-4 engaging sentences.",
+        "visual_prompt": "Bespoke dark editorial visual concept for this scene"
+      }}
+    ]
+  }},
+  "shorts_reels_tiktok": {{
+    "title": "Punchy vertical title",
+    "hook_text": "3-second visual hook text",
+    "caption_yt_shorts": "YouTube Shorts caption + hashtags",
+    "caption_tiktok": "TikTok caption + comment trigger + hashtags",
+    "caption_ig_reels": "Instagram Reels caption + save/share CTA + hashtags",
+    "hashtags": ["#Neuroscience", "#Focus", "#HabitScience", "#DeepWork", "#Productivity"],
+    "scenes": [
+      {{
+        "scene_no": 1,
+        "badge": "01 • HOOK",
+        "visual_headline": "Punchy vertical headline",
+        "narration": "Fast, crisp 1-2 sentence spoken narration.",
+        "visual_prompt": "9:16 editorial visual concept"
+      }}
+    ]
+  }},
+  "carousel_social": {{
+    "title": "Carousel title",
+    "slides": [
+      {{
+        "slide_no": 1,
+        "badge": "SLIDE 1/5 • COVER",
+        "headline": "High-curiosity cover headline",
+        "body": "Concise 1-2 sentence insight",
+        "highlight": "Key takeaway or metric",
+        "visual_prompt": "Slide illustration concept"
+      }}
+    ],
+    "caption_instagram": "Storytelling Instagram carousel caption + save CTA + hashtags",
+    "caption_linkedin": "Insightful LinkedIn post with structured bullets + discussion question",
+    "thread_x": ["1/5 Hook tweet + 🧵", "2/5 Insight", "3/5 Mechanism", "4/5 Protocol", "5/5 CTA"],
+    "post_threads": "Short conversational Threads post",
+    "post_facebook": "Engaging Facebook Page post",
+    "hashtags": ["#HabitScience", "#Neuroscience", "#Focus", "#DeepWork"]
+  }}
+}}
+
+Strict rules:
+- youtube_long.scenes MUST have 5 original scenes (Hook, Brain Mechanism, Hidden Trap, 3-Step Protocol, 7-Day Reset & CTA).
+- shorts_reels_tiktok.scenes MUST have 4 fast scenes (~35-50 seconds total spoken duration).
+- carousel_social.slides MUST have exactly 5 slides (Cover, 3 Core Science Insights, Actionable CTA).
+"""
+
+    lang_label = "Bahasa Indonesia"
+    return f"""Kamu adalah Creative Director, YouTube Scriptwriter, dan Social Media Growth Strategist.
+Buat Master Content Blueprint lengkap dalam {lang_label} untuk repurpose 1 ide menjadi SEMUA format sekaligus.
+
+Profil Channel:
+- Nama: {channel.get('name')} ({channel.get('handle')})
+- Niche: {channel.get('niche')}
+- Audiens: {channel.get('target_audience')}
+- Gaya bahasa: {channel.get('tone')}
+- CTA YouTube: {channel.get('cta_youtube')}
+- CTA Sosmed: {channel.get('cta_social')}
+
+Ide Utama:
+- Topik: {idea.topic}
+- Sudut pandang (Angle): {idea.angle}
+- Hook awal: {idea.hook}
+- Kata kunci: {", ".join(idea.keywords or [])}
+
+Kembalikan HANYA JSON valid dengan struktur persis seperti ini:
+{{
+  "youtube_long": {{
+    "title": "Judul utama SEO + CTR tinggi (max 70 karakter)",
+    "alt_titles": ["Alternatif 1", "Alternatif 2", "Alternatif 3"],
+    "description": "Deskripsi YouTube lengkap dengan ringkasan, poin penting, CTA, dan hashtag",
+    "tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8"],
+    "thumbnail": {{
+      "badge": "LABEL SINGKAT (2-3 kata)",
+      "headline": "TEKS THUMBNAIL PUNCHY (3-5 kata)",
+      "subheadline": "Subteks pendek (4-7 kata)",
+      "visual_prompt": "Prompt visual thumbnail cinematic high contrast"
+    }},
+    "scenes": [
+      {{
+        "scene_no": 1,
+        "section": "HOOK / INTRO / LANGKAH 1 / LANGKAH 2 / STUDI KASUS / CTA",
+        "visual_headline": "Judul singkat di layar (max 8 kata)",
+        "bullet_points": ["Poin layar 1", "Poin layar 2", "Poin layar 3"],
+        "on_screen_callout": "Highlight singkat 1 baris",
+        "narration": "Naskah voiceover natural, mengalir, 2-4 kalimat untuk diucapkan narator.",
+        "visual_prompt": "Deskripsi visual untuk scene ini"
+      }}
+    ]
+  }},
+  "shorts_reels_tiktok": {{
+    "title": "Judul Shorts/Reels/TikTok punchy",
+    "hook_text": "Teks hook besar 3 detik pertama",
+    "caption_yt_shorts": "Caption khusus YouTube Shorts + hashtag",
+    "caption_tiktok": "Caption khusus TikTok + CTA komentar + hashtag",
+    "caption_ig_reels": "Caption khusus Instagram Reels + CTA save/share + hashtag",
+    "hashtags": ["#AI", "#KontenKreator", "#Automasi", "#YouTubeShorts", "#TipsKonten"],
+    "scenes": [
+      {{
+        "scene_no": 1,
+        "badge": "01 HOOK",
+        "visual_headline": "Headline vertikal singkat",
+        "narration": "Narasi padat & cepat 1-2 kalimat.",
+        "visual_prompt": "Deskripsi visual 9:16"
+      }}
+    ]
+  }},
+  "carousel_social": {{
+    "title": "Judul Carousel",
+    "slides": [
+      {{
+        "slide_no": 1,
+        "badge": "SLIDE 1/5 • COVER",
+        "headline": "Headline cover menarik perhatian",
+        "body": "Penjelasan ringkas dan tajam 1-2 kalimat",
+        "highlight": "Takeaway / angka kunci",
+        "visual_prompt": "Konsep ilustrasi slide"
+      }}
+    ],
+    "caption_instagram": "Caption Instagram carousel storytelling + CTA save & comment + hashtag",
+    "caption_linkedin": "Postingan LinkedIn profesional dengan insight terstruktur + pertanyaan diskusi",
+    "thread_x": ["Tweet 1 (Hook + 🧵)", "Tweet 2", "Tweet 3", "Tweet 4", "Tweet 5 (CTA)"],
+    "post_threads": "Postingan pendek conversational untuk Threads",
+    "post_facebook": "Caption ramah diskusi untuk Facebook Page",
+    "hashtags": ["#ContentAutomation", "#AIUntukKreator", "#StrategiKonten", "#Produktivitas"]
+  }}
+}}
+
+Aturan penting:
+- youtube_long.scenes HARUS berisi 5 scene terstruktur (Hook, Masalah & Peluang, Framework 3 Tahap, Eksekusi Praktis, Ringkasan & CTA).
+- shorts_reels_tiktok.scenes HARUS berisi 4 scene cepat (Hook, Masalah, Solusi Inti, CTA) dengan total durasi baca ~35-50 detik.
+- carousel_social.slides HARUS berisi tepat 5 slide (Cover, 3 Insight Inti, Penutup & CTA).
+"""
+
+
+def _generate_with_gemini(idea: TopicIdea, config: dict[str, Any]) -> dict[str, Any] | None:
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        return None
+    try:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=api_key)
+        ai_cfg = config.get("ai", {})
+        resp = client.models.generate_content(
+            model=ai_cfg.get("text_model", "gemini-2.5-flash"),
+            contents=_build_gemini_prompt(idea, config),
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=float(ai_cfg.get("temperature", 0.7)),
+            ),
+        )
+        parsed = json.loads(resp.text)
+        if all(k in parsed for k in ("youtube_long", "shorts_reels_tiktok", "carousel_social")):
+            return parsed
+        return None
+    except Exception:
+        return None
+
+
+def _truncate_words(text: str, max_len: int) -> str:
+    clean = " ".join(text.split())
+    if len(clean) <= max_len:
+        return clean
+    clipped = clean[: max_len - 1].rsplit(" ", 1)[0].rstrip(" ,;:-")
+    return (clipped or clean[: max_len - 3]) + "..."
+
+
+def _build_structured_fallback(idea: TopicIdea, config: dict[str, Any]) -> dict[str, Any]:
+    channel = config.get("channel", {})
+    topic = idea.topic
+    cta_yt = channel.get("cta_youtube", "Subscribe untuk strategi automasi konten lainnya!")
+    cta_soc = channel.get("cta_social", "Simpan postingan ini dan bagikan ke tim kreator kamu.")
+    niche = channel.get("niche", "AI & Produktivitas")
+    short_title = _truncate_words(topic, 58)
+    short_sub = _truncate_words(topic, 48)
+    keywords = idea.keywords or ["automasi", "ai", "konten", "youtube", "sosmed"]
+    hashtags_list = [f"#{slugify(k, 22).replace('-', '')}" for k in keywords[:5] if slugify(k, 22)]
+    if "#YouTube" not in hashtags_list:
+        hashtags_list.append("#YouTube")
+    if "#ContentAutomation" not in hashtags_list:
+        hashtags_list.append("#ContentAutomation")
+
+    return {
+        "youtube_long": {
+            "title": f"{short_title} (Panduan Lengkap)",
+            "alt_titles": [
+                f"Blueprint Lengkap: {short_title}",
+                f"{short_title} — 1 Ide Jadi Semua Format Konten!",
+                f"Workflow {short_sub} yang Hemat 10 Jam/Minggu",
+            ],
+            "description": (
+                f"{idea.hook}\n\n"
+                f"Di video ini kita membedah tuntas tentang {topic} dengan pendekatan {idea.angle}. "
+                f"Cocok untuk {channel.get('target_audience', 'kreator konten')}.\n\n"
+                "Yang akan kamu pelajari:\n"
+                "00:00 Hook & Kenapa Ini Penting Sekarang\n"
+                "00:12 Masalah Utama Produksi Konten Manual\n"
+                "00:25 Sistem 4 Tahap Dari Ide Sampai Publish\n"
+                "00:40 Cara Repurpose 1 Ide ke YouTube, Shorts, Reels & Carousel\n"
+                "00:55 Checklist Eksekusi & Langkah Berikutnya\n\n"
+                f"{cta_yt}\n\n"
+                + " ".join(hashtags_list)
+            ),
+            "tags": list(dict.fromkeys(keywords + ["automasi konten", "youtube automation", "repurpose konten", "ai kreator"])),
+            "thumbnail": {
+                "badge": "BLUEPRINT 2026",
+                "headline": "1 IDE JADI SEMUA KONTEN",
+                "subheadline": short_sub,
+                "visual_prompt": f"High-contrast YouTube studio thumbnail about {topic}, glowing workflow nodes, bold futuristic typography, dark navy and indigo palette with amber accent",
+            },
+            "scenes": [
+                {
+                    "scene_no": 1,
+                    "section": "HOOK",
+                    "visual_headline": "1 Ide -> Semua Platform Otomatis",
+                    "bullet_points": [
+                        "Riset tren harian otomatis",
+                        "Video panjang + Shorts + Carousel",
+                        "Auto-draft lengkap dengan laporan",
+                    ],
+                    "on_screen_callout": "Hemat 80% waktu produksi konten mingguan",
+                    "narration": (
+                        f"{idea.hook} Bayangkan cukup memasukkan satu topik tentang {topic}, "
+                        "lalu sistem langsung menyiapkan naskah, voiceover, video panjang, video pendek, dan carousel siap publish."
+                    ),
+                    "visual_prompt": f"Dynamic studio intro graphic highlighting {topic}",
+                },
+                {
+                    "scene_no": 2,
+                    "section": "MASALAH UTAMA",
+                    "visual_headline": "Kenapa Kreator Cepat Burnout?",
+                    "bullet_points": [
+                        "Riset ide memakan waktu berjam-jam",
+                        "Nulis ulang caption untuk tiap platform",
+                        "Editing berulang tanpa standar template",
+                    ],
+                    "on_screen_callout": "Fokus strategi, biarkan sistem mengerjakan repetisi",
+                    "narration": (
+                        "Tantangan terbesar kreator saat ini bukan kekurangan ide, melainkan proses eksekusi yang berulang. "
+                        "Mulai dari riset tren, menulis script, mengisi suara, sampai menyesuaikan ukuran video untuk YouTube, TikTok, dan Instagram."
+                    ),
+                    "visual_prompt": "Clean dark infographic comparing manual workflow vs automated content studio",
+                },
+                {
+                    "scene_no": 3,
+                    "section": "ARSITEKTUR PIPELINE",
+                    "visual_headline": "4 Tahap Sistem Otomasi Konten",
+                    "bullet_points": [
+                        "1. Riset Tren & Anti-Duplikat Topik",
+                        "2. Master Script + Repurpose Multi-Format",
+                        "3. Render Visual, Voiceover & Subtitle",
+                        "4. Auto-Draft & Laporan Publikasi",
+                    ],
+                    "on_screen_callout": "Modular, konsisten, dan bisa jalan terjadwal",
+                    "narration": (
+                        f"Dengan sistem modular untuk niche {niche}, setiap produksi dimulai dari riset tren otomatis. "
+                        "Setelah itu AI merangkai master script, mengubahnya menjadi format vertikal dan carousel, lalu merender audio dan video secara otomatis."
+                    ),
+                    "visual_prompt": "4-step glowing pipeline architecture diagram in indigo and cyan",
+                },
+                {
+                    "scene_no": 4,
+                    "section": "REPURPOSE CERDAS",
+                    "visual_headline": "Satu Riset, Enam Kanal Aktif",
+                    "bullet_points": [
+                        "YouTube 16:9 + Thumbnail CTR tinggi",
+                        "Shorts, Reels, TikTok 9:16 + Subtitle",
+                        "Carousel IG, LinkedIn & Thread X",
+                    ],
+                    "on_screen_callout": "Distribusi maksimal tanpa kerja dua kali",
+                    "narration": (
+                        "Kunci pertumbuhan channel modern adalah distribusi konsisten. "
+                        "Satu riset mendalam langsung dipecah menjadi video YouTube 16 banding 9, klip vertikal 9 banding 16 dengan subtitle sinkron, serta carousel 5 slide beserta caption khusus tiap platform."
+                    ),
+                    "visual_prompt": "Multi-platform distribution hub graphic showing YouTube, Shorts, Reels, TikTok, Instagram, LinkedIn",
+                },
+                {
+                    "scene_no": 5,
+                    "section": "AUTO-DRAFT & CTA",
+                    "visual_headline": "Aman dengan Auto-Draft & Laporan",
+                    "bullet_points": [
+                        "Upload otomatis sebagai Draft / Private",
+                        "Review cepat lewat laporan detail",
+                        "Publish 1 klik atau jadwalkan otomatis",
+                    ],
+                    "on_screen_callout": "Kontrol penuh kualitas tetap di tangan kamu",
+                    "narration": (
+                        "Supaya tetap aman dan berkualitas tinggi, pipeline mengirim konten sebagai auto-draft lengkap dengan laporan detail file, durasi, dan status tiap platform. "
+                        f"{cta_yt}"
+                    ),
+                    "visual_prompt": "Clean dashboard summary screen with green verification badges and publish CTA",
+                },
+            ],
+        },
+        "shorts_reels_tiktok": {
+            "title": _truncate_words(f"Blueprint: {topic}", 54),
+            "hook_text": "1 IDE = 6 KONTEN OTOMATIS!",
+            "caption_yt_shorts": f"{idea.hook}\nTonton video lengkapnya di channel kami! {' '.join(hashtags_list[:4])} #Shorts",
+            "caption_tiktok": f"Masih bikin konten satu per satu? Coba sistem {topic} ini! Tulis 'AUTOMASI' di komentar kalau mau workflow-nya. {' '.join(hashtags_list[:5])} #TikTokEdukasi",
+            "caption_ig_reels": f"Save Reels ini dulu! Begini cara ubah 1 ide soal {topic} jadi video panjang, Reels, dan Carousel sekaligus. {cta_soc} {' '.join(hashtags_list[:5])}",
+            "hashtags": hashtags_list,
+            "scenes": [
+                {
+                    "scene_no": 1,
+                    "badge": "01 • HOOK",
+                    "visual_headline": "1 Ide Jadi 6 Konten Otomatis!",
+                    "narration": f"Stop bikin konten sosmed satu per satu! Begini cara kerja sistem {topic} dari ide sampai siap publish.",
+                    "visual_prompt": "Bold vertical 9:16 hook card with electric indigo glow",
+                },
+                {
+                    "scene_no": 2,
+                    "badge": "02 • RISET & SCRIPT",
+                    "visual_headline": "AI Riset Tren & Tulis Script",
+                    "narration": "Pertama, sistem mencari tren terbaru, membuat naskah video panjang, lalu otomatis memecahnya jadi script Shorts, Reels, TikTok, dan Carousel.",
+                    "visual_prompt": "Vertical dark graphic showing AI script and repurpose engine",
+                },
+                {
+                    "scene_no": 3,
+                    "badge": "03 • RENDER OTOMATIS",
+                    "visual_headline": "Voiceover, Subtitle & Video Jadi",
+                    "narration": "Kedua, voiceover natural, subtitle sinkron, thumbnail, dan video vertikal langsung dirender rapi tanpa edit manual dari nol.",
+                    "visual_prompt": "Vertical video rendering progress visual with waveform and captions",
+                },
+                {
+                    "scene_no": 4,
+                    "badge": "04 • AUTO-DRAFT",
+                    "visual_headline": "Masuk Draft + Laporan Lengkap",
+                    "narration": f"Terakhir, semua aset masuk auto-draft lengkap dengan laporan status tiap platform. {cta_soc}",
+                    "visual_prompt": "Vertical summary screen with publish checkmarks and CTA",
+                },
+            ],
+        },
+        "carousel_social": {
+            "title": f"Blueprint: {short_title}",
+            "slides": [
+                {
+                    "slide_no": 1,
+                    "badge": "SLIDE 1/5 • COVER",
+                    "headline": short_title,
+                    "body": "Ubah 1 ide menjadi YouTube Long, Shorts, Reels, TikTok, dan Carousel secara otomatis.",
+                    "highlight": "Geser untuk lihat alur lengkapnya ->",
+                    "visual_prompt": "Modern bold editorial cover slide dark theme",
+                },
+                {
+                    "slide_no": 2,
+                    "badge": "SLIDE 2/5 • RISET IDE",
+                    "headline": "Mulai dari Tren yang Tervalidasi",
+                    "body": "Ambil topik harian dari RSS & tren niche, lalu saring otomatis memakai riwayat konten agar tidak pernah mengulang topik.",
+                    "highlight": "Zero blank-page syndrome setiap minggu",
+                    "visual_prompt": "Minimalist card showing trend radar and topic filter",
+                },
+                {
+                    "slide_no": 3,
+                    "badge": "SLIDE 3/5 • REPURPOSE",
+                    "headline": "1 Master Blueprint, Multi-Platform",
+                    "body": "Dari satu naskah utama, pecah otomatis jadi struktur YouTube 16:9, klip vertikal 9:16, 5 slide carousel, thread X, dan post LinkedIn.",
+                    "highlight": "Konsisten di semua kanal tanpa burnout",
+                    "visual_prompt": "Content repurpose matrix graphic",
+                },
+                {
+                    "slide_no": 4,
+                    "badge": "SLIDE 4/5 • PRODUKSI",
+                    "headline": "Render Media Lokal & Hemat Biaya",
+                    "body": "Gabungkan neural TTS, subtitle sinkron otomatis, template visual brand, dan FFmpeg untuk hasil video tajam siap upload.",
+                    "highlight": "Cepat, terukur, dan mudah dikustomisasi",
+                    "visual_prompt": "Media production stack diagram",
+                },
+                {
+                    "slide_no": 5,
+                    "badge": "SLIDE 5/5 • PUBLISH",
+                    "headline": "Auto-Draft + Laporan Detail",
+                    "body": "Kirim otomatis sebagai draft ke YouTube & sosmed, lalu terima laporan lengkap berisi checklist QA, link draft, dan ringkasan aset.",
+                    "highlight": cta_soc,
+                    "visual_prompt": "Clean summary checklist CTA slide",
+                },
+            ],
+            "caption_instagram": (
+                f"Capek produksi konten berulang untuk tiap platform? 🚀\n\n"
+                f"Geser carousel ini untuk melihat sistem lengkap {topic} — mulai dari riset ide, penulisan script, render video 16:9 & 9:16, sampai auto-draft dengan laporan detail.\n\n"
+                f"💡 Poin kunci:\n"
+                f"1. Riset tren otomatis & anti-duplikat\n"
+                f"2. 1 topik direpurpose ke 6+ format\n"
+                f"3. Auto-draft dulu supaya kualitas tetap terjaga\n\n"
+                f"{cta_soc}\n\n"
+                + " ".join(hashtags_list)
+            ),
+            "caption_linkedin": (
+                f"Banyak tim konten gagal konsisten bukan karena kurang ide, tapi karena bottleneck di proses produksi & distribusi.\n\n"
+                f"Hari ini saya merangkum arsitektur untuk {topic}:\n"
+                f"• Stage 1: Trend discovery berbasis niche & history deduplication\n"
+                f"• Stage 2: Master scriptwriting + automatic multi-format repurposing\n"
+                f"• Stage 3: Automated voiceover, synced subtitles, thumbnail, carousel, dan render 16:9 + 9:16\n"
+                f"• Stage 4: Safe auto-draft publishing + executive publish report\n\n"
+                f"Hasilnya: 1 ide tervalidasi langsung menjadi aset siap tayang di YouTube, Shorts, Reels, TikTok, Instagram, LinkedIn, dan X.\n\n"
+                f"Bagian mana dari workflow konten Anda yang saat ini paling menyita waktu? Diskusi di komentar 👇\n\n"
+                + " ".join(hashtags_list)
+            ),
+            "thread_x": [
+                f"1/5 Masih bikin konten YouTube, TikTok, Reels & IG secara terpisah? Ini blueprint {topic} yang mengubah 1 ide jadi semua format otomatis 🧵👇",
+                "2/5 Mulai dari riset tren otomatis sesuai niche + cek history.json supaya topik selalu segar dan tidak pernah dobel.",
+                "3/5 Buat 1 Master Blueprint JSON: langsung menghasilkan script YouTube 16:9, klip pendek 9:16, 5 slide carousel, plus caption beda-beda tiap platform.",
+                "4/5 Produksi aset otomatis: neural voiceover + subtitle .SRT sinkron + thumbnail & carousel branded + render FFmpeg 16:9 & 9:16.",
+                f"5/5 Terakhir, upload otomatis ke mode Draft (YouTube Private + Social Webhook) dan terima PUBLISH_REPORT.md lengkap. {cta_soc}",
+            ],
+            "post_threads": (
+                f"Baru saja menerapkan sistem {topic}: cukup 1 ide, langsung keluar video YouTube 16:9, Shorts/Reels/TikTok 9:16, 5 slide carousel, caption semua platform, plus auto-draft & laporan detail. "
+                "Menurut kalian tahap mana yang paling wajib diotomatisasi duluan?"
+            ),
+            "post_facebook": (
+                f"Ingin jadwal upload YouTube dan media sosial tetap konsisten tanpa kehabisan waktu?\n\n"
+                f"Di paket konten kali ini kita bahas {topic} — alur kerja lengkap dari riset ide, naskah, voiceover, render video, hingga auto-draft dan laporan publikasi.\n\n"
+                f"{cta_soc}\n" + " ".join(hashtags_list)
+            ),
+            "hashtags": hashtags_list,
+        },
+    }
+
+
+def generate_content_blueprint(
+    idea: TopicIdea,
+    config: dict[str, Any],
+    brief_override_path: Path | None = None,
+) -> dict[str, Any]:
+    now_iso = datetime.now(timezone.utc).isoformat()
+    if brief_override_path and brief_override_path.exists():
+        loaded = json.loads(brief_override_path.read_text(encoding="utf-8"))
+        loaded.setdefault("meta", {})
+        loaded["meta"].setdefault("topic", idea.topic)
+        loaded["meta"].setdefault("slug", slugify(loaded["meta"]["topic"]))
+        loaded["meta"].setdefault("generated_at", now_iso)
+        loaded["meta"]["generator_mode"] = "external_brief_json"
+        return loaded
+
+    gemini_result = _generate_with_gemini(idea, config)
+    if gemini_result is not None:
+        blueprint = gemini_result
+        mode = f"gemini_api:{config.get('ai', {}).get('text_model', 'gemini-2.5-flash')}"
+    else:
+        blueprint = _build_structured_fallback(idea, config)
+        mode = "structured_local_template"
+
+    blueprint["meta"] = {
+        "topic": idea.topic,
+        "angle": idea.angle,
+        "hook": idea.hook,
+        "source": idea.source,
+        "source_url": idea.source_url,
+        "keywords": idea.keywords or [],
+        "slug": slugify(idea.topic),
+        "channel_name": config.get("channel", {}).get("name", "Creator Studio"),
+        "channel_handle": config.get("channel", {}).get("handle", "@creator"),
+        "language": config.get("channel", {}).get("language", "id"),
+        "generated_at": now_iso,
+        "generator_mode": mode,
+    }
+    return blueprint

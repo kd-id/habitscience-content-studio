@@ -1,0 +1,34 @@
+[
+  {
+    "run_id": "2026-11-25_153459_cara-membangun-automasi-konten-youtu",
+    "slug": "cara-membangun-automasi-konten-youtube-dan-sosme",
+    "topic": "Cara Membangun Automasi Konten YouTube dan Sosmed Pakai AI",
+    "generated_at_wib": "2026-11-25 15:36:58 WIB",
+    "publish_mode": "draft",
+    "counts": {
+      "total": 8,
+      "published": 0,
+      "drafted": 0,
+      "dry_run_ready": 0,
+      "pending_setup": 8,
+      "failed": 0
+    },
+    "report_md": "C:\\Users\\Administrator\\.gemini\\antigravity\\scratch\\content-automation-studio\\output\\2026-11-25_153459_cara-membangun-automasi-konten-youtu\\PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-25_161017_why-15-minutes-of-scrolling-destroys",
+    "slug": "why-15-minutes-of-scrolling-destroys-focus",
+    "topic": "Why 15 Minutes of Scrolling Destroys Your Focus for Hours (And the 3-Step Brain Reset)",
+    "generated_at_wib": "2026-11-25 16:12:52 WIB",
+    "publish_mode": "draft",
+    "counts": {
+      "total": 8,
+      "published": 0,
+      "drafted": 0,
+      "dry_run_ready": 0,
+      "pending_setup": 8,
+      "failed": 0
+    },
+    "report_md": "C:\\Users\\Administrator\\.gemini\\antigravity\\scratch\\content-automation-studio\\output\\2026-11-25_161017_why-15-minutes-of-scrolling-destroys\\PUBLISH_REPORT.md"
+  }
+]

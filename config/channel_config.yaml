@@ -1,0 +1,98 @@
+channel:
+  name: "HabitScience Lab"
+  handle: "@habitsciencelab"
+  niche: "Science-Backed Focus, Habits & Cognitive Performance"
+  target_audience: "Ambitious professionals, founders, students, and lifelong learners worldwide"
+  language: "en"
+  tone: "calm, authoritative, science-backed, deeply practical, zero fluff"
+  cta_youtube: "Subscribe to HabitScience Lab and grab the free 7-Day Focus Reset Protocol in the description to rewire your attention."
+  cta_social: "Save this for your next deep-work session and comment 'RESET' to get the 7-Day Protocol checklist."
+
+branding:
+  primary_color: "#14B8A6"
+  secondary_color: "#38BDF8"
+  accent_color: "#F59E0B"
+  bg_dark: "#09151C"
+  bg_card: "#11232E"
+  text_primary: "#F8FAFC"
+  text_muted: "#CBD5E1"
+  watermark_text: "@habitsciencelab"
+  font_bold: "bahnschrift.ttf"
+  font_regular: "segoeui.ttf"
+
+ai:
+  text_model: "gemini-2.5-flash"
+  image_model: "imagen-3.0-generate-002"
+  use_gemini_images: false
+  temperature: 0.7
+
+voiceover:
+  provider: "edge_tts"
+  voice_long: "en-US-BrianNeural"
+  voice_shorts: "en-US-AvaNeural"
+  rate_long: "+0%"
+  rate_shorts: "+6%"
+  pitch: "+0Hz"
+
+video:
+  youtube_long:
+    width: 1920
+    height: 1080
+    fps: 30
+    burn_subtitles: true
+    padding_after_audio_sec: 0.6
+  shorts:
+    width: 1080
+    height: 1920
+    fps: 30
+    burn_subtitles: true
+    max_duration_sec: 59
+    padding_after_audio_sec: 0.4
+
+platforms:
+  youtube_long:
+    enabled: true
+    category_id: "27"
+    draft_privacy: "private"
+    publish_privacy: "public"
+    made_for_kids: false
+  youtube_shorts:
+    enabled: true
+    category_id: "27"
+    draft_privacy: "private"
+    publish_privacy: "public"
+    made_for_kids: false
+  instagram_reels:
+    enabled: true
+    adapter: "webhook"
+  instagram_carousel:
+    enabled: true
+    slide_count: 5
+    adapter: "webhook"
+  tiktok:
+    enabled: true
+    adapter: "webhook"
+  linkedin:
+    enabled: true
+    adapter: "webhook"
+  x_threads:
+    enabled: true
+    adapter: "webhook"
+  facebook:
+    enabled: true
+    adapter: "webhook"
+
+publishing:
+  # Safe default: "draft" (YouTube Private Draft + Social Webhook status="draft")
+  default_mode: "draft"
+  save_payload_snapshots: true
+
+trends:
+  locale_hl: "en-US"
+  locale_gl: "US"
+  locale_ceid: "US:en"
+  queries:
+    - "neuroscience focus attention dopamine study"
+    - "habit formation behavioral psychology research"
+    - "deep work sleep cognitive performance science"
+  custom_rss_feeds: []

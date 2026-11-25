@@ -1,0 +1,38 @@
+services:
+  # 1. Mode On-Demand (jalankan 1x produksi lalu berhenti)
+  # Contoh: docker compose run --rm studio --topic "Tips AI 2026" --publish-mode draft
+  studio:
+    build: .
+    image: content-automation-studio:latest
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - HEADLESS_CLOUD=1
+      - TZ=Asia/Jakarta
+    volumes:
+      - ./config:/app/config
+      - ./output:/app/output
+
+  # 2. Mode Cloud Scheduler 24/7 (jalan terus di VPS / Coolify / Portainer)
+  # Jalankan dengan: docker compose --profile scheduler up -d --build
+  scheduler:
+    build: .
+    image: content-automation-studio:latest
+    profiles: ["scheduler"]
+    restart: unless-stopped
+    entrypoint: ["python", "-m", "src.cloud_scheduler"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - HEADLESS_CLOUD=1
+      - TZ=Asia/Jakarta
+      - SCHEDULE_TZ=Asia/Jakarta
+      - SCHEDULE_TIME_WIB=${SCHEDULE_TIME_WIB:-08:00}
+      - SCHEDULE_DAYS=${SCHEDULE_DAYS:-mon,tue,wed,thu,fri,sat,sun}
+      - PUBLISH_MODE=${PUBLISH_MODE:-draft}
+      - RUN_ON_STARTUP=${RUN_ON_STARTUP:-false}
+    volumes:
+      - ./config:/app/config
+      - ./output:/app/output

@@ -1,0 +1,16 @@
+# Python & caches
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Rahasia & kredensial (WAJIB tidak pernah masuk Git!)
+.env
+config/youtube_client_secret.json
+config/youtube_token.json
+
+# Output media berat (MP4, MP3, PNG) tidak perlu masuk Git,
+# kecuali history.json untuk mencegah duplikasi topik di GitHub Actions
+output/*
+!output/history.json
+!output/.gitkeep

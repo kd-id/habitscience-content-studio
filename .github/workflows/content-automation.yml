@@ -1,0 +1,135 @@
+name: Content Automation Studio (Cloud Pipeline)
+
+on:
+  # 1. Jalankan manual 1 klik dari GitHub Actions tab (termasuk dari HP!)
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "Topik manual (kosongkan untuk riset tren otomatis)"
+        required: false
+        default: ""
+      angle:
+        description: "Sudut pandang / angle konten (opsional)"
+        required: false
+        default: ""
+      publish_mode:
+        description: "Mode publikasi"
+        type: choice
+        default: "draft"
+        options:
+          - dry-run
+          - draft
+          - publish
+      skip_video:
+        description: "Lewati render MP4 (hanya script, gambar, audio & laporan)"
+        type: boolean
+        default: false
+
+  # 2. Jadwal otomatis di Cloud (tanpa PC menyala!)
+  # Catatan: Cron GitHub Actions memakai UTC.
+  # 01:00 UTC = 08:00 WIB setiap hari.
+  # Untuk 3x seminggu (Senin, Rabu, Jumat 08:00 WIB), ubah jadi: '0 1 * * 1,3,5'
+  schedule:
+    - cron: "0 1 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: content-automation-studio
+  cancel-in-progress: false
+
+jobs:
+  produce-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install FFmpeg & Linux TrueType fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-dejavu-core fonts-liberation
+          fc-cache -f
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Content Automation Pipeline
+        id: run_pipeline
+        env:
+          HEADLESS_CLOUD: "1"
+          INPUT_MODE: ${{ github.event.inputs.publish_mode || 'draft' }}
+          INPUT_TOPIC: ${{ github.event.inputs.topic }}
+          INPUT_ANGLE: ${{ github.event.inputs.angle }}
+          INPUT_SKIP_VIDEO: ${{ github.event.inputs.skip_video || 'false' }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
+          YOUTUBE_CLIENT_SECRET_JSON: ${{ secrets.YOUTUBE_CLIENT_SECRET_JSON }}
+          PUBLISH_WEBHOOK_URL: ${{ secrets.PUBLISH_WEBHOOK_URL }}
+          PUBLISH_WEBHOOK_SECRET: ${{ secrets.PUBLISH_WEBHOOK_SECRET }}
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_AUTHOR_URN: ${{ secrets.LINKEDIN_AUTHOR_URN }}
+          REPORT_NOTIFICATION_WEBHOOK_URL: ${{ secrets.REPORT_NOTIFICATION_WEBHOOK_URL }}
+        run: |
+          ARGS=(--publish-mode "$INPUT_MODE")
+          if [ -n "$INPUT_TOPIC" ]; then
+            ARGS+=(--topic "$INPUT_TOPIC")
+          fi
+          if [ -n "$INPUT_ANGLE" ]; then
+            ARGS+=(--angle "$INPUT_ANGLE")
+          fi
+          if [ "$INPUT_SKIP_VIDEO" = "true" ]; then
+            ARGS+=(--skip-video)
+          fi
+
+          python -m src.pipeline "${ARGS[@]}"
+
+          # Temukan folder output terbaru
+          LATEST_DIR=$(python -c "from pathlib import Path; dirs=sorted([p for p in Path('output').iterdir() if p.is_dir()], key=lambda p: p.stat().st_mtime, reverse=True); print(dirs[0])")
+          echo "run_dir=$LATEST_DIR" >> "$GITHUB_OUTPUT"
+          echo "run_name=$(basename "$LATEST_DIR")" >> "$GITHUB_OUTPUT"
+
+      - name: Verify generated media & QA checklist
+        if: ${{ github.event.inputs.skip_video != 'true' }}
+        run: python tests/verify_pipeline.py "${{ steps.run_pipeline.outputs.run_dir }}"
+
+      - name: Publish Detailed Report to GitHub Job Summary
+        if: always() && steps.run_pipeline.outputs.run_dir != ''
+        run: |
+          REPORT="${{ steps.run_pipeline.outputs.run_dir }}/PUBLISH_REPORT.md"
+          if [ -f "$REPORT" ]; then
+            cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload All Media Assets & Report as Artifact
+        if: always() && steps.run_pipeline.outputs.run_dir != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: content-pack-${{ steps.run_pipeline.outputs.run_name }}
+          path: ${{ steps.run_pipeline.outputs.run_dir }}
+          retention-days: 14
+
+      - name: Persist topic history (anti-duplicate)
+        if: success()
+        run: |
+          if [ -f output/history.json ]; then
+            git config user.name "content-automation-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add -f output/history.json
+            if ! git diff --cached --quiet; then
+              git commit -m "chore(history): record ${{ steps.run_pipeline.outputs.run_name }} [skip ci]"
+              git push
+            fi
+          fi
