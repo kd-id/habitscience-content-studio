@@ -48,12 +48,14 @@ def build_video_from_scenes(
     config: dict[str, Any],
     is_short: bool = False,
 ) -> dict[str, Any]:
-    vid_cfg = config.get("video", {}).get("shorts" if is_short else "youtube_long", {})
+    video_root = config.get("video", {})
+    vid_cfg = video_root.get("shorts" if is_short else "youtube_long", {})
     width = int(vid_cfg.get("width", 1080 if is_short else 1920))
     height = int(vid_cfg.get("height", 1920 if is_short else 1080))
     fps = int(vid_cfg.get("fps", 30))
     burn_subs = bool(vid_cfg.get("burn_subtitles", True))
-    pause_sec = float(vid_cfg.get("padding_after_audio_sec", 0.4 if is_short else 0.6))
+    pause_sec = float(vid_cfg.get("padding_after_audio_sec", 0.35 if is_short else 0.55))
+    ken_burns = bool(video_root.get("ken_burns_motion", True))
 
     out_dir = out_video_path.parent
     segments_dir = out_dir / "_segments"
@@ -62,41 +64,83 @@ def build_video_from_scenes(
     segment_paths: list[Path] = []
     for idx, (img_path, scene_audio) in enumerate(zip(scene_images, audio_bundle.scene_results), start=1):
         seg_dur = max(scene_audio.duration_sec + pause_sec, 1.0)
+        total_frames = max(int(round(seg_dur * fps)), fps)
         seg_out = segments_dir / f"seg_{idx:02d}.mp4"
-        fade_out_start = max(seg_dur - 0.30, 0.2)
+        fade_out_start = max(seg_dur - 0.35, 0.2)
 
-        # Clean, crisp HD segment with smooth fade-in/out & guaranteed yuv420p compatibility
-        vf = (
-            f"scale={width}:{height}:force_original_aspect_ratio=increase,"
-            f"crop={width}:{height},"
-            f"fade=t=in:st=0:d=0.30,"
-            f"fade=t=out:st={fade_out_start:.2f}:d=0.30,"
-            "format=yuv420p"
-        )
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-loop",
-            "1",
-            "-t",
-            f"{seg_dur:.3f}",
-            "-i",
-            str(img_path),
-            "-vf",
-            vf,
-            "-r",
-            str(fps),
-            "-c:v",
-            "libx264",
-            "-preset",
-            "veryfast",
-            "-crf",
-            "20",
-            "-pix_fmt",
-            "yuv420p",
-            "-an",
-            str(seg_out),
-        ]
+        if ken_burns:
+            # Smooth documentary Ken Burns motion (alternating subtle zoom-in and zoom-out, zero jitter)
+            zoom_span = 0.065
+            step = zoom_span / max(total_frames, 1)
+            if idx % 2 == 1:
+                z_expr = f"min(1.0+{step:.6f}*on,1.07)"
+            else:
+                z_expr = f"max(1.065-{step:.6f}*on,1.0)"
+            up_w = int(width * 1.25)
+            up_h = int(height * 1.25)
+            vf = (
+                f"scale={up_w}:{up_h}:force_original_aspect_ratio=increase,"
+                f"crop={up_w}:{up_h},"
+                f"zoompan=z='{z_expr}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={total_frames}:s={width}x{height}:fps={fps},"
+                f"fade=t=in:st=0:d=0.35,"
+                f"fade=t=out:st={fade_out_start:.2f}:d=0.35,"
+                "format=yuv420p"
+            )
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(img_path),
+                "-vf",
+                vf,
+                "-t",
+                f"{seg_dur:.3f}",
+                "-r",
+                str(fps),
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "20",
+                "-pix_fmt",
+                "yuv420p",
+                "-an",
+                str(seg_out),
+            ]
+        else:
+            vf = (
+                f"scale={width}:{height}:force_original_aspect_ratio=increase,"
+                f"crop={width}:{height},"
+                f"fade=t=in:st=0:d=0.30,"
+                f"fade=t=out:st={fade_out_start:.2f}:d=0.30,"
+                "format=yuv420p"
+            )
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-loop",
+                "1",
+                "-t",
+                f"{seg_dur:.3f}",
+                "-i",
+                str(img_path),
+                "-vf",
+                vf,
+                "-r",
+                str(fps),
+                "-c:v",
+                "libx264",
+                "-preset",
+                "veryfast",
+                "-crf",
+                "20",
+                "-pix_fmt",
+                "yuv420p",
+                "-an",
+                str(seg_out),
+            ]
+
         subprocess.run(cmd, capture_output=True, text=True, check=True)
         segment_paths.append(seg_out)
 
@@ -128,18 +172,18 @@ def build_video_from_scenes(
     master_audio = Path(audio_bundle.master_audio_path)
 
     if burn_subs and srt_file.exists() and srt_file.stat().st_size > 0:
-        # Execute with cwd=out_dir and pass relative SRT name to avoid Windows drive-letter escaping issues in libass
+        # Clean documentary captions (crisp shadow outline, no clunky opaque box)
         if is_short:
             style = (
-                "FontName=Arial,FontSize=15,Bold=1,PrimaryColour=&H00FFFFFF,"
-                "OutlineColour=&H000B1020,BackColour=&H90000000,BorderStyle=3,"
-                "Outline=2,Shadow=0,Alignment=2,MarginV=82,MarginL=24,MarginR=24"
+                "FontName=Arial,FontSize=16,Bold=1,PrimaryColour=&H00EBF2F5,"
+                "OutlineColour=&H00171311,BorderStyle=1,Outline=2.4,Shadow=1.2,"
+                "Alignment=2,MarginV=88,MarginL=26,MarginR=26"
             )
         else:
             style = (
-                "FontName=Arial,FontSize=17,Bold=1,PrimaryColour=&H00FFFFFF,"
-                "OutlineColour=&H000B1020,BackColour=&H90000000,BorderStyle=3,"
-                "Outline=2,Shadow=0,Alignment=2,MarginV=24,MarginL=40,MarginR=40"
+                "FontName=Arial,FontSize=17,Bold=1,PrimaryColour=&H00EBF2F5,"
+                "OutlineColour=&H00171311,BorderStyle=1,Outline=2.2,Shadow=1.2,"
+                "Alignment=2,MarginV=24,MarginL=44,MarginR=44"
             )
         cmd_final = [
             "ffmpeg",
@@ -189,7 +233,6 @@ def build_video_from_scenes(
         ]
         subprocess.run(cmd_final, capture_output=True, text=True, check=True)
 
-    # Clean up temporary segment artifacts while preserving final MP4
     for p in segment_paths:
         p.unlink(missing_ok=True)
     merged_silent.unlink(missing_ok=True)

@@ -52,7 +52,7 @@ Return ONLY valid JSON with this exact schema:
         "bullet_points": ["Point 1", "Point 2", "Point 3"],
         "on_screen_callout": "1-line memorable science takeaway",
         "narration": "Natural spoken documentary voiceover narration, 2-4 engaging sentences.",
-        "visual_prompt": "Bespoke dark editorial visual concept for this scene"
+        "visual_prompt": "Vivid, unique minimalist hand-drawn ink-sketch visual metaphor for this scene (objects/people/diagrams, strictly NO text/letters)"
       }}
     ]
   }},
@@ -69,7 +69,7 @@ Return ONLY valid JSON with this exact schema:
         "badge": "01 • HOOK",
         "visual_headline": "Punchy vertical headline",
         "narration": "Fast, crisp 1-2 sentence spoken narration.",
-        "visual_prompt": "9:16 editorial visual concept"
+        "visual_prompt": "Unique vertical 9:16 minimalist hand-drawn ink-sketch visual metaphor (strictly NO text/letters)"
       }}
     ]
   }},

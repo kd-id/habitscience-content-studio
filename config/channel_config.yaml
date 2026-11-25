@@ -9,25 +9,51 @@ channel:
   cta_social: "Save this for your next deep-work session and comment 'RESET' to get the 7-Day Protocol checklist."
 
 branding:
-  primary_color: "#14B8A6"
+  # Minimalist Hand-Drawn / Ink Sketch Editorial Palette (Matte Charcoal Notebook)
+  primary_color: "#2DD4BF"
   secondary_color: "#38BDF8"
   accent_color: "#F59E0B"
-  bg_dark: "#09151C"
-  bg_card: "#11232E"
-  text_primary: "#F8FAFC"
-  text_muted: "#CBD5E1"
+  bg_dark: "#111317"
+  bg_card: "#191C22"
+  text_primary: "#F5F2EB"
+  text_muted: "#B8B5AD"
   watermark_text: "@habitsciencelab"
   font_bold: "bahnschrift.ttf"
   font_regular: "segoeui.ttf"
 
+visual:
+  style: "minimalist_ink_sketch"
+  cinematic_full_bleed: true
+  prompt_prefix: >-
+    Minimalist hand-drawn white chalk and ink editorial line-art illustration on
+    matte dark charcoal sketchbook paper (#111317), refined Dan Koe and New Yorker
+    visual-note aesthetic, clean uncluttered negative space, single subtle teal
+    (#2DD4BF) and warm amber (#F59E0B) chalk highlighter accent, strictly NO text,
+    NO letters, NO words, NO numbers anywhere in the image.
+
 ai:
   text_model: "gemini-3.8-flash"
-  image_model: "imagen-3.0-generate-002"
-  use_gemini_images: false
+  image_model: "gemini-3.1-flash-image"
+  use_gemini_images: true
   temperature: 0.7
 
 voiceover:
-  provider: "edge_tts"
+  # Primary: Gemini Native Studio TTS (falls back to edge_tts only if API unavailable)
+  provider: "gemini_tts"
+  gemini_tts_model: "gemini-3.8-flash-tts"
+  gemini_voice_long: "Charon"
+  gemini_voice_shorts: "Aoede"
+  style_prompt_long: >-
+    Speak as a warm, calm, authoritative science documentary narrator (similar in
+    energy to Veritasium or Kurzgesagt). Use natural human cadence, thoughtful
+    micro-pauses between key ideas, subtle natural breath, and crisp clarity—never
+    rushed or robotic. Read ONLY the narration script below:
+  style_prompt_shorts: >-
+    Speak as an articulate, warm, engaging modern science storyteller with clean
+    pacing, natural conversational inflection, and subtle emphasis on key insights.
+    Read ONLY the narration script below:
+  loudnorm: true
+  # Edge TTS fallback settings
   voice_long: "en-US-BrianNeural"
   voice_shorts: "en-US-AvaNeural"
   rate_long: "+0%"
@@ -35,19 +61,20 @@ voiceover:
   pitch: "+0Hz"
 
 video:
+  ken_burns_motion: true
   youtube_long:
     width: 1920
     height: 1080
     fps: 30
     burn_subtitles: true
-    padding_after_audio_sec: 0.6
+    padding_after_audio_sec: 0.55
   shorts:
     width: 1080
     height: 1920
     fps: 30
     burn_subtitles: true
     max_duration_sec: 59
-    padding_after_audio_sec: 0.4
+    padding_after_audio_sec: 0.35
 
 platforms:
   youtube_long:
@@ -83,7 +110,6 @@ platforms:
     adapter: "webhook"
 
 publishing:
-  # Safe default: "draft" (YouTube Private Draft + Social Webhook status="draft")
   default_mode: "draft"
   save_payload_snapshots: true
 
