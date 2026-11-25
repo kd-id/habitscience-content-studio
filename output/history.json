@@ -78,5 +78,21 @@
       "failed": 0
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-25_180951_procrastination-is-not-laziness-the/PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-25_181616_the-neuroscience-of-boring-tasks-tra",
+    "slug": "the-neuroscience-of-boring-tasks-train-your-brai",
+    "topic": "The Neuroscience of Boring Tasks: Train Your Brain to Crave Deep Work",
+    "generated_at_wib": "2026-11-25 18:16:38 WIB",
+    "publish_mode": "dry-run",
+    "counts": {
+      "total": 8,
+      "published": 0,
+      "drafted": 0,
+      "dry_run_ready": 8,
+      "pending_setup": 0,
+      "failed": 0
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-25_181616_the-neuroscience-of-boring-tasks-tra/PUBLISH_REPORT.md"
   }
 ]
