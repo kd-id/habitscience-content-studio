@@ -1,23 +1,23 @@
 channel:
-  name: "HabitScience Lab"
-  handle: "@habitsciencelab"
+  name: "HabitSains"
+  handle: "@HabitSains"
   niche: "Science-Backed Focus, Habits & Cognitive Performance"
   target_audience: "Ambitious professionals, founders, students, and lifelong learners worldwide"
   language: "en"
   tone: "charismatic storyteller, warm science presenter, vivid metaphors, intriguing hooks, zero fluff"
-  cta_youtube: "Subscribe to HabitScience Lab and grab the free 7-Day Focus Reset Protocol in the description to rewire your attention."
+  cta_youtube: "Subscribe to HabitSains and grab the free 7-Day Focus Reset Protocol in the description to rewire your attention."
   cta_social: "Save this for your next deep-work session and comment 'RESET' to get the 7-Day Protocol checklist."
 
 branding:
-  # Cinematic Illustrated Storytelling Palette (Kurzgesagt / Johnny Harris / Aperture vibe)
-  primary_color: "#14B8A6"
-  secondary_color: "#38BDF8"
-  accent_color: "#F59E0B"
-  bg_dark: "#09131B"
-  bg_card: "#11212E"
+  # Studio v5 — Flat Vector 2D Explainer Palette (Kurzgesagt / TED-Ed vibe)
+  primary_color: "#2DD4BF"
+  secondary_color: "#FF7666"
+  accent_color: "#FBBF24"
+  bg_dark: "#121338"
+  bg_card: "#1D2052"
   text_primary: "#F8FAFC"
-  text_muted: "#CBD5E1"
-  watermark_text: "@habitsciencelab"
+  text_muted: "#C7D2FE"
+  watermark_text: "@HabitSains"
   font_bold: "bahnschrift.ttf"
   font_regular: "segoeui.ttf"
 
@@ -74,8 +74,8 @@ voiceover:
   pitch: "+0Hz"
 
 video:
-  # Engine mode: "motion_hybrid" (True 30fps Motion Graphics + FREE Pexels HD B-Roll!) | "motion_graphics" | "ken_burns_images"
-  engine_mode: "motion_hybrid"
+  # Engine mode: "flat_vector_2d" (Kurzgesagt/TED-Ed 30fps True Motion!) | "motion_hybrid" | "motion_graphics" | "ken_burns_images"
+  engine_mode: "flat_vector_2d"
   ken_burns_motion: true
   # Subtle calm warm ambient drone/pad behind voiceover (-27 dB, 100% royalty-free)
   # Put your own track at assets/bgm.mp3 to override the built-in ambient pad!

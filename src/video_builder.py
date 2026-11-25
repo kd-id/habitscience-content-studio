@@ -7,6 +7,7 @@ from typing import Any
 
 from src.broll_fetcher import fetch_pexels_broll_clip
 from src.motion_engine import render_motion_scene_segment
+from src.vector_2d_engine import render_flat_vector_scene_segment
 from src.voiceover import TrackAudioBundle
 
 
@@ -208,6 +209,22 @@ def build_video_from_scenes(
                 _build_graded_broll_segment(fetched, seg_dur, width, height, fps, seg_out)
                 raw_broll.unlink(missing_ok=True)
                 rendered = True
+
+        if not rendered and video_mode == "flat_vector_2d":
+            print(f"[video] Rendering Flat Vector 2D Explainer (Kurzgesagt 30fps) segment {idx}/{total_scenes} ({'9:16' if is_short else '16:9'})...", flush=True)
+            render_flat_vector_scene_segment(
+                scene=s_meta,
+                scene_idx=idx,
+                total_scenes=total_scenes,
+                duration_sec=seg_dur,
+                width=width,
+                height=height,
+                fps=fps,
+                out_mp4=seg_out,
+                config=config,
+                is_short=is_short,
+            )
+            rendered = True
 
         if not rendered and video_mode in ("motion_hybrid", "motion_graphics"):
             print(f"[video] Rendering true 30fps motion graphics segment {idx}/{total_scenes} ({'9:16' if is_short else '16:9'})...", flush=True)

@@ -68,7 +68,7 @@ def build_kit(logo_src: Path, banner_bg_src: Path, out_dir: Path) -> None:
     eb = draw.textbbox((0, 0), eyebrow, font=f_eyebrow)
     draw.text(((bw - (eb[2] - eb[0])) // 2, 548), eyebrow, font=f_eyebrow, fill=(45, 212, 191, 255))
 
-    title = "HABITSCIENCE LAB"
+    title = "HABITSAINS"
     tb = draw.textbbox((0, 0), title, font=f_title)
     tx = (bw - (tb[2] - tb[0])) // 2
     draw.text((tx + 4, 608), title, font=f_title, fill=(0, 0, 0, 195))
@@ -81,7 +81,7 @@ def build_kit(logo_src: Path, banner_bg_src: Path, out_dir: Path) -> None:
     sb = draw.textbbox((0, 0), sub, font=f_sub)
     draw.text(((bw - (sb[2] - sb[0])) // 2, 774), sub, font=f_sub, fill=(184, 181, 173, 255))
 
-    tag = "@habitsciencelab   •   NEW PROTOCOLS EVERY WEEK"
+    tag = "@HabitSains   •   NEW PROTOCOLS EVERY WEEK"
     gb = draw.textbbox((0, 0), tag, font=f_tag)
     draw.text(((bw - (gb[2] - gb[0])) // 2, 850), tag, font=f_tag, fill=(245, 242, 235, 190))
 
