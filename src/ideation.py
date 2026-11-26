@@ -102,10 +102,21 @@ def discover_trending_candidates(config: dict[str, Any], limit_per_query: int = 
     return candidates
 
 
+def _load_analytics_insights(history_file: Path) -> dict[str, Any]:
+    ins_file = history_file.parent / "analytics_insights.json"
+    if not ins_file.exists():
+        return {}
+    try:
+        return json.loads(ins_file.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
 def _rank_topic_with_gemini(
     candidates: list[dict[str, str]],
     config: dict[str, Any],
     used_slugs: set[str],
+    winning_patterns: list[str] | None = None,
 ) -> TopicIdea | None:
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key or not candidates:
@@ -116,14 +127,22 @@ def _rank_topic_with_gemini(
 
         client = genai.Client(api_key=api_key)
         channel = config.get("channel", {})
-        model = config.get("ai", {}).get("text_model", "gemini-3.8-flash")
+        model = config.get("ai", {}).get("text_model", "gemini-2.5-flash")
+        pat_txt = (
+            f"\nProven high-view patterns from our channel analytics (prioritize matching these!):\n- "
+            + "\n- ".join(winning_patterns[:4])
+            + "\n"
+            if winning_patterns
+            else ""
+        )
 
         lang = channel.get("language", "en")
         if lang == "en":
             prompt = (
                 f"You are the Lead Content Strategist for '{channel.get('name')}' "
                 f"(niche: {channel.get('niche')}, audience: {channel.get('target_audience')}, language: English).\n"
-                f"Select 1 high-CTR, original science-backed topic angle from the trend candidates below, avoiding previously used slugs ({sorted(list(used_slugs))[:15]}).\n"
+                f"Select 1 high-CTR, original science-backed topic angle from the trend candidates below, avoiding previously used slugs ({sorted(list(used_slugs))[:15]})."
+                f"{pat_txt}\n"
                 f"Candidates:\n{json.dumps(candidates[:12], ensure_ascii=False, indent=2)}\n\n"
                 "Return valid JSON with keys: topic, angle, hook, source_url, keywords (array of 5 strings)."
             )
@@ -190,12 +209,32 @@ def select_topic(
 
     history = load_history(history_file)
     used_slugs = {item.get("slug", "") for item in history}
+    insights = _load_analytics_insights(history_file)
+
+    # Closed-Loop Sequel Engine: every 3rd run, automatically produce a Part 2 / sequel
+    # directly extending our #1 most-watched video (once real views exist)!
+    sequels = insights.get("recommended_sequels") or []
+    if len(history) > 0 and (len(history) % 3 == 0) and int(insights.get("total_views_all_platforms", 0)) > 0:
+        for seq in sequels:
+            seq_topic = str(seq.get("topic") or "").strip()
+            if seq_topic and slugify(seq_topic) not in used_slugs:
+                return TopicIdea(
+                    topic=seq_topic,
+                    angle=str(seq.get("angle") or f"Direct Part 2 sequel expanding our most-watched {niche} episode").strip(),
+                    hook=str(seq.get("hook") or f"Because so many of you watched Part 1, here is what happens next: {seq_topic}").strip(),
+                    source="analytics_sequel",
+                    source_url="",
+                    keywords=[str(k) for k in (seq.get("keywords") or ["part 2", "neuroscience", "focus"])][:8],
+                    discovered_at=now_iso,
+                )
 
     candidates = discover_trending_candidates(config)
     fresh = [c for c in candidates if slugify(c["title"]) not in used_slugs]
     pool = fresh or candidates
 
-    gemini_pick = _rank_topic_with_gemini(pool, config, used_slugs)
+    gemini_pick = _rank_topic_with_gemini(
+        pool, config, used_slugs, winning_patterns=insights.get("winning_patterns")
+    )
     if gemini_pick:
         return gemini_pick
 

@@ -8,8 +8,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from src.analytics_engine import choose_next_visual_styles
 from src.config_loader import get_project_paths, load_config, slugify
-from src.ideation import select_topic
+from src.ideation import load_history, select_topic
 from src.media_assets import (
     generate_carousel_slides,
     generate_long_scene_images,
@@ -76,11 +77,30 @@ def run_pipeline(
         config.setdefault("video", {})["engine_mode"] = visual_style
     effective_mode = publish_mode or config.get("publishing", {}).get("default_mode", "draft")
 
+    # Resolve active visual styles (supports Closed-Loop Auto-Optimization when engine_mode == hybrid_cozy_3dpov)
+    vid_cfg = config.setdefault("video", {})
+    base_mode = str(vid_cfg.get("engine_mode", "hybrid_cozy_3dpov")).lower().strip()
+    if base_mode == "hybrid_cozy_3dpov" and bool(vid_cfg.get("auto_optimize_style", False)):
+        hist_len = len(load_history(paths.history_file))
+        opt_long, opt_short, opt_reason = choose_next_visual_styles(
+            paths.output_dir / "analytics_insights.json", hist_len, config
+        )
+        vid_cfg.setdefault("youtube_long", {})["engine_mode"] = opt_long
+        vid_cfg.setdefault("shorts", {})["engine_mode"] = opt_short
+        print(f"[0/7] Visual Style Optimizer aktif -> Long={opt_long}, Shorts={opt_short} ({opt_reason})", flush=True)
+    elif base_mode == "hybrid_cozy_3dpov":
+        opt_long, opt_short, opt_reason = "cozy_diorama", "pov_3d_toon", "hybrid_default"
+    else:
+        opt_long, opt_short, opt_reason = base_mode, base_mode, "manual_override"
+
     print("[1/7] Riset & pemilihan topik...", flush=True)
     idea = select_topic(config=config, history_file=paths.history_file, manual_topic=topic, manual_angle=angle)
 
     print(f"[2/7] Menyusun Master Script & Repurpose multi-format untuk: {idea.topic}", flush=True)
     blueprint = generate_content_blueprint(idea=idea, config=config, brief_override_path=brief_path)
+    blueprint.setdefault("meta", {})["visual_style_long"] = opt_long
+    blueprint["meta"]["visual_style_short"] = opt_short
+    blueprint["meta"]["visual_style_reason"] = opt_reason
 
     stamp = datetime.now(WIB).strftime("%Y-%m-%d_%H%M%S")
     run_slug = slugify(blueprint["meta"]["topic"], max_length=36)

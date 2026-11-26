@@ -84,6 +84,10 @@ video:
   #   "motion_hybrid"      (v4):   Programmatic Motion Graphics + B-Roll
   #   "ken_burns_images"   (v3):   Illustrated AI art + Ken Burns
   engine_mode: "hybrid_cozy_3dpov"
+  # Closed-Loop Visual Style Optimizer: 80% pakai gaya visual pemenang views tertinggi,
+  # 20% (setiap 5 run) uji gaya visual penantang (minimal_line_story / cinema_broll_html / cozy_diorama)
+  auto_optimize_style: true
+  style_explore_every_n_runs: 5
   broll_cut_interval_sec: 4.5
   cinema_sfx: true
   ken_burns_motion: true

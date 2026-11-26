@@ -10,6 +10,7 @@ WIB = timezone(timedelta(hours=7))
 
 STATUS_BADGES = {
     "PUBLISHED": "✅ PUBLISHED",
+    "SCHEDULED": "🗓 SCHEDULED",
     "DRAFTED": "📝 AUTO-DRAFTED",
     "DRY_RUN_READY": "🧪 DRY-RUN READY",
     "PENDING_AUTH": "🔑 PERLU OAUTH YOUTUBE",
@@ -240,6 +241,11 @@ def generate_publish_report(
     report_json_path = run_dir / "report.json"
     report_json_path.write_text(json.dumps(report_data, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    ext_ids = {
+        str(r.get("platform", "")): str(r.get("external_id", ""))
+        for r in publish_summary.get("results", [])
+        if r.get("external_id")
+    }
     update_history(
         history_file,
         {
@@ -248,6 +254,9 @@ def generate_publish_report(
             "topic": meta.get("topic"),
             "generated_at_wib": now_wib,
             "publish_mode": publish_summary.get("publish_mode"),
+            "visual_style_long": meta.get("visual_style_long", ""),
+            "visual_style_short": meta.get("visual_style_short", ""),
+            "external_ids": ext_ids,
             "counts": publish_summary.get("counts", {}),
             "report_md": str(report_md_path),
         },

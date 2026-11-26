@@ -15,6 +15,7 @@ output/*
 !output/history.json
 !output/schedule_state.json
 !output/replied_comments.json
+!output/analytics_insights.json
 !output/.gitkeep
 
 # Cached downloaded B-roll video clips (Studio v6)
