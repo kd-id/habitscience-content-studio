@@ -110,5 +110,21 @@
       "failed": 0
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-25_184525_why-your-morning-routine-is-secretly/PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-26_145539_how-do-video-games-affect-brain-deve",
+    "slug": "how-do-video-games-affect-brain-development-in-c",
+    "topic": "How do video games affect brain development in children and teens?",
+    "generated_at_wib": "2026-11-26 15:11:29 WIB",
+    "publish_mode": "draft",
+    "counts": {
+      "total": 8,
+      "published": 0,
+      "drafted": 4,
+      "dry_run_ready": 0,
+      "pending_setup": 2,
+      "failed": 2
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-26_145539_how-do-video-games-affect-brain-deve/PUBLISH_REPORT.md"
   }
 ]
