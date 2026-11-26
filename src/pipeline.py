@@ -157,6 +157,8 @@ def run_pipeline(
             config,
             is_short=True,
             scenes_meta=blueprint["shorts_reels_tiktok"]["scenes"],
+            pov_episode=blueprint.get("shorts_reels_tiktok", {}).get("pov_3d_episode"),
+            topic_meta=blueprint.get("meta"),
         )
     else:
         print("[5/7] Melewati render video (--skip-video aktif).", flush=True)

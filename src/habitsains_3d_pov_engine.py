@@ -25,6 +25,7 @@ from typing import Any
 
 from src.html_motion_overlay import find_chrome_executable
 from src.pov_3d_toon_engine import _synth_edge_line
+from src.scriptwriter import normalize_pov_3d_episode
 
 
 # ---------------------------------------------------------------------------
@@ -451,40 +452,41 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
     ctx.fillRect(0, 0, 280, 500);
     // Header time
     ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 68px Arial'; ctx.textAlign = 'center';
-    ctx.fillText(CFG.phone_time || '7:01', 140, 108);
+    ctx.fillText(CFG.phone_time || '7:01', 140, 108, 250);
     ctx.fillStyle = urgentMode ? '#FB7185' : '#2DD4BF';
     ctx.font = 'bold 20px Arial';
-    ctx.fillText(urgentMode ? (CFG.phone_urgent_hdr || '3 URGENT ALERTS!') : (CFG.phone_norm_hdr || '19 NOTIFICATIONS'), 140, 148);
+    ctx.fillText(urgentMode ? (CFG.phone_urgent_hdr || '3 URGENT ALERTS!') : (CFG.phone_norm_hdr || '19 NOTIFICATIONS'), 140, 148, 254);
 
-    const cards = urgentMode
-      ? [
-          ['#E11D48', 'BOSS • URGENT', 'Can you reply right now?!'],
-          ['#F59E0B', 'VIRAL REEL', 'You were tagged in 4 posts'],
-          ['#E11D48', 'BREAKING NEWS', 'Tap to see what happened'],
-        ]
-      : [
-          ['#E11D48', 'SOCIAL FEED', '14 new likes & comments'],
-          ['#3B82F6', 'MESSAGES', '3 unread group chats'],
-          ['#F59E0B', 'SHORT VIDEOS', 'Just 2 minutes? Tap now'],
-        ];
+    const defUrgent = [
+      ['#E11D48', 'BOSS • URGENT', 'Can you reply right now?!'],
+      ['#F59E0B', 'VIRAL REEL', 'You were tagged in 4 posts'],
+      ['#E11D48', 'BREAKING NEWS', 'Tap to see what happened'],
+    ];
+    const defNorm = [
+      ['#E11D48', 'SOCIAL FEED', '14 new likes & comments'],
+      ['#3B82F6', 'MESSAGES', '3 unread group chats'],
+      ['#F59E0B', 'SHORT VIDEOS', 'Just 2 minutes? Tap now'],
+    ];
+    const customCards = urgentMode ? CFG.phone_urgent_cards : CFG.phone_norm_cards;
+    const cards = (Array.isArray(customCards) && customCards.length === 3) ? customCards : (urgentMode ? defUrgent : defNorm);
     cards.forEach(([col, title, sub], idx) => {{
       const cy = 182 + idx * 86;
       ctx.fillStyle = urgentMode ? '#331420' : '#1E253D';
       ctx.fillRect(18, cy, 244, 72);
-      ctx.fillStyle = col;
+      ctx.fillStyle = col || '#E11D48';
       ctx.fillRect(18, cy, 10, 72);
       ctx.textAlign = 'left';
       ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 18px Arial';
-      ctx.fillText(title, 40, cy + 28);
+      ctx.fillText(String(title || ''), 38, cy + 28, 214);
       ctx.fillStyle = '#CBD5E1'; ctx.font = '15px Arial';
-      ctx.fillText(sub, 40, cy + 54);
+      ctx.fillText(String(sub || ''), 38, cy + 54, 214);
     }});
 
     // Glowing swipe prompt
     ctx.fillStyle = urgentMode ? '#F43F5E' : '#2DD4BF';
-    ctx.fillRect(54, 444, 172, 34);
+    ctx.fillRect(46, 444, 188, 34);
     ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; ctx.font = 'bold 17px Arial';
-    ctx.fillText(urgentMode ? 'OPEN NOW' : 'SWIPE TO SCROLL', 140, 467);
+    ctx.fillText(urgentMode ? (CFG.phone_cta_urgent || 'OPEN NOW') : (CFG.phone_cta_norm || 'SWIPE TO SCROLL'), 140, 467, 178);
 
     const tex = new THREE.CanvasTexture(tc);
     tex.encoding = THREE.sRGBEncoding;
@@ -500,11 +502,11 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
     ctx.strokeRect(8, 8, 324, 444);
 
     ctx.fillStyle = '#2DD4BF'; ctx.font = 'bold 20px Arial'; ctx.textAlign = 'center';
-    ctx.fillText(CFG.scan_title || 'NEURAL DOPAMINE SCAN', 170, 46);
-    ctx.fillStyle = '#F43F5E'; ctx.font = 'bold 44px Arial';
-    ctx.fillText(CFG.scan_stat || '-40% FOCUS', 170, 108);
+    ctx.fillText(CFG.scan_title || 'NEURAL DOPAMINE SCAN', 170, 46, 304);
+    ctx.fillStyle = '#F43F5E'; ctx.font = 'bold 42px Arial';
+    ctx.fillText(CFG.scan_stat || '-40% FOCUS', 170, 108, 304);
     ctx.fillStyle = '#FBBF24'; ctx.font = 'bold 18px Arial';
-    ctx.fillText(CFG.scan_sub || 'CRASH LASTS 6 HOURS', 170, 140);
+    ctx.fillText(CFG.scan_sub || 'CRASH LASTS 6 HOURS', 170, 140, 304);
 
     // Draw Baseline vs Spike-Crash Graph!
     ctx.fillStyle = '#161E38'; ctx.fillRect(26, 166, 288, 175);
@@ -524,13 +526,13 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
     ctx.stroke();
 
     ctx.fillStyle = '#94A3B8'; ctx.font = 'bold 15px Arial'; ctx.textAlign = 'left';
-    ctx.fillText('7:01 AM SCROLL', 36, 368);
+    ctx.fillText(CFG.scan_left_lbl || '7:01 AM SCROLL', 32, 368, 134);
     ctx.fillStyle = '#F43F5E'; ctx.textAlign = 'right';
-    ctx.fillText('3:00 PM FOG', 304, 368);
+    ctx.fillText(CFG.scan_right_lbl || '3:00 PM FOG', 308, 368, 134);
 
     ctx.fillStyle = '#1E293B'; ctx.fillRect(26, 388, 288, 48);
-    ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; ctx.font = 'bold 19px Arial';
-    ctx.fillText('REWARD SYSTEM: DEPLETED', 170, 419);
+    ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center'; ctx.font = 'bold 18px Arial';
+    ctx.fillText(CFG.scan_footer || 'REWARD SYSTEM: DEPLETED', 170, 419, 276);
 
     const tex = new THREE.CanvasTexture(tc);
     tex.encoding = THREE.sRGBEncoding;
@@ -544,17 +546,17 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
     ctx.fillStyle = '#F8FAFC'; ctx.fillRect(0, 0, 480, 300);
     ctx.fillStyle = '#1E293B'; ctx.fillRect(0, 0, 480, 46);
     ctx.fillStyle = '#2DD4BF'; ctx.font = 'bold 19px Arial'; ctx.textAlign = 'left';
-    ctx.fillText(CFG.laptop_hdr || 'DEEP WORK • BIG PROJECT', 18, 30);
+    ctx.fillText(CFG.laptop_hdr || 'DEEP WORK • BIG PROJECT', 18, 30, 300);
     ctx.fillStyle = '#F43F5E'; ctx.textAlign = 'right';
-    ctx.fillText(CFG.laptop_due || 'DUE 5:00 PM', 462, 30);
+    ctx.fillText(CFG.laptop_due || 'DUE 5:00 PM', 462, 30, 140);
 
     ctx.fillStyle = '#0F172A'; ctx.textAlign = 'left'; ctx.font = 'bold 26px Arial';
-    ctx.fillText(CFG.laptop_title || 'Chapter 1: Core Strategy', 28, 102);
+    ctx.fillText(CFG.laptop_title || 'Chapter 1: Core Strategy', 28, 102, 424);
     ctx.fillStyle = '#94A3B8'; ctx.font = '22px Arial';
-    ctx.fillText(CFG.laptop_status || '|  (0 words written...)', 28, 152);
+    ctx.fillText(CFG.laptop_status || '|  (0 words written...)', 28, 152, 424);
     ctx.fillStyle = '#FEE2E2'; ctx.fillRect(28, 206, 424, 58);
     ctx.fillStyle = '#BE123C'; ctx.font = 'bold 20px Arial'; ctx.textAlign = 'center';
-    ctx.fillText(CFG.laptop_callout || 'REQUIRES 3 HOURS OF DEEP FOCUS', 240, 243);
+    ctx.fillText(CFG.laptop_callout || 'REQUIRES 3 HOURS OF DEEP FOCUS', 240, 243, 408);
 
     const tex = new THREE.CanvasTexture(tc);
     tex.encoding = THREE.sRGBEncoding;
@@ -683,23 +685,26 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
   standPhoneGrp.add(spBody, spScr);
   room.add(standPhoneGrp);
 
-  // Crisp Labeled 3D Floating Notification Cards (Dopamine Swarm orbiting cleanly around phone!)
+  // Crisp Labeled 3D Floating Notification Cards (Topic-Matched Swarm orbiting cleanly around phone!)
   function makeNotifBadgeTex(bgHex, label) {{
     const tc = document.createElement('canvas');
     tc.width = 160; tc.height = 110;
     const ctx = tc.getContext('2d');
     ctx.fillStyle = bgHex; ctx.fillRect(0, 0, 160, 110);
     ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 8; ctx.strokeRect(6, 6, 148, 98);
-    ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 46px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(label, 80, 58);
+    const txt = String(label || 'ALERT');
+    const fs = txt.length <= 4 ? 44 : (txt.length <= 5 ? 36 : 30);
+    ctx.fillStyle = '#FFFFFF'; ctx.font = `bold ${{fs}}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(txt, 80, 58, 138);
     const tex = new THREE.CanvasTexture(tc);
     tex.encoding = THREE.sRGBEncoding;
     return tex;
   }}
-  const notifSpecs = [
-    ['#E11D48', '99+'], ['#F59E0B', 'PING!'], ['#3B82F6', 'MSG'], ['#E11D48', 'LIVE'],
-    ['#EC4899', 'LIKE'], ['#F43F5E', 'ALERT'],
-  ];
+  const badgeColors = ['#E11D48', '#F59E0B', '#3B82F6', '#E11D48', '#EC4899', '#F43F5E'];
+  const badgeLabels = (Array.isArray(CFG.swarm_badges) && CFG.swarm_badges.length >= 6)
+    ? CFG.swarm_badges.slice(0, 6)
+    : ['99+', 'PING!', 'MSG', 'LIVE', 'LIKE', 'ALERT'];
+  const notifSpecs = badgeLabels.map((lbl, idx) => [badgeColors[idx % badgeColors.length], lbl]);
   const notifMats = notifSpecs.map(([bg, lbl]) => new THREE.MeshBasicMaterial({{ map: makeNotifBadgeTex(bg, lbl) }}));
 
   const notifSwarm = new THREE.Group();
@@ -904,6 +909,7 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
   const T_TIMER = CFG.t_timer;
   const T_SCAN = CFG.t_scan;
   const T_DESK = CFG.t_desk;
+  const T_AGREE = (typeof CFG.t_agree === 'number') ? CFG.t_agree : (T_DESK + (CFG.t_ping - T_DESK) * 0.62);
   const T_PING = CFG.t_ping;
   const T_END = CFG.t_endcard;
 
@@ -1007,15 +1013,15 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
       lookAt.set(-0.08, 1.82, -1.35);
       handRaise = 0.02;
     }} else if (t < T_PING) {{
-      // Beat 6: POV pans LEFT to inspect the 3D Deep-Work Study Desk & Laptop (PROJECT DUE 5:00 PM • 0 WORDS)!
-      const dur6 = T_PING - T_DESK;
+      // Beat 6: POV pans LEFT to inspect the 3D Deep-Work Study Desk & Laptop, then turns back to Partner on T_AGREE!
       const local = t - T_DESK;
-      if (local < dur6 * 0.62) {{
+      const splitAt = Math.max(1.2, T_AGREE - T_DESK);
+      if (local < splitAt) {{
         const u = smooth(local / 0.90);
         camPos.set(lerp(-0.04, -0.58, u), lerp(1.84, 1.54, u), lerp(0.38, -0.45, u));
         lookAt.set(lerp(-0.08, -2.22, u), lerp(1.82, 1.24, u), lerp(-1.35, -0.55, u));
       }} else {{
-        const u = smooth((local - dur6 * 0.62) / 0.85);
+        const u = smooth((local - splitAt) / 0.75);
         camPos.set(lerp(-0.58, 0.05, u), lerp(1.54, 1.84, u), lerp(-0.45, 0.48, u));
         lookAt.set(lerp(-2.22, 0.05, u), lerp(1.24, 1.84, u), lerp(-0.55, -1.35, u));
         handRaise = lerp(0.05, 0.25, u);
@@ -1476,18 +1482,104 @@ def _derive_dynamic_pov_labels(scenes_meta: list[dict[str, Any]], config: dict[s
     }
 
 
+def _fmt_srt_ts(sec: float) -> str:
+    ms = max(int(round(sec * 1000)), 0)
+    hh, rem = divmod(ms, 3600000)
+    mm, rem = divmod(rem, 60000)
+    ss, msec = divmod(rem, 1000)
+    return f"{hh:02d}:{mm:02d}:{ss:02d},{msec:03d}"
+
+
+def _write_pov_srt(dialogue_events: list[dict[str, Any]], srt_path: Path) -> None:
+    blocks: list[str] = []
+    for idx, ev in enumerate(dialogue_events, start=1):
+        blocks.append(
+            f"{idx}\n{_fmt_srt_ts(float(ev['start']))} --> {_fmt_srt_ts(float(ev['end']))}\n{ev['text']}\n"
+        )
+    srt_path.parent.mkdir(parents=True, exist_ok=True)
+    srt_path.write_text("\n".join(blocks), encoding="utf-8")
+
+
+def _schedule_pov_dialogue_events(
+    raw_clips: list[dict[str, Any]],
+    gap_scale: float = 1.0,
+    endcard_dur: float = 3.6,
+) -> tuple[list[dict[str, Any]], dict[str, float]]:
+    """Compute exact beat timestamps & camera cuts locked directly to each spoken clip's real duration."""
+    dialogue_events: list[dict[str, Any]] = []
+    beat_starts: dict[str, float] = {}
+    cursor = 0.65 * gap_scale
+
+    for clip in raw_clips:
+        beat = clip["beat"]
+        dur = float(clip["dur"])
+        if beat == "trap":
+            cursor += 0.22 * gap_scale
+        elif beat == "explain":
+            cursor += 0.45 * gap_scale
+        elif beat == "ping":
+            cursor += 1.25 * gap_scale
+
+        beat_starts[beat] = cursor
+        dialogue_events.append({
+            "beat": beat,
+            "speaker": clip["speaker"],
+            "text": clip["text"],
+            "start": round(cursor, 3),
+            "end": round(cursor + dur, 3),
+            "wav_path": clip["wav_path"],
+        })
+        cursor += dur + (0.28 * gap_scale)
+
+    t_trap = max(beat_starts["trap"] - 0.14 * gap_scale, 0.8)
+    t_explain = max(beat_starts["explain"] - 0.30 * gap_scale, t_trap + 0.8)
+    t_timer = max(beat_starts["timer_react"] - 0.22 * gap_scale, t_explain + 0.8)
+    t_scan = max(beat_starts["scan"] - 0.22 * gap_scale, t_timer + 0.8)
+    t_desk = max(beat_starts["desk"] - 0.22 * gap_scale, t_scan + 0.8)
+    t_agree = max(beat_starts["agree"] - 0.18 * gap_scale, t_desk + 1.0)
+    t_ping = max(beat_starts["ping"] - 1.15 * gap_scale, t_agree + 0.6)
+    t_endcard = cursor + 0.40 * gap_scale
+    total_dur = t_endcard + endcard_dur
+    timings = {
+        "t_trap": round(t_trap, 3),
+        "t_explain": round(t_explain, 3),
+        "t_timer": round(t_timer, 3),
+        "t_scan": round(t_scan, 3),
+        "t_desk": round(t_desk, 3),
+        "t_agree": round(t_agree, 3),
+        "t_ping": round(t_ping, 3),
+        "t_endcard": round(t_endcard, 3),
+        "total_dur": round(total_dur, 3),
+    }
+    return dialogue_events, timings
+
+
+def _probe_audio_duration(path: Path) -> float:
+    res = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
+        capture_output=True, text=True, check=True,
+    )
+    return max(float(res.stdout.strip() or 1.0), 0.6)
+
+
 def render_pov_3d_toon_video_for_pipeline(
     scenes_meta: list[dict[str, Any]],
     audio_bundle: Any,
     out_video_path: Path,
     config: dict[str, Any],
     is_short: bool = True,
+    pov_episode: dict[str, Any] | None = None,
+    topic_meta: dict[str, Any] | None = None,
 ) -> Path:
     """Pipeline adapter: render any daily HabitSains episode in Studio v9 3D Cel-Shaded POV style.
 
+    Uses a beat-locked 2-speaker POV script + topic-matched 3D props (phone cards, floating badges,
+    Brain Scan tablet, study desk laptop, [A]/[B] cliffhanger) so EVERY spoken line, SFX, and
+    3D camera cut matches the exact visual action on screen.
+
     Renders WebGL cleanly at 720x1280 (vertical) or 1280x720 (landscape) @ 24fps and upscales via
     FFmpeg Lanczos directly to exact target resolution (1080x1920 or 1920x1080), keeping Shorts
-    strictly <= 58.5s for 100% YouTube Shorts / Reels / TikTok & verify_pipeline.py compliance.
+    strictly <= 58.2s with yuv420p TV-range Main profile + 48kHz stereo AAC for Meta & YouTube.
     """
     from playwright.sync_api import sync_playwright
 
@@ -1499,68 +1591,96 @@ def render_pov_3d_toon_video_for_pipeline(
     vid_cfg = config.get("video", {}).get("shorts" if is_short else "youtube_long", {})
     target_w = int(vid_cfg.get("width", 1080 if is_short else 1920))
     target_h = int(vid_cfg.get("height", 1920 if is_short else 1080))
-    pause_sec = float(vid_cfg.get("padding_after_audio_sec", 0.30 if is_short else 0.45))
     max_short_sec = float(vid_cfg.get("max_duration_sec", 59.0)) if is_short else 9999.0
 
     # Render Three.js WebGL at crisp 720p (2.25x faster headless SwiftShader) -> Lanczos upscale to target 1080p!
     gl_w, gl_h = (720, 1280) if target_h >= target_w else (1280, 720)
     fps = 24
 
-    # Build synced dialogue timeline directly from pipeline's generated voiceover scenes!
-    dialogue: list[dict[str, Any]] = []
-    cursor = 0.0
-    for idx, sr in enumerate(audio_bundle.scene_results):
-        seg_dur = max(float(sr.duration_sec) + pause_sec, 1.0)
-        txt = str(getattr(sr, "text", "") or (scenes_meta[idx].get("narration", "") if idx < len(scenes_meta) else "")).strip()
-        dialogue.append({
-            "speaker": "pov" if idx == 0 else "partner",
-            "text": txt,
-            "start": round(cursor, 3),
-            "end": round(cursor + float(sr.duration_sec), 3),
-        })
-        cursor += seg_dur
-
-    audio_dur = max(float(getattr(audio_bundle, "total_duration_sec", cursor)), 4.0)
-    if is_short:
-        safe_cap = min(max_short_sec - 0.8, 58.2)
-        if audio_dur + 3.4 <= safe_cap:
-            t_endcard = audio_dur + 0.20
-            total_dur = t_endcard + 3.20
-        else:
-            total_dur = min(audio_dur + 0.25, safe_cap)
-            t_endcard = max(total_dur - 2.60, total_dur * 0.86)
-    else:
-        t_endcard = audio_dur + 0.30
-        total_dur = t_endcard + 3.80
-
-    # Distribute the 6 cinematic 3D POV beats smoothly across the narration duration!
-    speech_span = max(t_endcard, 6.0)
-    t_trap = speech_span * 0.14
-    t_explain = speech_span * 0.28
-    t_timer = speech_span * 0.40
-    t_scan = speech_span * 0.52
-    t_desk = speech_span * 0.70
-    t_ping = speech_span * 0.85
-
-    labels = _derive_dynamic_pov_labels(scenes_meta, config)
-    timeline_cfg: dict[str, Any] = {
-        **labels,
-        "t_trap": round(t_trap, 3),
-        "t_explain": round(t_explain, 3),
-        "t_timer": round(t_timer, 3),
-        "t_scan": round(t_scan, 3),
-        "t_desk": round(t_desk, 3),
-        "t_ping": round(t_ping, 3),
-        "t_endcard": round(t_endcard, 3),
-        "dialogue": dialogue,
-    }
+    # Resolve & sanitize beat-locked 2-speaker POV episode matched to TODAY'S EXACT TOPIC!
+    meta = topic_meta or {}
+    inferred_topic = str(
+        meta.get("topic")
+        or (scenes_meta[0].get("visual_headline", "") if scenes_meta else "")
+        or "Science-Backed Deep Focus"
+    ).strip()
+    episode = normalize_pov_3d_episode(
+        raw_ep=pov_episode,
+        topic=inferred_topic,
+        angle=str(meta.get("angle", "")),
+        hook=str(meta.get("hook", "")),
+        scenes_meta=scenes_meta,
+        config=config,
+    )
+    props = episode["props"]
+    script_lines = episode["dialogue"]
 
     work_dir = out_video_path.parent / "_v9_pov_work"
     work_dir.mkdir(parents=True, exist_ok=True)
-    master_voice = Path(audio_bundle.master_audio_path)
+
+    # Synthesize true 2-speaker neural dialogue (ChristopherNeural Brain Guide vs AndrewMultilingualNeural POV)
+    voice_partner = "en-US-ChristopherNeural"
+    voice_pov = "en-US-AndrewMultilingualNeural"
+    raw_clips: list[dict[str, Any]] = []
+    print(f"[v9-pov] Synthesizing 8 beat-locked 2-speaker POV lines for: {props.get('series_title')}...", flush=True)
+    for idx, line in enumerate(script_lines):
+        mp3 = work_dir / f"dlg_{idx:02d}.mp3"
+        wav = work_dir / f"dlg_{idx:02d}.wav"
+        is_partner = line["speaker"] == "partner"
+        voice = voice_partner if is_partner else voice_pov
+        rate = "+7%" if is_partner else "+8%"
+        dur = asyncio.run(_synth_edge_line(line["text"], mp3, voice=voice, rate=rate))
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", str(mp3), "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(wav)],
+            capture_output=True, check=True,
+        )
+        raw_clips.append({
+            "beat": line["beat"],
+            "speaker": line["speaker"],
+            "text": line["text"],
+            "dur": dur,
+            "wav_path": str(wav),
+        })
+
+    # Schedule exact beat timestamps & enforce safe <= 58.2s Shorts ceiling without ever clipping a word!
+    safe_cap = min(max_short_sec - 0.8, 58.2) if is_short else 9999.0
+    endcard_dur = 3.5 if is_short else 4.2
+    dialogue_events, timings = _schedule_pov_dialogue_events(raw_clips, gap_scale=1.0, endcard_dur=endcard_dur)
+
+    if is_short and timings["total_dur"] > safe_cap:
+        # Step 1: Slightly tighten inter-beat pauses while keeping camera choreography intact
+        dialogue_events, timings = _schedule_pov_dialogue_events(raw_clips, gap_scale=0.72, endcard_dur=3.1)
+
+    if is_short and timings["total_dur"] > safe_cap:
+        # Step 2: Uniform gentle atempo speedup on speech clips so zero sentences are ever cut off!
+        speech_sum = sum(c["dur"] for c in raw_clips)
+        overhead = timings["total_dur"] - speech_sum
+        target_speech = max(safe_cap - overhead - 0.4, speech_sum * 0.78)
+        tempo = min(max(speech_sum / max(target_speech, 1.0), 1.03), 1.24)
+        print(f"[v9-pov] Adjusting 2-speaker pacing by {tempo:.2f}x to fit cleanly inside {safe_cap:.1f}s Shorts cap...", flush=True)
+        for idx, clip in enumerate(raw_clips):
+            fast_wav = work_dir / f"dlg_{idx:02d}_fast.wav"
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", clip["wav_path"], "-af", f"atempo={tempo:.3f}", "-ar", "44100", "-ac", "2", "-c:a", "pcm_s16le", str(fast_wav)],
+                capture_output=True, check=True,
+            )
+            clip["wav_path"] = str(fast_wav)
+            clip["dur"] = _probe_audio_duration(fast_wav)
+        dialogue_events, timings = _schedule_pov_dialogue_events(raw_clips, gap_scale=0.72, endcard_dur=3.0)
+
+    t_trap = timings["t_trap"]
+    t_explain = timings["t_explain"]
+    t_timer = timings["t_timer"]
+    t_scan = timings["t_scan"]
+    t_desk = timings["t_desk"]
+    t_agree = timings["t_agree"]
+    t_ping = timings["t_ping"]
+    t_endcard = timings["t_endcard"]
+    total_dur = timings["total_dur"]
+
     mixed_m4a = work_dir / "mixed_v9_pov.m4a"
-    _mix_pipeline_audio_with_sfx(
-        master_voice_path=master_voice,
+    _build_habitsains_soundscape(
+        dialogue_events=dialogue_events,
         total_dur=total_dur,
         trap_time=t_trap,
         timer_time=t_timer,
@@ -1570,12 +1690,38 @@ def render_pov_3d_toon_video_for_pipeline(
         work_dir=work_dir,
     )
 
+    # Keep pipeline subtitles.srt & audio_bundle metadata synced with the real spoken 2-speaker POV script!
+    srt_path_str = getattr(audio_bundle, "srt_path", "") if audio_bundle is not None else ""
+    if srt_path_str:
+        _write_pov_srt(dialogue_events, Path(srt_path_str))
+    if audio_bundle is not None and hasattr(audio_bundle, "total_duration_sec"):
+        try:
+            audio_bundle.total_duration_sec = round(total_dur, 2)
+        except Exception:
+            pass
+
+    timeline_cfg: dict[str, Any] = {
+        **props,
+        "t_trap": t_trap,
+        "t_explain": t_explain,
+        "t_timer": t_timer,
+        "t_scan": t_scan,
+        "t_desk": t_desk,
+        "t_agree": t_agree,
+        "t_ping": t_ping,
+        "t_endcard": t_endcard,
+        "dialogue": [
+            {"speaker": e["speaker"], "text": e["text"], "start": e["start"], "end": e["end"]}
+            for e in dialogue_events
+        ],
+    }
+
     html_doc = _build_habitsains_3d_html(three_js_path.read_text(encoding="utf-8"), timeline_cfg, gl_w, gl_h)
     total_frames = int(round(total_dur * fps))
     silent_mp4 = work_dir / "video_v9_pov_silent.mp4"
 
     print(
-        f"[video] Rendering Studio v9 3D Cel-Shaded POV ({gl_w}x{gl_h} -> {target_w}x{target_h} @ {fps}fps, {total_dur:.1f}s)...",
+        f"[video] Rendering Story-Synced Studio v9 3D POV ({gl_w}x{gl_h} -> {target_w}x{target_h} @ {fps}fps, {total_dur:.1f}s)...",
         flush=True,
     )
     cmd = [

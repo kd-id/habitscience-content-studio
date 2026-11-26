@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -76,7 +77,53 @@ Return ONLY valid JSON with this exact schema:
         "narration": "Fast, charismatic 1-2 sentence spoken beat (~6-8 seconds).",
         "visual_prompt": "Distinct vertical 9:16 cinematic illustrated storytelling scene (strictly NO text/letters)"
       }}
-    ]
+    ],
+    "pov_3d_episode": {{
+      "props": {{
+        "loc_main": "YOUR DESK • 2:14 PM (or YOUR BEDROOM • 7:01 AM / 11:42 PM matching topic)",
+        "series_title": "SHORT 2-4 WORD ALL-CAPS TITLE (max 20 chars)",
+        "phone_time": "2:14",
+        "phone_norm_hdr": "SHORT HEADER (max 19 chars, e.g. 14 FOCUS TRAPS)",
+        "phone_norm_cards": [
+          ["#E11D48", "CARD 1 TITLE (max 15 chars)", "Short topic bait (max 24 chars)"],
+          ["#3B82F6", "CARD 2 TITLE (max 15 chars)", "Short topic bait (max 24 chars)"],
+          ["#F59E0B", "CARD 3 TITLE (max 15 chars)", "Short topic bait (max 24 chars)"]
+        ],
+        "phone_cta_norm": "SWIPE NOW (max 15 chars)",
+        "phone_urgent_hdr": "3 URGENT TRAPS! (max 19 chars)",
+        "phone_urgent_cards": [
+          ["#E11D48", "ALERT 1 (max 15 chars)", "Temptation subtext (max 24 chars)"],
+          ["#F59E0B", "ALERT 2 (max 15 chars)", "Temptation subtext (max 24 chars)"],
+          ["#E11D48", "ALERT 3 (max 15 chars)", "Temptation subtext (max 24 chars)"]
+        ],
+        "phone_cta_urgent": "TAP NOW (max 15 chars)",
+        "swarm_badges": ["SPIKE", "DRIFT", "PING!", "NOISE", "TRAP", "FOG"],
+        "scan_title": "TOPIC BRAIN SCAN (max 22 chars)",
+        "scan_stat": "-40% FOCUS (max 14 chars)",
+        "scan_sub": "SHORT MECHANISM SUB (max 24 chars)",
+        "scan_left_lbl": "TRIGGER (max 15 chars)",
+        "scan_right_lbl": "RESULT (max 15 chars)",
+        "scan_footer": "SHORT STATUS FOOTER (max 25 chars)",
+        "laptop_hdr": "DEEP WORK • PRIORITY (max 22 chars)",
+        "laptop_due": "DUE 5:00 PM",
+        "laptop_title": "Topic-matched task title (max 26 chars)",
+        "laptop_status": "|  (Short status max 26 chars)",
+        "laptop_callout": "SHORT ACTIONABLE RULE (max 30 chars)",
+        "option_a": "CONCRETE SCIENCE-BACKED HABIT CHOICE (max 44 chars)",
+        "option_b": "TEMPTING BAD-HABIT CHOICE (max 44 chars)",
+        "end_sub": "Part 2 reveals what happens to your brain next"
+      }},
+      "dialogue": [
+        {{"beat": "intro", "speaker": "pov", "text": "10-16 words: POV looks at the ringing alarm & glowing phone on nightstand, voicing the relatable temptation tied directly to THIS topic."}},
+        {{"beat": "trap", "speaker": "partner", "text": "10-16 words: Starts with STOP! or WAIT! right as 3D warning cards erupt around the phone, naming the exact trap in THIS topic."}},
+        {{"beat": "explain", "speaker": "partner", "text": "16-24 words: Prefrontal Cortex guide faces POV eye-to-eye and explains the real neuroscience mechanism of THIS exact topic."}},
+        {{"beat": "timer_react", "speaker": "pov", "text": "7-12 words: Shocked POV reaction right as the FOCUS WINDOW countdown timer activates on screen."}},
+        {{"beat": "scan", "speaker": "partner", "text": "12-18 words: Explicitly says Look at this scan and cites the EXACT scan_stat & effect displayed on the 3D Brain Scan tablet."}},
+        {{"beat": "desk", "speaker": "partner", "text": "12-18 words: Explicitly points left to the 3D laptop on the study desk and gives the concrete habit fix for THIS topic."}},
+        {{"beat": "agree", "speaker": "pov", "text": "5-10 words: POV turns back to guide and commits to the habit fix."}},
+        {{"beat": "ping", "speaker": "partner", "text": "11-17 words: Reacts directly as 3 urgent alerts buzz on the nightstand phone and POV's hand reaches back toward it!"}}
+      ]
+    }}
   }},
   "carousel_social": {{
     "title": "Carousel title",
@@ -102,6 +149,7 @@ Return ONLY valid JSON with this exact schema:
 Strict beat counts for fast, engaging visual pacing:
 - youtube_long.scenes MUST have 8 distinct visual beats (~12-16s each, total ~2 minutes of captivating storytelling).
 - shorts_reels_tiktok.scenes MUST have 6 punchy vertical beats (~6-8s each, total ~38-48 seconds, strictly under 58 seconds).
+- shorts_reels_tiktok.pov_3d_episode MUST have ALL 8 beat-locked 2-speaker dialogue lines (intro, trap, explain, timer_react, scan, desk, agree, ping) totaling 85-118 words (~40-50 seconds spoken) so EVERY spoken line directly matches what the 3D POV camera is showing (nightstand phone -> floating 3D cards -> partner face-to-face -> HUD timer -> 3D Brain Scan tablet -> 3D desk laptop -> commitment -> 3 urgent vibrating alerts -> [A]/[B] choice).
 - carousel_social.slides MUST have exactly 5 slides (Cover, 3 Core Science Insights, Actionable CTA).
 """
 
@@ -279,6 +327,585 @@ def _truncate_words(text: str, max_len: int) -> str:
     return (clipped or clean[: max_len - 3]) + "..."
 
 
+REQUIRED_POV_BEATS: tuple[str, ...] = (
+    "intro",
+    "trap",
+    "explain",
+    "timer_react",
+    "scan",
+    "desk",
+    "agree",
+    "ping",
+)
+_BEAT_SPEAKERS: dict[str, str] = {
+    "intro": "pov",
+    "trap": "partner",
+    "explain": "partner",
+    "timer_react": "pov",
+    "scan": "partner",
+    "desk": "partner",
+    "agree": "pov",
+    "ping": "partner",
+}
+_BADGE_COLORS: tuple[str, ...] = (
+    "#E11D48",
+    "#F59E0B",
+    "#3B82F6",
+    "#EC4899",
+    "#8B5CF6",
+    "#F43F5E",
+)
+
+
+def _clamp_prop(val: Any, max_len: int, fallback: str) -> str:
+    raw = " ".join(str(val or "").split()).strip()
+    if not raw:
+        raw = fallback
+    if len(raw) <= max_len:
+        return raw
+    clipped = raw[:max_len].rsplit(" ", 1)[0].rstrip(" ,;:-")
+    return clipped if len(clipped) >= max(4, max_len // 2) else raw[:max_len].rstrip()
+
+
+def _extract_series_title(topic: str) -> str:
+    clean = re.sub(r"\([^)]*\)", "", topic or "")
+    clean = re.sub(r"[^A-Za-z0-9\s\-]", " ", clean)
+    stop = {
+        "why", "how", "the", "your", "what", "does", "do", "is", "are", "of", "to", "in", "for",
+        "and", "a", "an", "on", "supports", "support", "affects", "affect", "causes", "cause",
+        "makes", "make", "helps", "help", "shows", "show", "secretly", "actually", "really",
+        "related", "behind", "about", "into", "with", "from",
+    }
+    words = [w for w in clean.split() if w]
+    key_words = [w for w in words if w.lower() not in stop]
+    chosen = (key_words[:3] if len(key_words) >= 2 else words[:3]) or ["FOCUS", "TRAP"]
+    title = " ".join(chosen).upper()
+    if len(title) > 20:
+        title = " ".join(chosen[:2]).upper()[:20].strip()
+    return title or "THE FOCUS TRAP"
+
+
+def _extract_spoken_topic(topic: str) -> str:
+    clean = re.sub(r"\([^)]*\)", "", topic or "").strip().rstrip("?!.")
+    if ":" in clean:
+        left, right = [p.strip() for p in clean.split(":", 1)]
+        clean = left if 2 <= len(left.split()) <= 6 else right
+    words = clean.split()
+    if len(words) > 7:
+        clean = " ".join(words[:7])
+    return clean or "deep focus"
+
+
+def build_topic_matched_pov_3d_episode(
+    topic: str,
+    angle: str = "",
+    hook: str = "",
+    scenes_meta: list[dict[str, Any]] | None = None,
+    config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Synthesize a beat-locked 8-line 2-speaker 3D POV script & matching 3D prop text for ANY topic.
+
+    Every single line references what the 3D POV camera shows in that exact beat:
+      intro (nightstand alarm + phone) -> trap (STOP! + 3D floating cards erupt) ->
+      explain (Prefrontal Cortex guide face-to-face) -> timer_react (FOCUS WINDOW HUD) ->
+      scan (3D Brain Scan tablet) -> desk (3D study desk & laptop) ->
+      agree (POV commits) -> ping (3 vibrating urgent alerts + hand reaches -> [A]/[B] choice).
+    """
+    cfg = config or {}
+    handle = str(cfg.get("branding", {}).get("watermark_text", "@HabitSains"))
+    scenes = scenes_meta or []
+    blob = " ".join(
+        [
+            topic or "",
+            angle or "",
+            hook or "",
+            *[f"{s.get('visual_headline', '')} {s.get('on_screen_callout', '')} {s.get('narration', '')}" for s in scenes],
+        ]
+    )
+    low = blob.lower()
+    series_title = _extract_series_title(topic)
+    spoken_topic = _extract_spoken_topic(topic)
+    clean_laptop_title = (
+        spoken_topic
+        if len(spoken_topic) <= 26
+        else _clamp_prop(f"{series_title.title()} Session", 26, "Deep Focus Session")
+    )
+    end_sub_line = f"Part 2 reveals what happens next • {handle}"
+
+    # Extract an authentic numeric stat from the topic or scenes when present
+    stat_match = re.search(r"(\d{1,3}\s?%|\d{1,2}\s?(?:min|minutes|hours|hrs))", blob, re.IGNORECASE)
+    extracted_num = ""
+    if stat_match:
+        extracted_num = stat_match.group(1).upper().replace("MINUTES", "MIN").replace("HOURS", "HRS").strip()
+
+    # Select rich neuroscience-matched archetype + weave exact topic specifics into props & lines!
+    if "coupling" in low or ("dopamine" in low and any(k in low for k in ("attention", "network", "focus", "scroll", "drain", "reward"))):
+        is_coupling = "coupling" in low or "network" in low
+        stat_str = extracted_num if "%" in extracted_num else "-40% COUPLING" if is_coupling else "-40% FOCUS"
+        props = {
+            "loc_main": "YOUR DESK • 2:14 PM",
+            "loc_sub": f"{handle} • Part 1",
+            "series_eyebrow": "HABITSAINS POV",
+            "series_title": series_title,
+            "timer_label": "FOCUS WINDOW",
+            "phone_time": "2:14",
+            "phone_norm_hdr": "14 DOPAMINE BAITS",
+            "phone_norm_cards": [
+                ["#E11D48", "SHORT CLIPS", "Quick dopamine hit?"],
+                ["#3B82F6", "GROUP CHAT", "12 unread pings waiting"],
+                ["#F59E0B", "SOCIAL FEED", "Breaks attention link"],
+            ],
+            "phone_cta_norm": "CHECK QUICKLY",
+            "phone_urgent_hdr": "3 DOPAMINE TRAPS!",
+            "phone_urgent_cards": [
+                ["#E11D48", "VIRAL CLIP", "Tap for instant novelty"],
+                ["#F59E0B", "NEW REPLY", "Pulls brain off-task"],
+                ["#E11D48", "TRENDING NOW", "Just 60 seconds?"],
+            ],
+            "phone_cta_urgent": "TAP NOW",
+            "swarm_badges": ["SPIKE", "DRIFT", "BAIT", "SPLIT", "NOISE", "CRASH"],
+            "scan_title": "ATTENTION NETWORK SCAN" if is_coupling else "DOPAMINE FOCUS SCAN",
+            "scan_stat": stat_str,
+            "scan_sub": "NETWORK LINK FRACTURED" if is_coupling else "BASELINE DOPAMINE CRASH",
+            "scan_left_lbl": "CHEAP SPIKE",
+            "scan_right_lbl": "UNCOUPLED" if is_coupling else "BRAIN FOG",
+            "scan_footer": "ATTENTION LINK: WEAKENED" if is_coupling else "REWARD SYSTEM: DEPLETED",
+            "laptop_hdr": "DEEP WORK • PRIORITY",
+            "laptop_due": "DUE 5:00 PM",
+            "laptop_title": clean_laptop_title,
+            "laptop_status": "|  (Waiting for steady focus)",
+            "laptop_callout": "STEADY DOPAMINE = DEEP FOCUS",
+            "end_top": "PART 1 • YOU DECIDE",
+            "option_a": "LOCK PHONE AWAY & PROTECT ATTENTION LINK" if is_coupling else "LOCK PHONE AWAY FOR 45 MIN DEEP WORK",
+            "option_b": "TAP ONE ALERT & FRACTURE YOUR FOCUS",
+            "end_sub": end_sub_line,
+        }
+        if is_coupling:
+            dialogue = [
+                {"beat": "intro", "speaker": "pov", "text": "Two fourteen already... my focus is fading. Maybe one quick phone check will wake my brain up."},
+                {"beat": "trap", "speaker": "partner", "text": "STOP! Drop that phone! You're about to shatter your brain's dopamine attention coupling!"},
+                {"beat": "explain", "speaker": "partner", "text": "Listen closely. Steady dopamine is the glue that couples your brain's attention networks together. Cheap screen spikes hijack that signal and scatter your focus."},
+                {"beat": "timer_react", "speaker": "pov", "text": "Wait... so quick scrolling literally uncouples my attention networks?!"},
+                {"beat": "scan", "speaker": "partner", "text": "Look at this scan. One dopamine spike drops network coupling forty percent, leaving every complex task feeling impossible."},
+                {"beat": "desk", "speaker": "partner", "text": "Look at that work on your desk. Start five clean minutes with zero screen hits so steady dopamine locks your networks back in."},
+                {"beat": "agree", "speaker": "pov", "text": "Okay, phone stays down. Five clean minutes on the desk."},
+                {"beat": "ping", "speaker": "partner", "text": "Hear those three alerts? Cheap dopamine is already pulling your hand straight back toward the screen!"},
+            ]
+        else:
+            dialogue = [
+                {"beat": "intro", "speaker": "pov", "text": "Ugh... my brain feels foggy. Let me just scroll my phone for two minutes to recharge."},
+                {"beat": "trap", "speaker": "partner", "text": "STOP! Don't touch that screen! You're walking straight into a dopamine crash!"},
+                {"beat": "explain", "speaker": "partner", "text": f"Listen closely. With {spoken_topic.lower()}, cheap novelty floods your reward circuits fast, then drops baseline dopamine below normal for hours."},
+                {"beat": "timer_react", "speaker": "pov", "text": "Wait... two minutes of scrolling ruins my whole focus window?!"},
+                {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Your prefrontal focus drops forty percent right after the spike, turning simple work into mental mud."},
+                {"beat": "desk", "speaker": "partner", "text": "Look over at your desk. Give that task five friction-free minutes without the phone so real motivation builds naturally."},
+                {"beat": "agree", "speaker": "pov", "text": "Alright, alright... I'm putting the phone face down."},
+                {"beat": "ping", "speaker": "partner", "text": "There go three alerts at once! Your hand is already twitching back toward the phone!"},
+            ]
+    elif any(k in low for k in ("sleep", "insomnia", "bedtime", "midnight", "night", "circadian", "melatonin")):
+        props = {
+            "loc_main": "YOUR BEDROOM • 11:42 PM",
+            "loc_sub": f"{handle} • Part 1",
+            "series_eyebrow": "HABITSAINS POV",
+            "series_title": series_title,
+            "timer_label": "RECOVERY WINDOW",
+            "phone_time": "11:42",
+            "phone_norm_hdr": "LATE-NIGHT LOOP",
+            "phone_norm_cards": [
+                ["#E11D48", "AUTOPLAY NEXT", "Blue light blocks melatonin"],
+                ["#3B82F6", "LATE CHAT", "Keeps cortex wide awake"],
+                ["#F59E0B", "JUST 1 MORE", "Steals deep REM sleep"],
+            ],
+            "phone_cta_norm": "WATCH ONE MORE",
+            "phone_urgent_hdr": "3 MIDNIGHT BAITS!",
+            "phone_urgent_cards": [
+                ["#E11D48", "NEW EPISODE", "Just 10 minutes more?"],
+                ["#F59E0B", "FRIEND TAGGED", "Tap before sleeping"],
+                ["#E11D48", "LATE ALERT", "Spikes evening cortisol"],
+            ],
+            "phone_cta_urgent": "OPEN SCREEN",
+            "swarm_badges": ["BLUE", "AWAKE", "REM-", "ALERT", "LATE", "FOG"],
+            "scan_title": "SLEEP RECOVERY SCAN",
+            "scan_stat": extracted_num if "%" in extracted_num else "-35% MEMORY",
+            "scan_sub": "DEEP SLEEP CUT IN HALF",
+            "scan_left_lbl": "11:42 PM SCREEN",
+            "scan_right_lbl": "7:00 AM CRASH",
+            "scan_footer": "MELATONIN: SUPPRESSED",
+            "laptop_hdr": "TOMORROW • BIG TASK",
+            "laptop_due": "DUE 9:00 AM",
+            "laptop_title": clean_laptop_title,
+            "laptop_status": "|  (Needs a rested brain)",
+            "laptop_callout": "SLEEP LOCKS IN MEMORY & FOCUS",
+            "end_top": "PART 1 • YOU DECIDE",
+            "option_a": "CHARGE PHONE OUTSIDE & SLEEP ON TIME",
+            "option_b": '"JUST ONE MORE VIDEO" UNTIL 1:00 AM',
+            "end_sub": end_sub_line,
+        }
+        dialogue = [
+            {"beat": "intro", "speaker": "pov", "text": "Eleven forty-two already... I should sleep, let me just watch one short video first."},
+            {"beat": "trap", "speaker": "partner", "text": "STOP! Put that glowing screen down! You're sabotaging tonight's brain recovery right now!"},
+            {"beat": "explain", "speaker": "partner", "text": "Listen closely. Bright late-night feeds block melatonin and keep your prefrontal cortex wired, slashing the deep sleep that repairs memory and focus."},
+            {"beat": "timer_react", "speaker": "pov", "text": "Wait... ten minutes on my phone messes up tomorrow's whole focus window?!"},
+            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Delayed sleep cuts memory consolidation and leaves your brain running in fog all next afternoon."},
+            {"beat": "desk", "speaker": "partner", "text": "Look at that work waiting on your desk for tomorrow. It needs a fully restored prefrontal cortex, not sleep debt."},
+            {"beat": "agree", "speaker": "pov", "text": "Okay, you're right... lights out, phone stays away."},
+            {"beat": "ping", "speaker": "partner", "text": "Hear those three midnight pings? One tap right now and you'll still be awake at one AM!"},
+        ]
+    elif any(k in low for k in ("morning", "7 am", "7:00", "wake", "cortisol", "sunlight", "alarm")):
+        props = {
+            "loc_main": "YOUR BEDROOM • 7:01 AM",
+            "loc_sub": f"{handle} • Part 1",
+            "series_eyebrow": "HABITSAINS POV",
+            "series_title": series_title,
+            "timer_label": "FOCUS WINDOW",
+            "phone_time": "7:01",
+            "phone_norm_hdr": "19 NOTIFICATIONS",
+            "phone_norm_cards": [
+                ["#E11D48", "SOCIAL FEED", "14 new likes & comments"],
+                ["#3B82F6", "MESSAGES", "3 unread group chats"],
+                ["#F59E0B", "SHORT VIDEOS", "Just 2 minutes? Tap now"],
+            ],
+            "phone_cta_norm": "SWIPE TO SCROLL",
+            "phone_urgent_hdr": "3 URGENT ALERTS!",
+            "phone_urgent_cards": [
+                ["#E11D48", "BOSS • URGENT", "Can you reply right now?!"],
+                ["#F59E0B", "VIRAL REEL", "You were tagged in 4 posts"],
+                ["#E11D48", "BREAKING NEWS", "Tap to see what happened"],
+            ],
+            "phone_cta_urgent": "OPEN NOW",
+            "swarm_badges": ["99+", "PING!", "MSG", "LIVE", "LIKE", "ALERT"],
+            "scan_title": "MORNING DOPAMINE SCAN",
+            "scan_stat": extracted_num if "%" in extracted_num else "-40% FOCUS",
+            "scan_sub": "CRASH LASTS 6 HOURS",
+            "scan_left_lbl": "7:01 AM SCROLL",
+            "scan_right_lbl": "3:00 PM FOG",
+            "scan_footer": "REWARD SYSTEM: DEPLETED",
+            "laptop_hdr": "DEEP WORK • BIG PROJECT",
+            "laptop_due": "DUE 5:00 PM",
+            "laptop_title": clean_laptop_title,
+            "laptop_status": "|  (0 words written...)",
+            "laptop_callout": "PROTECT YOUR FIRST 60 MINUTES",
+            "end_top": "PART 1 • YOU DECIDE",
+            "option_a": "LOCK PHONE AWAY & GET MORNING SUNLIGHT",
+            "option_b": '"JUST TWO MINUTES" OF MORNING SCROLLING',
+            "end_sub": end_sub_line,
+        }
+        dialogue = [
+            {"beat": "intro", "speaker": "pov", "text": "Ugh... seven AM already. Let me just check my phone for two minutes before getting up."},
+            {"beat": "trap", "speaker": "partner", "text": "STOP! Don't touch that screen! You're walking straight into the seven AM focus trap!"},
+            {"beat": "explain", "speaker": "partner", "text": "Listen closely. Your brain wakes up with clean morning chemistry. One bed-scroll spikes cheap dopamine artificially, then crashes your focus for six hours."},
+            {"beat": "timer_react", "speaker": "pov", "text": "Wait... six whole hours ruined from just two minutes?!"},
+            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Your focus capacity drops forty percent, and every hard task feels twice as heavy."},
+            {"beat": "desk", "speaker": "partner", "text": "Look at that project on your desk. Guard your first hour with daylight and deep work, not a fried reward system."},
+            {"beat": "agree", "speaker": "pov", "text": "Okay, okay... I won't check it yet."},
+            {"beat": "ping", "speaker": "partner", "text": "There it goes—three urgent alerts hitting at once! Your hand is already reaching back for it!"},
+        ]
+    elif any(k in low for k in ("multitask", "switch", "23-minute", "23 min", "residue", "interrupt", "notification")):
+        props = {
+            "loc_main": "YOUR DESK • 2:14 PM",
+            "loc_sub": f"{handle} • Part 1",
+            "series_eyebrow": "HABITSAINS POV",
+            "series_title": series_title,
+            "timer_label": "DEEP FOCUS CLOCK",
+            "phone_time": "2:14",
+            "phone_norm_hdr": "TASK SWITCH TRAP",
+            "phone_norm_cards": [
+                ["#3B82F6", "QUICK DM", "Costs 23 min to refocus"],
+                ["#F59E0B", "NEW EMAIL", "Leaves attention residue"],
+                ["#E11D48", "BADGE PING", "Resets working memory"],
+            ],
+            "phone_cta_norm": "CHECK 10 SECS",
+            "phone_urgent_hdr": "3 SWITCH TRIGGERS!",
+            "phone_urgent_cards": [
+                ["#E11D48", "TEAM CHAT", "Quick question right now"],
+                ["#F59E0B", "INBOX +4", "Urgent? Or distraction?"],
+                ["#E11D48", "APP ALERT", "One glance = 23m tax"],
+            ],
+            "phone_cta_urgent": "SWITCH NOW",
+            "swarm_badges": ["23 MIN", "SWITCH", "PING!", "TAB+", "NOISE", "TAX"],
+            "scan_title": "ATTENTION RESIDUE SCAN",
+            "scan_stat": "23 MIN TAX",
+            "scan_sub": "PER SINGLE INTERRUPTION",
+            "scan_left_lbl": "10 SEC GLANCE",
+            "scan_right_lbl": "23 MIN LOST",
+            "scan_footer": "WORKING MEMORY: FRAGMENTED",
+            "laptop_hdr": "SINGLE-TASK • PRIORITY",
+            "laptop_due": "DUE 5:00 PM",
+            "laptop_title": clean_laptop_title,
+            "laptop_status": "|  (1 tab open, zero pings)",
+            "laptop_callout": "ONE TASK AT A TIME = 2X SPEED",
+            "end_top": "PART 1 • YOU DECIDE",
+            "option_a": "AIRPLANE MODE & FINISH ONE TASK CLEANLY",
+            "option_b": "PEEK AT ONE MESSAGE & PAY THE 23-MIN TAX",
+            "end_sub": end_sub_line,
+        }
+        dialogue = [
+            {"beat": "intro", "speaker": "pov", "text": "Ooh, my phone lit up. Let me reply for ten seconds, then jump right back to work."},
+            {"beat": "trap", "speaker": "partner", "text": "STOP! Don't switch tabs! That ten-second glance is an attention-residue trap!"},
+            {"beat": "explain", "speaker": "partner", "text": "Listen closely. Your brain can't truly multitask. Every quick check leaves attention residue stuck on the old message while your working memory scrambles to reload."},
+            {"beat": "timer_react", "speaker": "pov", "text": "Wait... ten seconds costs how much of my focus window?!"},
+            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Research shows a single interruption triggers a twenty-three minute recovery tax before deep focus returns."},
+            {"beat": "desk", "speaker": "partner", "text": "Look at that project on your desk. Keep one tab open and silence every alert until this block is done."},
+            {"beat": "agree", "speaker": "pov", "text": "Got it... airplane mode on. One task only."},
+            {"beat": "ping", "speaker": "partner", "text": "Uh-oh—three pings just lit up your phone! Your hand is already reaching to take a peek!"},
+        ]
+    elif any(k in low for k in ("procrastin", "boring", "lazy", "laziness", "emotional", "willpower", "crave", "habit")):
+        props = {
+            "loc_main": "YOUR DESK • 2:14 PM",
+            "loc_sub": f"{handle} • Part 1",
+            "series_eyebrow": "HABITSAINS POV",
+            "series_title": series_title,
+            "timer_label": "ACTION WINDOW",
+            "phone_time": "2:14",
+            "phone_norm_hdr": "ESCAPE LOOP ACTIVE",
+            "phone_norm_cards": [
+                ["#E11D48", "EASY RELIEF", "Hides task discomfort"],
+                ["#F59E0B", "ENDLESS FEED", "Feels safe, breeds guilt"],
+                ["#3B82F6", "LATER MODE", "Makes starting harder"],
+            ],
+            "phone_cta_norm": "AVOID TASK",
+            "phone_urgent_hdr": "3 ESCAPE BAITS!",
+            "phone_urgent_cards": [
+                ["#E11D48", "NEW VIDEO", "Instant mood relief!"],
+                ["#F59E0B", "GROUP MEME", "Just laugh for 1 min"],
+                ["#E11D48", "EASY SCROLL", "Delay hard work again"],
+            ],
+            "phone_cta_urgent": "ESCAPE NOW",
+            "swarm_badges": ["DELAY", "AVOID", "SCROLL", "FEAR", "DRIFT", "TRAP"],
+            "scan_title": "AMYGDALA THREAT SCAN",
+            "scan_stat": "MOOD LOOP",
+            "scan_sub": "NOT LAZINESS—EMOTION",
+            "scan_left_lbl": "TASK STRESS",
+            "scan_right_lbl": "GUILT SPIKE",
+            "scan_footer": "BRAIN SEEKS FAST RELIEF",
+            "laptop_hdr": "5-MINUTE START RULE",
+            "laptop_due": "DUE TODAY",
+            "laptop_title": clean_laptop_title,
+            "laptop_status": "|  (Write just 1 ugly line)",
+            "laptop_callout": "ACTION CALMS THE AMYGDALA",
+            "end_top": "PART 1 • YOU DECIDE",
+            "option_a": "START A 5-MINUTE TINY SPRINT ON THE DESK",
+            "option_b": "SCROLL FOR MOOD RELIEF & DELAY AGAIN",
+            "end_sub": end_sub_line,
+        }
+        dialogue = [
+            {"beat": "intro", "speaker": "pov", "text": "I know I need to start this task... I just don't feel motivated. Maybe a quick phone break first."},
+            {"beat": "trap", "speaker": "partner", "text": "STOP! Don't grab that phone! That's not laziness—it's your brain's emotional escape loop!"},
+            {"beat": "explain", "speaker": "partner", "text": "Listen closely. When a task feels boring or intimidating, your amygdala flags it as a threat and pushes you toward fast screen relief."},
+            {"beat": "timer_react", "speaker": "pov", "text": "Wait... so procrastination is mood regulation, not a discipline problem?!"},
+            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Every avoidance scroll buys temporary relief, then spikes stress and makes starting even harder."},
+            {"beat": "desk", "speaker": "partner", "text": "Look at that laptop on your desk. Shrink the first step to five tiny minutes—once you start, the resistance fades."},
+            {"beat": "agree", "speaker": "pov", "text": "Okay... just five ugly minutes. No phone."},
+            {"beat": "ping", "speaker": "partner", "text": "Three notifications just buzzed right on cue! Your brain is begging your hand to escape again!"},
+        ]
+    elif any(k in low for k in ("ultradian", "90-minute", "burnout", "fatigue", "caffeine", "coffee", "recovery", "energy")):
+        props = {
+            "loc_main": "YOUR DESK • 2:14 PM",
+            "loc_sub": f"{handle} • Part 1",
+            "series_eyebrow": "HABITSAINS POV",
+            "series_title": series_title,
+            "timer_label": "ULTRADIAN CYCLE",
+            "phone_time": "2:14",
+            "phone_norm_hdr": "FAKE BREAK TRAP",
+            "phone_norm_cards": [
+                ["#E11D48", "SCROLL BREAK", "Zero neural recovery"],
+                ["#F59E0B", "HIGH NOISE", "Keeps cortex fatigued"],
+                ["#3B82F6", "MORE FEEDS", "Drains afternoon fuel"],
+            ],
+            "phone_cta_norm": "FAKE REST",
+            "phone_urgent_hdr": "3 ENERGY DRAINS!",
+            "phone_urgent_cards": [
+                ["#E11D48", "RAPID CLIPS", "Overloads tired brain"],
+                ["#F59E0B", "NEW ALERTS", "Blocks true reset"],
+                ["#E11D48", "ENDLESS FEED", "Triggers 3 PM crash"],
+            ],
+            "phone_cta_urgent": "DRAIN NOW",
+            "swarm_badges": ["FATIGUE", "CRASH", "NOISE", "BURN", "FOG", "LOW"],
+            "scan_title": "COGNITIVE ENERGY SCAN",
+            "scan_stat": extracted_num if extracted_num else "90 MIN CAP",
+            "scan_sub": "BRAIN NEEDS TRUE RESET",
+            "scan_left_lbl": "FAKE BREAK",
+            "scan_right_lbl": "BURNOUT DIP",
+            "scan_footer": "RECOVERY: BLOCKED BY SCREEN",
+            "laptop_hdr": "RHYTHMIC DEEP WORK",
+            "laptop_due": "90-MIN BLOCK",
+            "laptop_title": clean_laptop_title,
+            "laptop_status": "|  (Work deep, rest offline)",
+            "laptop_callout": "REAL REST = EYES OFF SCREENS",
+            "end_top": "PART 1 • YOU DECIDE",
+            "option_a": "TAKE A 10-MIN SCREEN-FREE RECOVERY BREAK",
+            "option_b": "SCROLL YOUR PHONE & STAY EXHAUSTED",
+            "end_sub": end_sub_line,
+        }
+        dialogue = [
+            {"beat": "intro", "speaker": "pov", "text": "Two hours straight and my brain is fried. Let me take a quick break on my phone."},
+            {"beat": "trap", "speaker": "partner", "text": "STOP! Put that phone down! Scrolling on a break is the fastest way to burn out!"},
+            {"beat": "explain", "speaker": "partner", "text": "Listen closely. Your prefrontal cortex peaks in ninety-minute biological waves. Flooding it with rapid feeds during rest prevents real cognitive recovery."},
+            {"beat": "timer_react", "speaker": "pov", "text": "Wait... scrolling during breaks doesn't actually rest my brain at all?!"},
+            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Fake screen breaks keep mental fatigue locked high, tanking your output for the rest of the day."},
+            {"beat": "desk", "speaker": "partner", "text": "Look back at your desk. Step away from every screen for ten quiet minutes, then return for one clean focus wave."},
+            {"beat": "agree", "speaker": "pov", "text": "Alright... ten quiet minutes off-screen first."},
+            {"beat": "ping", "speaker": "partner", "text": "Hear those three buzzes? Your tired brain is already pulling your hand right back to the phone!"},
+        ]
+    else:
+        # Universal topic-locked neuroscience POV template that explicitly names & mirrors the exact daily topic!
+        stat_str = extracted_num if extracted_num else "-40% FOCUS"
+        props = {
+            "loc_main": "YOUR DESK • 2:14 PM",
+            "loc_sub": f"{handle} • Part 1",
+            "series_eyebrow": "HABITSAINS POV",
+            "series_title": series_title,
+            "timer_label": "FOCUS WINDOW",
+            "phone_time": "2:14",
+            "phone_norm_hdr": "14 FOCUS TRAPS",
+            "phone_norm_cards": [
+                ["#E11D48", "FAST FEEDS", "Hijacks brain bandwidth"],
+                ["#3B82F6", "NEW PINGS", "Interrupts deep wiring"],
+                ["#F59E0B", "QUICK HIT", "Drains prefrontal fuel"],
+            ],
+            "phone_cta_norm": "CHECK NOW",
+            "phone_urgent_hdr": "3 FOCUS ALERTS!",
+            "phone_urgent_cards": [
+                ["#E11D48", "URGENT PING", "Pulls you off protocol"],
+                ["#F59E0B", "VIRAL CLIP", "Just 60 seconds?"],
+                ["#E11D48", "LIVE ALERT", "Breaks neural momentum"],
+            ],
+            "phone_cta_urgent": "OPEN NOW",
+            "swarm_badges": ["SPIKE", "DRIFT", "PING!", "NOISE", "TRAP", "FOG"],
+            "scan_title": _clamp_prop(f"{series_title} SCAN", 22, "NEURAL FOCUS SCAN"),
+            "scan_stat": _clamp_prop(stat_str, 14, "-40% FOCUS"),
+            "scan_sub": "PREFRONTAL LOAD SPIKES",
+            "scan_left_lbl": "DISTRACTION",
+            "scan_right_lbl": "FOCUS DROP",
+            "scan_footer": "CONTROL CIRCUIT: STRAINED",
+            "laptop_hdr": "DEEP WORK • PROTOCOL",
+            "laptop_due": "DUE 5:00 PM",
+            "laptop_title": clean_laptop_title,
+            "laptop_status": "|  (Ready for deep work)",
+            "laptop_callout": "PROTECT YOUR PREFRONTAL CORTEX",
+            "end_top": "PART 1 • YOU DECIDE",
+            "option_a": "LOCK PHONE AWAY & RUN ONE CLEAN FOCUS BLOCK",
+            "option_b": "TAP ONE ALERT & LOSE MENTAL MOMENTUM",
+            "end_sub": end_sub_line,
+        }
+        dialogue = [
+            {"beat": "intro", "speaker": "pov", "text": f"Ugh... my head feels scattered. Let me just check my phone for a second before I tackle {spoken_topic.lower()}."},
+            {"beat": "trap", "speaker": "partner", "text": f"STOP! Don't touch that screen! You're triggering the exact trap behind {spoken_topic.lower()}!"},
+            {"beat": "explain", "speaker": "partner", "text": "Listen closely. Your prefrontal cortex has limited daily bandwidth. Every high-novelty screen hit floods your circuits and drains deep analytical focus."},
+            {"beat": "timer_react", "speaker": "pov", "text": "Wait... one tiny check really drains my whole focus window?!"},
+            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Once distraction spikes your reward circuits, your brain's focus capacity drops sharply and stays foggy."},
+            {"beat": "desk", "speaker": "partner", "text": "Look over at your desk. Protect one clean, screen-free work block right now so your brain stays locked in."},
+            {"beat": "agree", "speaker": "pov", "text": "Okay, phone stays down. Locking into the desk now."},
+            {"beat": "ping", "speaker": "partner", "text": "Hear those three alerts hitting at once? Your hand is already reaching back toward the phone!"},
+        ]
+
+    return {"props": props, "dialogue": dialogue}
+
+
+def normalize_pov_3d_episode(
+    raw_ep: dict[str, Any] | None,
+    topic: str,
+    angle: str = "",
+    hook: str = "",
+    scenes_meta: list[dict[str, Any]] | None = None,
+    config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Validate & length-clamp a Gemini or fallback pov_3d_episode so 3D props and 8 beats NEVER break."""
+    base = build_topic_matched_pov_3d_episode(
+        topic=topic, angle=angle, hook=hook, scenes_meta=scenes_meta, config=config
+    )
+    if not isinstance(raw_ep, dict):
+        return base
+
+    base_props = base["props"]
+    raw_props = raw_ep.get("props") if isinstance(raw_ep.get("props"), dict) else {}
+    str_limits = {
+        "loc_main": 26,
+        "loc_sub": 26,
+        "series_eyebrow": 20,
+        "series_title": 22,
+        "timer_label": 18,
+        "phone_time": 6,
+        "phone_norm_hdr": 20,
+        "phone_cta_norm": 16,
+        "phone_urgent_hdr": 20,
+        "phone_cta_urgent": 16,
+        "scan_title": 24,
+        "scan_stat": 15,
+        "scan_sub": 25,
+        "scan_left_lbl": 16,
+        "scan_right_lbl": 16,
+        "scan_footer": 26,
+        "laptop_hdr": 24,
+        "laptop_due": 14,
+        "laptop_title": 28,
+        "laptop_status": 30,
+        "laptop_callout": 32,
+        "end_top": 24,
+        "option_a": 48,
+        "option_b": 48,
+        "end_sub": 48,
+    }
+    clean_props: dict[str, Any] = {}
+    for k, lim in str_limits.items():
+        clean_props[k] = _clamp_prop(raw_props.get(k), lim, str(base_props[k]))
+
+    # Sanitize 3-row phone notification card arrays
+    for card_key in ("phone_norm_cards", "phone_urgent_cards"):
+        raw_cards = raw_props.get(card_key)
+        fallback_cards = base_props[card_key]
+        out_cards: list[list[str]] = []
+        if isinstance(raw_cards, list):
+            for idx in range(3):
+                item = raw_cards[idx] if idx < len(raw_cards) else fallback_cards[idx]
+                fb = fallback_cards[idx]
+                if isinstance(item, (list, tuple)) and len(item) >= 3:
+                    col = str(item[0]).strip()
+                    if not re.match(r"^#[0-9A-Fa-f]{6}$", col):
+                        col = fb[0]
+                    out_cards.append([col, _clamp_prop(item[1], 16, fb[1]), _clamp_prop(item[2], 26, fb[2])])
+                else:
+                    out_cards.append(list(fb))
+        clean_props[card_key] = out_cards if len(out_cards) == 3 else [list(c) for c in fallback_cards]
+
+    # Sanitize 6 floating 3D badge labels
+    raw_badges = raw_props.get("swarm_badges")
+    fb_badges = base_props["swarm_badges"]
+    out_badges: list[str] = []
+    if isinstance(raw_badges, list):
+        for idx in range(6):
+            raw_b = raw_badges[idx] if idx < len(raw_badges) else fb_badges[idx]
+            if isinstance(raw_b, (list, tuple)) and len(raw_b) >= 2:
+                raw_b = raw_b[1]
+            out_badges.append(_clamp_prop(raw_b, 7, fb_badges[idx]).upper())
+    clean_props["swarm_badges"] = out_badges if len(out_badges) == 6 else list(fb_badges)
+
+    # Validate & align all 8 required beats in exact visual choreography order
+    raw_dlg = raw_ep.get("dialogue")
+    by_beat: dict[str, dict[str, str]] = {}
+    if isinstance(raw_dlg, list):
+        for item in raw_dlg:
+            if not isinstance(item, dict):
+                continue
+            b = str(item.get("beat", "")).strip().lower()
+            txt = " ".join(str(item.get("text", "")).split()).strip()
+            if b in _BEAT_SPEAKERS and len(txt) >= 6:
+                # Cap individual line length at 28 words so total runtime stays snappy (< 58s)
+                words = txt.split()
+                if len(words) > 28:
+                    txt = " ".join(words[:28]).rstrip(" ,;:-") + "."
+                by_beat[b] = {
+                    "beat": b,
+                    "speaker": _BEAT_SPEAKERS[b],
+                    "text": txt,
+                }
+
+    base_by_beat = {d["beat"]: d for d in base["dialogue"]}
+    clean_dialogue = [by_beat.get(b, base_by_beat[b]) for b in REQUIRED_POV_BEATS]
+
+    return {"props": clean_props, "dialogue": clean_dialogue}
+
+
 def _build_english_fallback(idea: TopicIdea, config: dict[str, Any]) -> dict[str, Any]:
     channel = config.get("channel", {})
     topic = idea.topic
@@ -424,6 +1051,13 @@ def _build_english_fallback(idea: TopicIdea, config: dict[str, Any]) -> dict[str
                     "visual_prompt": "Vertical calm summary CTA graphic",
                 },
             ],
+            "pov_3d_episode": build_topic_matched_pov_3d_episode(
+                topic=topic,
+                angle=idea.angle,
+                hook=idea.hook,
+                scenes_meta=None,
+                config=config,
+            ),
         },
         "carousel_social": {
             "title": short_title,
@@ -751,6 +1385,16 @@ def generate_content_blueprint(
         loaded["meta"].setdefault("slug", slugify(loaded["meta"]["topic"]))
         loaded["meta"].setdefault("generated_at", now_iso)
         loaded["meta"]["generator_mode"] = "external_brief_json"
+        if config.get("channel", {}).get("language", "en") == "en" and isinstance(loaded.get("shorts_reels_tiktok"), dict):
+            shorts_block = loaded["shorts_reels_tiktok"]
+            shorts_block["pov_3d_episode"] = normalize_pov_3d_episode(
+                shorts_block.get("pov_3d_episode"),
+                topic=str(loaded["meta"].get("topic") or idea.topic),
+                angle=str(loaded["meta"].get("angle") or idea.angle),
+                hook=str(loaded["meta"].get("hook") or idea.hook),
+                scenes_meta=shorts_block.get("scenes"),
+                config=config,
+            )
         return loaded
 
     gemini_result, used_model = _generate_with_gemini(idea, config)
@@ -760,6 +1404,17 @@ def generate_content_blueprint(
     else:
         blueprint = _build_structured_fallback(idea, config)
         mode = "structured_local_template"
+
+    if config.get("channel", {}).get("language", "en") == "en" and isinstance(blueprint.get("shorts_reels_tiktok"), dict):
+        shorts_block = blueprint["shorts_reels_tiktok"]
+        shorts_block["pov_3d_episode"] = normalize_pov_3d_episode(
+            shorts_block.get("pov_3d_episode"),
+            topic=idea.topic,
+            angle=idea.angle,
+            hook=idea.hook,
+            scenes_meta=shorts_block.get("scenes"),
+            config=config,
+        )
 
     blueprint["meta"] = {
         "topic": idea.topic,

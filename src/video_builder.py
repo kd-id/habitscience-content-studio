@@ -155,6 +155,8 @@ def build_video_from_scenes(
     config: dict[str, Any],
     is_short: bool = False,
     scenes_meta: list[dict[str, Any]] | None = None,
+    pov_episode: dict[str, Any] | None = None,
+    topic_meta: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     video_root = config.get("video", {})
     vid_cfg = video_root.get("shorts" if is_short else "youtube_long", {})
@@ -186,6 +188,8 @@ def build_video_from_scenes(
             out_video_path=out_video_path,
             config=config,
             is_short=is_short,
+            pov_episode=pov_episode,
+            topic_meta=topic_meta,
         )
         return probe_video_info(out_video_path)
 
