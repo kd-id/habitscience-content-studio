@@ -167,18 +167,19 @@
     "external_ids": {
       "YouTube Long (16:9)": "Ft-zCxDQUvo",
       "YouTube Shorts (9:16)": "8Mhpatu-7mA",
-      "Instagram Reels": "18654159277062177",
+      "Instagram Reels": "18080714777450244",
       "Instagram Carousel": "18167039356494393",
-      "Facebook Page Reels": "1147155471226922"
+      "Facebook Page Reels": "1147155471226922",
+      "X & Threads": "threads:18141534982724268"
     },
     "counts": {
       "total": 8,
-      "published": 1,
+      "published": 3,
       "scheduled": 3,
       "drafted": 0,
       "dry_run_ready": 0,
       "pending_setup": 2,
-      "failed": 2
+      "failed": 0
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-27_053744_why-leaving-your-phone-face-down-sti/PUBLISH_REPORT.md"
   }
