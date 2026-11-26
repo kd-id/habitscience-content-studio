@@ -153,5 +153,33 @@
       "failed": 0
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-26_213223_dopamine-supports-coupling-of-attent/PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-27_053744_why-leaving-your-phone-face-down-sti",
+    "slug": "why-leaving-your-phone-face-down-still-destroys",
+    "topic": "Why Leaving Your Phone Face Down Still Destroys Your Focus",
+    "pillar": "focus_habits",
+    "pillar_label": "Everyday Focus & Habits",
+    "generated_at_wib": "2026-11-27 05:48:37 WIB",
+    "publish_mode": "scheduled",
+    "visual_style_long": "cozy_diorama",
+    "visual_style_short": "pov_3d_toon",
+    "external_ids": {
+      "YouTube Long (16:9)": "Ft-zCxDQUvo",
+      "YouTube Shorts (9:16)": "8Mhpatu-7mA",
+      "Instagram Reels": "18654159277062177",
+      "Instagram Carousel": "18167039356494393",
+      "Facebook Page Reels": "1147155471226922"
+    },
+    "counts": {
+      "total": 8,
+      "published": 1,
+      "scheduled": 3,
+      "drafted": 0,
+      "dry_run_ready": 0,
+      "pending_setup": 2,
+      "failed": 2
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-27_053744_why-leaving-your-phone-face-down-sti/PUBLISH_REPORT.md"
   }
 ]
