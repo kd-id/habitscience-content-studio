@@ -121,23 +121,23 @@ platforms:
     made_for_kids: false
   instagram_reels:
     enabled: true
-    adapter: "webhook"
+    adapter: "direct"
   instagram_carousel:
     enabled: true
     slide_count: 5
-    adapter: "webhook"
+    adapter: "direct"
   tiktok:
     enabled: true
-    adapter: "webhook"
+    adapter: "direct"
   linkedin:
     enabled: true
-    adapter: "webhook"
+    adapter: "direct"
   x_threads:
     enabled: true
-    adapter: "webhook"
+    adapter: "direct"
   facebook:
     enabled: true
-    adapter: "webhook"
+    adapter: "direct"
 
 publishing:
   default_mode: "draft"

@@ -132,7 +132,7 @@ def _build_habitsains_soundscape(
 
         filters.append(f"{''.join(mix)}amix=inputs={len(mix)}:duration=first:dropout_transition=2:normalize=0,alimiter=limit=0.95[out]")
         subprocess.run(
-            ["ffmpeg", "-y", *inputs, "-filter_complex", ";".join(filters), "-map", "[out]", "-c:a", "aac", "-b:a", "192k", str(out_m4a)],
+            ["ffmpeg", "-y", *inputs, "-filter_complex", ";".join(filters), "-map", "[out]", "-ar", "48000", "-c:a", "aac", "-b:a", "192k", str(out_m4a)],
             capture_output=True, text=True, check=True,
         )
         return out_m4a
@@ -1389,7 +1389,7 @@ def _mix_pipeline_audio_with_sfx(
 
         filters.append(f"{''.join(mix)}amix=inputs={len(mix)}:duration=first:dropout_transition=2:normalize=0,alimiter=limit=0.95[out]")
         subprocess.run(
-            ["ffmpeg", "-y", *inputs, "-filter_complex", ";".join(filters), "-map", "[out]", "-c:a", "aac", "-b:a", "192k", str(out_m4a)],
+            ["ffmpeg", "-y", *inputs, "-filter_complex", ";".join(filters), "-map", "[out]", "-ar", "48000", "-c:a", "aac", "-b:a", "192k", str(out_m4a)],
             capture_output=True, text=True, check=True,
         )
         return out_m4a

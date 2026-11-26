@@ -9,6 +9,15 @@ from typing import Any
 
 import requests
 
+from src.social_publishers import (
+    publish_facebook_reel_direct,
+    publish_instagram_carousel_direct,
+    publish_instagram_reels_direct,
+    publish_linkedin_direct,
+    publish_tiktok_direct,
+    publish_x_and_threads_direct,
+)
+
 
 YOUTUBE_SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 
@@ -330,14 +339,20 @@ def publish_all_platforms(
                 "notes": youtube_auth_err or "OAuth YouTube belum dihubungkan.",
             })
 
-    # 3. Social Media Bundle Payload (Instagram Reels, Instagram Carousel, TikTok, LinkedIn, X/Threads, Facebook)
+    # 3. Direct Free Official APIs (Instagram Reels/Carousel, TikTok, Facebook Reels, LinkedIn, X/Threads)
+    #    with automatic fallback to PUBLISH_WEBHOOK_URL for any platform without direct credentials.
+    short_vid_str = assets.get("shorts_reels_tiktok", {}).get("video_path", "")
+    short_vid_path = Path(short_vid_str) if short_vid_str else None
+    slide_strs = assets.get("carousel_social", {}).get("slide_paths", [])
+    slide_paths = [Path(s) for s in slide_strs]
+
     social_targets = [
-        ("instagram_reels", "Instagram Reels", "Video 1080x1920", shorts_meta.get("caption_ig_reels", ""), assets.get("shorts_reels_tiktok", {}).get("video_path", "")),
-        ("tiktok", "TikTok", "Video 1080x1920", shorts_meta.get("caption_tiktok", ""), assets.get("shorts_reels_tiktok", {}).get("video_path", "")),
-        ("instagram_carousel", "Instagram Carousel", "5 Slides 1080x1350", carousel_meta.get("caption_instagram", ""), assets.get("carousel_social", {}).get("slide_paths", [])),
-        ("linkedin", "LinkedIn", "Carousel / Post", carousel_meta.get("caption_linkedin", ""), assets.get("carousel_social", {}).get("slide_paths", [])),
-        ("x_threads", "X & Threads", "Thread 5 Posts + Threads", "\n\n".join(carousel_meta.get("thread_x", [])), assets.get("carousel_social", {}).get("slide_paths", [])[:1]),
-        ("facebook", "Facebook Page", "Post + Carousel/Video", carousel_meta.get("post_facebook", ""), assets.get("carousel_social", {}).get("slide_paths", [])[:1]),
+        ("instagram_reels", "Instagram Reels", "Video 1080x1920", shorts_meta.get("caption_ig_reels", ""), short_vid_str),
+        ("tiktok", "TikTok", "Video 1080x1920", shorts_meta.get("caption_tiktok", ""), short_vid_str),
+        ("instagram_carousel", "Instagram Carousel", "5 Slides 1080x1350", carousel_meta.get("caption_instagram", ""), slide_strs),
+        ("linkedin", "LinkedIn", "Carousel / Post", carousel_meta.get("caption_linkedin", ""), slide_strs),
+        ("x_threads", "X & Threads", "Thread 5 Posts + Threads", "\n\n".join(carousel_meta.get("thread_x", [])), slide_strs[:1]),
+        ("facebook", "Facebook Page Reels", "Reel 1080x1920", carousel_meta.get("post_facebook", "") or shorts_meta.get("caption_ig_reels", ""), short_vid_str),
     ]
 
     webhook_payload = {
@@ -368,11 +383,50 @@ def publish_all_platforms(
     if config.get("publishing", {}).get("save_payload_snapshots", True):
         payload_file.write_text(json.dumps(webhook_payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    # Attempt Direct Free API first for each enabled platform (when mode in draft/publish)
+    direct_results: dict[str, dict[str, Any]] = {}
+    fallback_targets: list[tuple[str, str, str, str, Any]] = []
+
+    for item in active_social:
+        key, label, fmt, caption, _ = item
+        if mode == "dry-run":
+            fallback_targets.append(item)
+            continue
+
+        adapter = str(platforms_cfg.get(key, {}).get("adapter", "direct")).lower().strip()
+        if adapter == "webhook":
+            fallback_targets.append(item)
+            continue
+
+        if key == "instagram_reels":
+            d_res = publish_instagram_reels_direct(short_vid_path, caption, mode)
+        elif key == "tiktok":
+            d_res = publish_tiktok_direct(short_vid_path, caption, mode)
+        elif key == "instagram_carousel":
+            d_res = publish_instagram_carousel_direct(slide_paths, caption, mode)
+        elif key == "linkedin":
+            d_res = publish_linkedin_direct(slide_paths, caption, mode)
+        elif key == "x_threads":
+            d_res = publish_x_and_threads_direct(carousel_meta.get("thread_x", []), carousel_meta.get("post_threads", ""), mode)
+        elif key == "facebook":
+            d_res = publish_facebook_reel_direct(short_vid_path, caption, mode)
+        else:
+            d_res = {"handled": False}
+
+        if d_res.get("handled"):
+            direct_results[key] = d_res
+        else:
+            direct_results[key] = d_res
+            fallback_targets.append(item)
+
+    # Dispatch optional webhook ONLY for platforms not already handled by Direct API
     webhook_ok = False
     webhook_msg = ""
     webhook_resp: dict[str, Any] = {}
-    if mode in ("draft", "publish") and active_social:
-        webhook_ok, webhook_msg, webhook_resp = _dispatch_social_webhook(webhook_payload)
+    if mode in ("draft", "publish") and fallback_targets and os.getenv("PUBLISH_WEBHOOK_URL", "").strip():
+        fb_keys = {k for k, *_ in fallback_targets}
+        fb_payload = {**webhook_payload, "targets": [t for t in webhook_payload["targets"] if t["platform_key"] in fb_keys]}
+        webhook_ok, webhook_msg, webhook_resp = _dispatch_social_webhook(fb_payload)
 
     for key, label, fmt, caption, _ in active_social:
         preview = (caption.splitlines()[0] if caption else blueprint["meta"]["topic"])[:75]
@@ -386,7 +440,20 @@ def publish_all_platforms(
                 "target_privacy": "draft",
                 "external_id": "",
                 "url": "",
-                "notes": f"Payload siap di {payload_file.name}. Aktifkan PUBLISH_WEBHOOK_URL (Zapier/n8n) untuk auto-draft/publish.",
+                "notes": f"Simulasi sukses. Direct API & payload siap di {payload_file.name}.",
+            })
+        elif key in direct_results and direct_results[key].get("handled"):
+            dr = direct_results[key]
+            results.append({
+                "platform": label,
+                "format": fmt,
+                "mode": mode,
+                "status": dr["status"],
+                "title": preview,
+                "target_privacy": mode,
+                "external_id": dr.get("external_id", ""),
+                "url": dr.get("url", ""),
+                "notes": dr.get("notes", ""),
             })
         elif webhook_ok:
             results.append({
@@ -398,19 +465,20 @@ def publish_all_platforms(
                 "target_privacy": mode,
                 "external_id": str(webhook_resp.get("id", webhook_resp.get("request_id", ""))),
                 "url": str(webhook_resp.get("url", "")),
-                "notes": f"Terkirim via webhook ({webhook_msg}).",
+                "notes": f"Terkirim via webhook fallback ({webhook_msg}).",
             })
         else:
+            missing_hint = direct_results.get(key, {}).get("notes", "") or webhook_msg or "Token Direct API belum diset."
             results.append({
                 "platform": label,
                 "format": fmt,
                 "mode": mode,
-                "status": "READY_FOR_CONNECTOR",
+                "status": "PENDING_AUTH",
                 "title": preview,
                 "target_privacy": mode,
                 "external_id": "",
                 "url": "",
-                "notes": f"{webhook_msg}. Payload tersimpan di {payload_file.name}.",
+                "notes": f"{missing_hint} (Lihat docs/DIRECT_SOCIAL_API_SETUP.md; payload tersimpan di {payload_file.name}).",
             })
 
     summary = {
