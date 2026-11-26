@@ -428,7 +428,7 @@ def _generate_sequel_insights_with_gemini(
         from google.genai import types
 
         client = genai.Client(api_key=api_key)
-        model = config.get("ai", {}).get("text_model", "gemini-2.5-flash")
+        model = config.get("ai", {}).get("text_model", "gemini-3.8-flash")
         prompt = f"""You are a YouTube & Short-Form Viral Growth Strategist for @HabitSains (English science-backed focus, dopamine, habits & neuroscience channel).
 
 Here are the channel's TOP PERFORMING published videos right now:

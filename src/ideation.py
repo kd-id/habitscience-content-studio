@@ -127,7 +127,7 @@ def _rank_topic_with_gemini(
 
         client = genai.Client(api_key=api_key)
         channel = config.get("channel", {})
-        model = config.get("ai", {}).get("text_model", "gemini-2.5-flash")
+        model = config.get("ai", {}).get("text_model", "gemini-3.8-flash")
         pat_txt = (
             f"\nProven high-view patterns from our channel analytics (prioritize matching these!):\n- "
             + "\n- ".join(winning_patterns[:4])

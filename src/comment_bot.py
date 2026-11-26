@@ -204,7 +204,7 @@ def generate_human_reply(
         from google.genai import types
 
         client = genai.Client(api_key=api_key)
-        model = config.get("ai", {}).get("text_model", "gemini-2.5-flash")
+        model = config.get("ai", {}).get("text_model", "gemini-3.8-flash")
         vote_hint = f"The commenter voted for Option {vote} on our interactive A/B decision video." if vote else "Normal viewer comment."
 
         prompt = f"""You are the real human creator behind @HabitSains replying to a viewer comment from your phone on {platform}.
