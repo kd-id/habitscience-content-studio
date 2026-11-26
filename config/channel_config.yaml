@@ -4,7 +4,7 @@ channel:
   niche: "Science-Backed Focus, Habits & Cognitive Performance"
   target_audience: "Ambitious professionals, founders, students, and lifelong learners worldwide"
   language: "en"
-  tone: "charismatic storyteller, warm science presenter, vivid metaphors, intriguing hooks, zero fluff"
+  tone: "warm, super-simple everyday conversational English (grade 6-7 level), zero academic jargon, immediately relatable stories, punchy hooks"
   cta_youtube: "Subscribe to HabitSains and grab the free 7-Day Focus Reset Protocol in the description to rewire your attention."
   cta_social: "Save this for your next deep-work session and comment 'RESET' to get the 7-Day Protocol checklist."
 
@@ -161,12 +161,24 @@ comment_bot:
   youtube_daily_reply_cap: 4
   max_replies_per_platform_per_run: 6
 
+content_pillars:
+  rotation:
+    - id: "focus_habits"
+      label: "Everyday Focus & Habits"
+      description: "Simple everyday phone habits, focus tricks, and beating procrastination without academic jargon."
+    - id: "everyday_science"
+      label: "Fun Everyday Science"
+      description: "Light, surprising everyday brain & body facts (coffee crash, tired after 8h sleep, shower ideas, fake scroll breaks, naps, stress)."
+    - id: "pov_survival"
+      label: "3D POV Brain Challenge"
+      description: "Thrilling First-Person 3D POV countdown/survival challenges (@you.have.72hours vibe) with urgent [A]/[B] decisions."
+
 trends:
   locale_hl: "en-US"
   locale_gl: "US"
   locale_ceid: "US:en"
   queries:
-    - "neuroscience focus attention dopamine study"
-    - "habit formation behavioral psychology research"
-    - "deep work sleep cognitive performance science"
+    - "why checking phone ruins focus habit everyday"
+    - "why coffee makes you crash tired after sleeping 8 hours"
+    - "digital detox no phone challenge focus brain"
   custom_rss_feeds: []

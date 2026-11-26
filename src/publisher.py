@@ -569,9 +569,11 @@ def _format_telegram_report_html(report_summary: dict[str, Any]) -> str:
         "FAILED": "❌",
     }
 
+    pillar_lbl = html.escape(str(report_summary.get("pillar_label") or report_summary.get("pillar") or ""))
     lines = [
         "<b>🎬 HabitSains Studio — Laporan Produksi</b>",
         f"📌 <b>Topik:</b> {topic}",
+        *([f"🧭 <b>Pillar Jadwal:</b> {pillar_lbl}"] if pillar_lbl else []),
         f"⚙️ <b>Mode:</b> <code>{mode}</code> | <b>QA:</b> {'✅ LOLOS' if qa_ok else '⚠️ CEK'} | ⏱ {dur_txt}",
         (
             f"📊 <b>Ringkasan:</b> "

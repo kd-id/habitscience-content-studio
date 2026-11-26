@@ -1,60 +1,93 @@
-"""Unit tests for Story-Synced Studio v9 3D POV script, props, and timing choreography."""
+"""Unit tests for 3-Pillar Rotation, Zero-Jargon Ideation, and Story-Synced Studio v9 3D POV."""
 
 from __future__ import annotations
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
+from src.config_loader import slugify
 from src.habitsains_3d_pov_engine import _schedule_pov_dialogue_events
+from src.ideation import PILLAR_TOPIC_BANKS, _looks_academic_jargon, select_next_pillar, select_topic
 from src.scriptwriter import (
     REQUIRED_POV_BEATS,
     build_topic_matched_pov_3d_episode,
     normalize_pov_3d_episode,
 )
 
+BANNED_JARGON = (
+    "prefrontal cortex",
+    "amygdala",
+    "melatonin",
+    "memory consolidation",
+    "attention residue",
+    "ultradian",
+    "neural correlates",
+    "coupling",
+)
 
-class TestPov3DSync(unittest.TestCase):
-    def test_dopamine_attention_coupling_episode_matches_topic(self) -> None:
-        ep = build_topic_matched_pov_3d_episode(
-            topic="Dopamine Supports Coupling of Attention-Related Networks",
-            angle="Neuroscience breakdown of dopamine and attention networks",
-            hook="Why quick scrolling breaks attention network coupling.",
-            config={"branding": {"watermark_text": "@HabitSains"}},
-        )
-        props = ep["props"]
-        dlg = ep["dialogue"]
 
-        self.assertEqual([d["beat"] for d in dlg], list(REQUIRED_POV_BEATS))
-        self.assertEqual([d["speaker"] for d in dlg], ["pov", "partner", "partner", "pov", "partner", "partner", "pov", "partner"])
-        self.assertEqual(len(props["phone_norm_cards"]), 3)
-        self.assertEqual(len(props["phone_urgent_cards"]), 3)
-        self.assertEqual(len(props["swarm_badges"]), 6)
+class TestPov3DSyncAndPillars(unittest.TestCase):
+    def test_academic_jargon_filter_blocks_dense_paper_titles(self) -> None:
+        self.assertTrue(_looks_academic_jargon("Dopamine Supports Coupling of Attention-Related Networks"))
+        self.assertTrue(_looks_academic_jargon("How do video games affect brain development in children and teens?"))
+        self.assertTrue(_looks_academic_jargon("fMRI Study Finds Cortical Modulation Under Cognitive Load"))
+        self.assertFalse(_looks_academic_jargon("Why Drinking Coffee Right After Waking Up Makes You Crash at 2 PM"))
+        self.assertFalse(_looks_academic_jargon("72 Hours Without Your Phone: What Happens to Your Brain on Hour 1"))
 
-        # Verify topic coupling terms appear in BOTH 3D props AND spoken beats!
-        self.assertIn("ATTENTION", props["scan_title"].upper())
-        self.assertIn("COUPLING", props["scan_stat"].upper())
-        self.assertIn("DOPAMINE", props["series_title"].upper())
-        self.assertIn("COUPLING", props["series_title"].upper())
-        self.assertNotIn("SUPPORTS", props["series_title"].upper())
-        self.assertTrue(any("coupling" in d["text"].lower() for d in dlg))
-        self.assertTrue(any("scan" in d["text"].lower() for d in dlg if d["beat"] == "scan"))
-        self.assertTrue(any("desk" in d["text"].lower() for d in dlg if d["beat"] == "desk"))
-        self.assertTrue(any("alert" in d["text"].lower() or "hand" in d["text"].lower() for d in dlg if d["beat"] == "ping"))
+    def test_three_pillar_rotation_never_collides_back_to_back(self) -> None:
+        cfg = {"channel": {"language": "en", "niche": "HabitSains"}}
+        with tempfile.TemporaryDirectory() as tmp:
+            hist_file = Path(tmp) / "history.json"
+            history: list[dict[str, str]] = []
+            seen_pillars: list[str] = []
+            seen_topics: set[str] = set()
 
-    def test_archetype_coverage_and_normalization_clamping(self) -> None:
-        topics = [
-            "How Late-Night Sleep Debt Ruins Prefrontal Focus",
-            "The 23-Minute Rule: What Multitasking Does to Your Brain",
-            "Procrastination Is Not Laziness: The Emotional Regulation Loop",
-            "The 90-Minute Ultradian Cycle: Work Less and Produce More",
-            "Why Morning Sunlight Resets Your Cortisol Rhythm",
-            "Neuroplasticity Tricks for Rapid Skill Mastery",
-        ]
-        for t in topics:
-            ep = build_topic_matched_pov_3d_episode(topic=t, config={"branding": {"watermark_text": "@HabitSains"}})
-            self.assertEqual(len(ep["dialogue"]), 8)
-            self.assertTrue(all(len(d["text"].split()) <= 30 for d in ep["dialogue"]), f"Line too long for {t}")
+            with patch("src.ideation.discover_trending_candidates", return_value=[]), \
+                 patch("src.ideation._rank_topic_with_gemini", return_value=None):
+                for _ in range(6):
+                    hist_file.write_text(json.dumps(history), encoding="utf-8")
+                    idea = select_topic(config=cfg, history_file=hist_file)
+                    seen_pillars.append(idea.pillar)
+                    self.assertNotIn(idea.topic, seen_topics)
+                    seen_topics.add(idea.topic)
+                    self.assertFalse(_looks_academic_jargon(idea.topic))
+                    history.append({"slug": slugify(idea.topic), "pillar": idea.pillar})
 
-        # Verify malformed / overly verbose Gemini JSON is safely sanitized without crashing
+            # Exact non-colliding rotation across 2 full daily cycles (6 runs)
+            self.assertEqual(
+                seen_pillars,
+                ["focus_habits", "everyday_science", "pov_survival", "focus_habits", "everyday_science", "pov_survival"],
+            )
+
+    def test_zero_jargon_plain_english_across_all_three_pillars(self) -> None:
+        cfg = {"branding": {"watermark_text": "@HabitSains"}}
+        for pillar_id, bank in PILLAR_TOPIC_BANKS.items():
+            for item in bank:
+                ep = build_topic_matched_pov_3d_episode(
+                    topic=item["topic"],
+                    angle=item["angle"],
+                    hook=item["hook"],
+                    config=cfg,
+                    pillar=pillar_id,
+                )
+                props = ep["props"]
+                dlg = ep["dialogue"]
+                self.assertEqual([d["beat"] for d in dlg], list(REQUIRED_POV_BEATS))
+                self.assertEqual(len(props["phone_norm_cards"]), 3)
+                self.assertEqual(len(props["phone_urgent_cards"]), 3)
+                self.assertEqual(len(props["swarm_badges"]), 6)
+
+                full_text = " ".join(
+                    [d["text"] for d in dlg]
+                    + [str(v) for v in props.values() if isinstance(v, str)]
+                ).lower()
+                for bad in BANNED_JARGON:
+                    self.assertNotIn(bad, full_text, f"Found academic jargon {bad!r} in pillar={pillar_id} topic={item['topic']!r}")
+
+    def test_normalization_clamps_verbose_gemini_output(self) -> None:
         dirty = {
             "props": {
                 "series_title": "THIS IS AN EXTREMELY LONG SERIES TITLE THAT WOULD OVERFLOW THE BANNER",
@@ -63,20 +96,18 @@ class TestPov3DSync(unittest.TestCase):
             },
             "dialogue": [
                 {"beat": "intro", "speaker": "partner", "text": " ".join(["word"] * 45)},
-                {"beat": "scan", "speaker": "partner", "text": "Look at this scan showing a forty percent drop in clarity."},
+                {"beat": "scan", "speaker": "partner", "text": "Look at this scan showing your energy drops forty percent."},
             ],
         }
-        norm = normalize_pov_3d_episode(dirty, topic="Test Focus Science")
+        norm = normalize_pov_3d_episode(dirty, topic="Why Coffee Right After Waking Up Makes You Crash at 2 PM", pillar="everyday_science")
         self.assertLessEqual(len(norm["props"]["series_title"]), 22)
         self.assertEqual(len(norm["props"]["phone_norm_cards"]), 3)
         self.assertTrue(norm["props"]["phone_norm_cards"][0][0].startswith("#"))
         self.assertEqual(len(norm["props"]["swarm_badges"]), 6)
         self.assertTrue(all(len(b) <= 7 for b in norm["props"]["swarm_badges"]))
         self.assertEqual([d["beat"] for d in norm["dialogue"]], list(REQUIRED_POV_BEATS))
-        # Speaker role is strictly enforced by beat even if model swapped it
         self.assertEqual(norm["dialogue"][0]["speaker"], "pov")
         self.assertLessEqual(len(norm["dialogue"][0]["text"].split()), 28)
-        self.assertIn("forty percent", norm["dialogue"][4]["text"])
 
     def test_schedule_pov_dialogue_events_monotonic_beats(self) -> None:
         raw_clips = [

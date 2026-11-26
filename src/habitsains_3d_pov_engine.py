@@ -1611,6 +1611,7 @@ def render_pov_3d_toon_video_for_pipeline(
         hook=str(meta.get("hook", "")),
         scenes_meta=scenes_meta,
         config=config,
+        pillar=str(meta.get("pillar", "")),
     )
     props = episode["props"]
     script_lines = episode["dialogue"]

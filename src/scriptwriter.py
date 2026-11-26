@@ -15,13 +15,20 @@ def _build_gemini_prompt(idea: TopicIdea, config: dict[str, Any]) -> str:
     channel = config.get("channel", {})
     lang = channel.get("language", "en")
     if lang == "en":
-        return f"""You are a Lead YouTube Creative Director, Charismatic Science Presenter Scriptwriter (think Johnny Harris meets Kurzgesagt and Ali Abdaal), and Multi-Platform Growth Strategist.
-Create an original, high-retention Master Content Blueprint in vivid, conversational spoken English that repurposes 1 validated idea across ALL platforms while strictly avoiding robotic or repetitive templates.
+        pillar_id = getattr(idea, "pillar", "focus_habits") or "focus_habits"
+        pillar_label = getattr(idea, "pillar_label", "Everyday Focus & Habits") or "Everyday Focus & Habits"
+        pillar_hint = {
+            "pov_survival": "Style focus: Thrilling First-Person 3D POV countdown/survival brain challenge (@you.have.72hours vibe) where every distraction costs precious time or battery!",
+            "everyday_science": "Style focus: Fun, surprising everyday brain/body science that makes viewers say 'WAIT—THAT is why that happens to me?!'",
+            "focus_habits": "Style focus: Relatable everyday phone/focus/procrastination struggle + 1 super-simple habit trick anyone can try right now.",
+        }.get(pillar_id, "Style focus: Super-simple everyday brain & habit storytelling.")
+        return f"""You are a Viral YouTube & Reels Storyteller (think Ali Abdaal meets Kurzgesagt and @you.have.72hours).
+Create an original, ultra-clear Master Content Blueprint in SUPER-SIMPLE everyday spoken English so ANY regular viewer immediately understands the exact point in 2 seconds.
 
 Channel Profile:
 - Name: {channel.get('name')} ({channel.get('handle')})
-- Niche: {channel.get('niche')}
-- Target Audience: {channel.get('target_audience')}
+- Scheduled Pillar: {pillar_label} ({pillar_id}) — {pillar_hint}
+- Audience: Everyday viewers worldwide (busy workers, students, anyone glued to their phone)
 - Tone: {channel.get('tone')}
 - YouTube CTA: {channel.get('cta_youtube')}
 - Social CTA: {channel.get('cta_social')}
@@ -32,10 +39,12 @@ Core Idea:
 - Opening Hook: {idea.hook}
 - Keywords: {", ".join(idea.keywords or [])}
 
-Storytelling & Narration Rules (CRITICAL):
-- Write as a charismatic human presenter talking directly to ONE viewer ("you"), using rhetorical questions, vivid relatable scenarios, short punchy rhythm changes, and natural pauses.
-- NEVER write stiff textbook prose or dry bullet readings.
-- Every scene MUST have a completely distinct, vivid, dramatic visual storytelling metaphor in `visual_prompt` (objects, characters, lighting, symbolic environments — strictly NO text/letters).
+PLAIN-ENGLISH CLARITY RULES (CRITICAL — GRADE 6-7 LEVEL):
+- Talk like a smart friend explaining something over coffee—short sentences, simple everyday words, ZERO textbook/college jargon.
+- STRICTLY FORBIDDEN words anywhere in titles, props, or narration: "prefrontal cortex", "amygdala", "coupling", "neural correlates", "cognitive load", "memory consolidation", "executive function", "ultradian", "melatonin", "cortical", "bandwidth".
+- Instead use crystal-clear everyday words: "focus battery", "brain fuel", "your brain's alarm button", "sleep chemical", "mental fog", "fake excitement", "autopilot scrolling".
+- Every video MUST make 3 things instantly obvious: (1) the relatable moment, (2) the simple reason WHY it happens, (3) 1 easy action to try today.
+- Every scene MUST have a distinct visual storytelling metaphor in `visual_prompt` (strictly NO text/letters).
 
 Return ONLY valid JSON with this exact schema:
 {{
@@ -402,14 +411,14 @@ def build_topic_matched_pov_3d_episode(
     hook: str = "",
     scenes_meta: list[dict[str, Any]] | None = None,
     config: dict[str, Any] | None = None,
+    pillar: str = "",
 ) -> dict[str, Any]:
-    """Synthesize a beat-locked 8-line 2-speaker 3D POV script & matching 3D prop text for ANY topic.
+    """Synthesize a plain-English, zero-jargon, beat-locked 8-line 2-speaker 3D POV script & 3D props.
 
-    Every single line references what the 3D POV camera shows in that exact beat:
-      intro (nightstand alarm + phone) -> trap (STOP! + 3D floating cards erupt) ->
-      explain (Prefrontal Cortex guide face-to-face) -> timer_react (FOCUS WINDOW HUD) ->
-      scan (3D Brain Scan tablet) -> desk (3D study desk & laptop) ->
-      agree (POV commits) -> ping (3 vibrating urgent alerts + hand reaches -> [A]/[B] choice).
+    Designed for instant Grade 6-7 comprehension across ALL 3 rotating pillars:
+      - focus_habits: everyday phone, procrastination, distraction & motivation fixes
+      - everyday_science: surprising daily brain facts (coffee crash, tired after 8h sleep, shower ideas, naps, lyrics)
+      - pov_survival: thrilling @you.have.72hours countdown brain-survival challenges
     """
     cfg = config or {}
     handle = str(cfg.get("branding", {}).get("watermark_text", "@HabitSains"))
@@ -428,130 +437,245 @@ def build_topic_matched_pov_3d_episode(
     clean_laptop_title = (
         spoken_topic
         if len(spoken_topic) <= 26
-        else _clamp_prop(f"{series_title.title()} Session", 26, "Deep Focus Session")
+        else _clamp_prop(f"{series_title.title()} Goal", 26, "Today's Big Goal")
     )
     end_sub_line = f"Part 2 reveals what happens next • {handle}"
 
-    # Extract an authentic numeric stat from the topic or scenes when present
     stat_match = re.search(r"(\d{1,3}\s?%|\d{1,2}\s?(?:min|minutes|hours|hrs))", blob, re.IGNORECASE)
     extracted_num = ""
     if stat_match:
         extracted_num = stat_match.group(1).upper().replace("MINUTES", "MIN").replace("HOURS", "HRS").strip()
 
-    # Select rich neuroscience-matched archetype + weave exact topic specifics into props & lines!
-    if "coupling" in low or ("dopamine" in low and any(k in low for k in ("attention", "network", "focus", "scroll", "drain", "reward"))):
-        is_coupling = "coupling" in low or "network" in low
-        stat_str = extracted_num if "%" in extracted_num else "-40% COUPLING" if is_coupling else "-40% FOCUS"
+    is_survival = (
+        pillar == "pov_survival"
+        or any(k in low for k in ("72 hour", "24 hour", "survive", "challenge", "resets the clock", "locked in", "brain battery", "zero screen", "no phone"))
+    )
+
+    if is_survival:
+        is_night = any(k in low for k in ("midnight", "11:42", "sleep", "night", "tomorrow"))
+        loc_main = "YOUR BEDROOM • 11:42 PM" if is_night else "CHALLENGE • HOUR 1"
+        phone_time = "11:42" if is_night else "01:00"
+        stat_str = extracted_num if extracted_num else "1 TAP = FAIL"
+        props = {
+            "loc_main": loc_main,
+            "loc_sub": f"{handle} • Part 1",
+            "series_eyebrow": "3D POV CHALLENGE",
+            "series_title": series_title,
+            "timer_label": "SURVIVAL CLOCK",
+            "phone_time": phone_time,
+            "phone_norm_hdr": "CHALLENGE ACTIVE",
+            "phone_norm_cards": [
+                ["#E11D48", "RULE #1", "Do NOT touch your phone"],
+                ["#F59E0B", "BRAIN BATTERY", "Drops every time you peek"],
+                ["#3B82F6", "NEW MESSAGES", "14 people just texted you"],
+            ],
+            "phone_cta_norm": "TAP TO QUIT",
+            "phone_urgent_hdr": "3 FINAL TEMPTATIONS!",
+            "phone_urgent_cards": [
+                ["#E11D48", "URGENT TEXT", "Open this right now?!"],
+                ["#F59E0B", "VIRAL VIDEO", "Everyone is watching it"],
+                ["#E11D48", "GROUP CHAT", "99+ unread messages!"],
+            ],
+            "phone_cta_urgent": "GIVE IN NOW",
+            "swarm_badges": ["QUIT?", "TAP!", "99+", "PING!", "FAIL", "TRAP"],
+            "scan_title": "BRAIN BATTERY SCAN",
+            "scan_stat": _clamp_prop(stat_str, 14, "1 TAP = FAIL"),
+            "scan_sub": "MOST PEOPLE QUIT FAST",
+            "scan_left_lbl": "1 QUICK PEEK",
+            "scan_right_lbl": "FOCUS AT 0%",
+            "scan_footer": "CHALLENGE: AT RISK",
+            "laptop_hdr": "MISSION • FINISH TODAY",
+            "laptop_due": "TIME RUNNING OUT",
+            "laptop_title": clean_laptop_title,
+            "laptop_status": "|  (Stay locked in to win)",
+            "laptop_callout": "IGNORE THE PHONE = YOU WIN",
+            "end_top": "PART 1 • YOU DECIDE",
+            "option_a": "IGNORE ALL 3 ALERTS & SURVIVE THE CLOCK",
+            "option_b": "PEEK FOR 5 SECONDS & FAIL THE CHALLENGE",
+            "end_sub": end_sub_line,
+        }
+        dialogue = [
+            {"beat": "intro", "speaker": "pov", "text": "Okay... the timer just started. One quick peek at my phone can't really ruin the whole challenge, right?"},
+            {"beat": "trap", "speaker": "partner", "text": "STOP! Pull your hand back! One tap on that glowing screen resets your entire focus clock!"},
+            {"beat": "explain", "speaker": "partner", "text": "Here is the rule. Every time you cave in to a quick ping, your brain craves ten more—and your focus battery tanks almost instantly."},
+            {"beat": "timer_react", "speaker": "pov", "text": "Wait... so even a five-second peek really wipes out my battery?!"},
+            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Most people fold right here in the first hour because boredom feels scary for five minutes."},
+            {"beat": "desk", "speaker": "partner", "text": "Look at your desk. Survive just ten quiet minutes on your real goal, and the urge to check your phone drops fast."},
+            {"beat": "agree", "speaker": "pov", "text": "Alright, hands off the phone. I'm surviving this clock."},
+            {"beat": "ping", "speaker": "partner", "text": "Uh-oh—three loud alerts just hit at once! Your hand is already reaching back toward the screen!"},
+        ]
+    elif any(k in low for k in ("coffee", "caffeine")):
+        props = {
+            "loc_main": "YOUR BEDROOM • 7:01 AM",
+            "loc_sub": f"{handle} • Part 1",
+            "series_eyebrow": "EVERYDAY SCIENCE",
+            "series_title": series_title,
+            "timer_label": "ENERGY CLOCK",
+            "phone_time": "7:01",
+            "phone_norm_hdr": "MORNING ROUTINE",
+            "phone_norm_cards": [
+                ["#F59E0B", "7:01 AM COFFEE", "Feels great right now..."],
+                ["#E11D48", "2:00 PM WALL", "Massive energy crash later"],
+                ["#3B82F6", "SLEEPY SIGNAL", "Only paused, not gone"],
+            ],
+            "phone_cta_norm": "DRINK NOW",
+            "phone_urgent_hdr": "2 PM CRASH ALERT!",
+            "phone_urgent_cards": [
+                ["#E11D48", "EYES HEAVY", "Coffee just wore off!"],
+                ["#F59E0B", "CUP #2?", "Ruins your sleep tonight"],
+                ["#E11D48", "BRAIN FOG", "Can't focus on work"],
+            ],
+            "phone_cta_urgent": "MORE COFFEE",
+            "swarm_badges": ["CRASH", "TIRED", "2 PM!", "FOG", "TRAP", "LOW"],
+            "scan_title": "DAILY ENERGY SCAN",
+            "scan_stat": "2 PM CRASH",
+            "scan_sub": "SLEEPY SIGNAL FLOODS BACK",
+            "scan_left_lbl": "7 AM COFFEE",
+            "scan_right_lbl": "2 PM WALL",
+            "scan_footer": "WAIT 60-90 MIN AFTER WAKING",
+            "laptop_hdr": "AFTERNOON • BIG TASK",
+            "laptop_due": "DUE 5:00 PM",
+            "laptop_title": clean_laptop_title,
+            "laptop_status": "|  (Hard to think at 2 PM)",
+            "laptop_callout": "WATER FIRST -> COFFEE LATER",
+            "end_top": "PART 1 • YOU DECIDE",
+            "option_a": "DRINK WATER FIRST & WAIT 60 MIN FOR COFFEE",
+            "option_b": "CHUG COFFEE AT 7 AM & CRASH AT 2 PM",
+            "end_sub": end_sub_line,
+        }
+        dialogue = [
+            {"beat": "intro", "speaker": "pov", "text": "Seven AM already... I feel half asleep. Let me grab coffee right now before I even wake up."},
+            {"beat": "trap", "speaker": "partner", "text": "STOP! Don't drink coffee the second you open your eyes! That's why you crash hard at two PM!"},
+            {"beat": "explain", "speaker": "partner", "text": "Here is why. Coffee doesn't actually erase tiredness—it just hits pause on your brain's sleepy chemical. Drink it too early, and all that tiredness piles up behind a dam."},
+            {"beat": "timer_react", "speaker": "pov", "text": "Wait... so my morning cup is what causes my two PM wall?!"},
+            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. The moment that early caffeine wears off, the dam breaks and your energy drops off a cliff."},
+            {"beat": "desk", "speaker": "partner", "text": "Look at the work waiting on your desk. Drink water first, get light in your eyes, and wait an hour for coffee so your energy stays smooth."},
+            {"beat": "agree", "speaker": "pov", "text": "Okay, water first... I'll wait an hour for coffee."},
+            {"beat": "ping", "speaker": "partner", "text": "Three morning alerts just hit and your brain is begging for instant caffeine—can you really hold out?"},
+        ]
+    elif any(k in low for k in ("shower", "nap", "lyrics", "music", "doorway", "walking into a room", "time feels faster", "junk food", "crave")):
+        is_shower = "shower" in low
+        is_nap = "nap" in low
+        is_lyrics = "lyrics" in low or "music" in low
+        is_door = "doorway" in low or "walking into a room" in low
         props = {
             "loc_main": "YOUR DESK • 2:14 PM",
             "loc_sub": f"{handle} • Part 1",
-            "series_eyebrow": "HABITSAINS POV",
+            "series_eyebrow": "EVERYDAY SCIENCE",
             "series_title": series_title,
-            "timer_label": "FOCUS WINDOW",
+            "timer_label": "BRAIN MODE",
             "phone_time": "2:14",
-            "phone_norm_hdr": "14 DOPAMINE BAITS",
+            "phone_norm_hdr": "WHY DOES THIS HAPPEN?",
             "phone_norm_cards": [
-                ["#E11D48", "SHORT CLIPS", "Quick dopamine hit?"],
-                ["#3B82F6", "GROUP CHAT", "12 unread pings waiting"],
-                ["#F59E0B", "SOCIAL FEED", "Breaks attention link"],
+                ["#3B82F6", "NONSTOP NOISE", "Crowds your thinking space"],
+                ["#F59E0B", "ZERO QUIET", "Blocks sudden great ideas"],
+                ["#E11D48", "BRAIN OVERLOAD", "Makes simple things blurry"],
             ],
-            "phone_cta_norm": "CHECK QUICKLY",
-            "phone_urgent_hdr": "3 DOPAMINE TRAPS!",
+            "phone_cta_norm": "KEEP SCROLLING",
+            "phone_urgent_hdr": "3 NOISE TRAPS!",
             "phone_urgent_cards": [
-                ["#E11D48", "VIRAL CLIP", "Tap for instant novelty"],
-                ["#F59E0B", "NEW REPLY", "Pulls brain off-task"],
-                ["#E11D48", "TRENDING NOW", "Just 60 seconds?"],
+                ["#E11D48", "LOUD FEED", "Kills quiet thinking"],
+                ["#F59E0B", "NEW VIDEO", "Fills every silent gap"],
+                ["#E11D48", "PING ALERT", "Breaks your train of thought"],
             ],
-            "phone_cta_urgent": "TAP NOW",
-            "swarm_badges": ["SPIKE", "DRIFT", "BAIT", "SPLIT", "NOISE", "CRASH"],
-            "scan_title": "ATTENTION NETWORK SCAN" if is_coupling else "DOPAMINE FOCUS SCAN",
-            "scan_stat": stat_str,
-            "scan_sub": "NETWORK LINK FRACTURED" if is_coupling else "BASELINE DOPAMINE CRASH",
-            "scan_left_lbl": "CHEAP SPIKE",
-            "scan_right_lbl": "UNCOUPLED" if is_coupling else "BRAIN FOG",
-            "scan_footer": "ATTENTION LINK: WEAKENED" if is_coupling else "REWARD SYSTEM: DEPLETED",
-            "laptop_hdr": "DEEP WORK • PRIORITY",
-            "laptop_due": "DUE 5:00 PM",
+            "phone_cta_urgent": "TAP NOISE",
+            "swarm_badges": ["NOISE", "FOG", "PING!", "BUSY", "LOST", "TRAP"],
+            "scan_title": "EVERYDAY BRAIN SCAN",
+            "scan_stat": "20 MIN MAX" if is_nap else ("NO LYRICS" if is_lyrics else "QUIET = IDEAS"),
+            "scan_sub": "WHY YOUR BRAIN ACTS WEIRD",
+            "scan_left_lbl": "OVERLOADED",
+            "scan_right_lbl": "CRYSTAL CLEAR",
+            "scan_footer": "GIVE YOUR BRAIN ROOM TO BREATHE",
+            "laptop_hdr": "SMART HABIT • TRY TODAY",
+            "laptop_due": "SIMPLE FIX",
             "laptop_title": clean_laptop_title,
-            "laptop_status": "|  (Waiting for steady focus)",
-            "laptop_callout": "STEADY DOPAMINE = DEEP FOCUS",
+            "laptop_status": "|  (Works the very first day)",
+            "laptop_callout": "LESS NOISE = SHARPER BRAIN",
             "end_top": "PART 1 • YOU DECIDE",
-            "option_a": "LOCK PHONE AWAY & PROTECT ATTENTION LINK" if is_coupling else "LOCK PHONE AWAY FOR 45 MIN DEEP WORK",
-            "option_b": "TAP ONE ALERT & FRACTURE YOUR FOCUS",
+            "option_a": "TRY THIS SIMPLE BRAIN FIX TODAY",
+            "option_b": "KEEP DOING IT THE OLD TIRED WAY",
             "end_sub": end_sub_line,
         }
-        if is_coupling:
-            dialogue = [
-                {"beat": "intro", "speaker": "pov", "text": "Two fourteen already... my focus is fading. Maybe one quick phone check will wake my brain up."},
-                {"beat": "trap", "speaker": "partner", "text": "STOP! Drop that phone! You're about to shatter your brain's dopamine attention coupling!"},
-                {"beat": "explain", "speaker": "partner", "text": "Listen closely. Steady dopamine is the glue that couples your brain's attention networks together. Cheap screen spikes hijack that signal and scatter your focus."},
-                {"beat": "timer_react", "speaker": "pov", "text": "Wait... so quick scrolling literally uncouples my attention networks?!"},
-                {"beat": "scan", "speaker": "partner", "text": "Look at this scan. One dopamine spike drops network coupling forty percent, leaving every complex task feeling impossible."},
-                {"beat": "desk", "speaker": "partner", "text": "Look at that work on your desk. Start five clean minutes with zero screen hits so steady dopamine locks your networks back in."},
-                {"beat": "agree", "speaker": "pov", "text": "Okay, phone stays down. Five clean minutes on the desk."},
-                {"beat": "ping", "speaker": "partner", "text": "Hear those three alerts? Cheap dopamine is already pulling your hand straight back toward the screen!"},
-            ]
+        if is_shower:
+            explain = "Your brain only connects creative dots when you stop feeding it nonstop noise. In the shower, there's no phone—so your hidden ideas finally pop up."
+            scan_line = "Look at this scan. Staring at a screen locks your brain in tunnel vision, while five quiet minutes spark twice as many fresh ideas."
+            desk_line = "Look at that stuck task on your desk. Step away for five silent minutes without your phone, and watch the answer hit you."
+        elif is_nap:
+            explain = "After twenty minutes, your brain drops into super-deep sleep. Wake up in the middle of that at forty-five minutes, and you feel drunk and groggy for hours."
+            scan_line = "Look at this scan. A twenty-minute nap refreshes your energy cleanly—while a forty-five minute nap leaves you in heavy brain fog."
+            desk_line = "Look at your desk. Set a strict twenty-minute alarm before you lie down so you wake up sharp instead of wrecked."
+        elif is_lyrics:
+            explain = "Your brain uses the exact same reading zone to process sung words. So when lyrics play, your brain has to keep switching back and forth."
+            scan_line = "Look at this scan. Songs with lyrics cut reading speed sharply—forcing you to re-read the exact same sentence three times."
+            desk_line = "Look at that work on your desk. Switch to instrumental music or quiet beats and watch how much faster you finish."
+        elif is_door:
+            explain = "Every time you walk through a doorway, your brain treats the new room like a brand-new chapter—and quietly closes the mental tab from the last room."
+            scan_line = "Look at this scan. Crossing a doorway clears short-term memory on purpose so your brain can focus on the new space."
+            desk_line = "Look at your desk. Say the one thing you need out loud before standing up, and your brain won't wipe it at the door."
         else:
-            dialogue = [
-                {"beat": "intro", "speaker": "pov", "text": "Ugh... my brain feels foggy. Let me just scroll my phone for two minutes to recharge."},
-                {"beat": "trap", "speaker": "partner", "text": "STOP! Don't touch that screen! You're walking straight into a dopamine crash!"},
-                {"beat": "explain", "speaker": "partner", "text": f"Listen closely. With {spoken_topic.lower()}, cheap novelty floods your reward circuits fast, then drops baseline dopamine below normal for hours."},
-                {"beat": "timer_react", "speaker": "pov", "text": "Wait... two minutes of scrolling ruins my whole focus window?!"},
-                {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Your prefrontal focus drops forty percent right after the spike, turning simple work into mental mud."},
-                {"beat": "desk", "speaker": "partner", "text": "Look over at your desk. Give that task five friction-free minutes without the phone so real motivation builds naturally."},
-                {"beat": "agree", "speaker": "pov", "text": "Alright, alright... I'm putting the phone face down."},
-                {"beat": "ping", "speaker": "partner", "text": "There go three alerts at once! Your hand is already twitching back toward the phone!"},
-            ]
-    elif any(k in low for k in ("sleep", "insomnia", "bedtime", "midnight", "night", "circadian", "melatonin")):
+            explain = f"It feels random, right? With {spoken_topic.lower()}, your brain is just taking a shortcut to save energy—and constant phone noise makes it ten times worse."
+            scan_line = "Look at this scan. When your mind is flooded with alerts and stress, clear thinking drops fast and autopilot takes over."
+            desk_line = "Look over at your desk. Give yourself ten minutes of calm focus without your phone and notice how fast your head clears."
+        dialogue = [
+            {"beat": "intro", "speaker": "pov", "text": "Wait a second... why does my brain always do this to me? Let me scroll my phone while I think."},
+            {"beat": "trap", "speaker": "partner", "text": "STOP! Put that phone down! Your brain isn't broken—there's a crazy simple reason this happens!"},
+            {"beat": "explain", "speaker": "partner", "text": explain},
+            {"beat": "timer_react", "speaker": "pov", "text": "No way... THAT is actually why that keeps happening to me?!"},
+            {"beat": "scan", "speaker": "partner", "text": scan_line},
+            {"beat": "desk", "speaker": "partner", "text": desk_line},
+            {"beat": "agree", "speaker": "pov", "text": "Whoa, that actually makes total sense. I'll try it now."},
+            {"beat": "ping", "speaker": "partner", "text": "Too late—three notifications just buzzed! Your hand is already reaching right back for the screen!"},
+        ]
+    elif any(k in low for k in ("sleep", "insomnia", "bedtime", "midnight", "night", "exhausted", "8 hours", "1 hour later")):
         props = {
             "loc_main": "YOUR BEDROOM • 11:42 PM",
             "loc_sub": f"{handle} • Part 1",
-            "series_eyebrow": "HABITSAINS POV",
+            "series_eyebrow": "EVERYDAY SCIENCE",
             "series_title": series_title,
-            "timer_label": "RECOVERY WINDOW",
+            "timer_label": "SLEEP BATTERY",
             "phone_time": "11:42",
             "phone_norm_hdr": "LATE-NIGHT LOOP",
             "phone_norm_cards": [
-                ["#E11D48", "AUTOPLAY NEXT", "Blue light blocks melatonin"],
-                ["#3B82F6", "LATE CHAT", "Keeps cortex wide awake"],
-                ["#F59E0B", "JUST 1 MORE", "Steals deep REM sleep"],
+                ["#E11D48", "ONE MORE VIDEO", "Tricks brain into daytime"],
+                ["#3B82F6", "LATE CHATS", "Keeps your mind racing"],
+                ["#F59E0B", "LIGHT SLEEP", "Wake up tired after 8 hrs"],
             ],
-            "phone_cta_norm": "WATCH ONE MORE",
-            "phone_urgent_hdr": "3 MIDNIGHT BAITS!",
+            "phone_cta_norm": "WATCH 1 MORE",
+            "phone_urgent_hdr": "3 MIDNIGHT TRAPS!",
             "phone_urgent_cards": [
-                ["#E11D48", "NEW EPISODE", "Just 10 minutes more?"],
+                ["#E11D48", "NEXT EPISODE", "Just 10 minutes more?"],
                 ["#F59E0B", "FRIEND TAGGED", "Tap before sleeping"],
-                ["#E11D48", "LATE ALERT", "Spikes evening cortisol"],
+                ["#E11D48", "LATE PING", "Steals deep recharge"],
             ],
             "phone_cta_urgent": "OPEN SCREEN",
-            "swarm_badges": ["BLUE", "AWAKE", "REM-", "ALERT", "LATE", "FOG"],
-            "scan_title": "SLEEP RECOVERY SCAN",
-            "scan_stat": extracted_num if "%" in extracted_num else "-35% MEMORY",
-            "scan_sub": "DEEP SLEEP CUT IN HALF",
-            "scan_left_lbl": "11:42 PM SCREEN",
-            "scan_right_lbl": "7:00 AM CRASH",
-            "scan_footer": "MELATONIN: SUPPRESSED",
-            "laptop_hdr": "TOMORROW • BIG TASK",
-            "laptop_due": "DUE 9:00 AM",
+            "swarm_badges": ["AWAKE", "TIRED", "1 AM!", "PING!", "LATE", "FOG"],
+            "scan_title": "DEEP SLEEP SCAN",
+            "scan_stat": extracted_num if "%" in extracted_num else "-35% ENERGY",
+            "scan_sub": "8 HOURS IN BED, STILL TIRED",
+            "scan_left_lbl": "11:42 PM PHONE",
+            "scan_right_lbl": "GROGGY MORNING",
+            "scan_footer": "DEEP RECHARGE: BLOCKED",
+            "laptop_hdr": "TOMORROW • BIG DAY",
+            "laptop_due": "STARTS 9 AM",
             "laptop_title": clean_laptop_title,
             "laptop_status": "|  (Needs a rested brain)",
-            "laptop_callout": "SLEEP LOCKS IN MEMORY & FOCUS",
+            "laptop_callout": "PHONE OUTSIDE = REAL ENERGY",
             "end_top": "PART 1 • YOU DECIDE",
-            "option_a": "CHARGE PHONE OUTSIDE & SLEEP ON TIME",
+            "option_a": "CHARGE PHONE OUTSIDE & SLEEP DEEPLY",
             "option_b": '"JUST ONE MORE VIDEO" UNTIL 1:00 AM',
             "end_sub": end_sub_line,
         }
         dialogue = [
             {"beat": "intro", "speaker": "pov", "text": "Eleven forty-two already... I should sleep, let me just watch one short video first."},
-            {"beat": "trap", "speaker": "partner", "text": "STOP! Put that glowing screen down! You're sabotaging tonight's brain recovery right now!"},
-            {"beat": "explain", "speaker": "partner", "text": "Listen closely. Bright late-night feeds block melatonin and keep your prefrontal cortex wired, slashing the deep sleep that repairs memory and focus."},
-            {"beat": "timer_react", "speaker": "pov", "text": "Wait... ten minutes on my phone messes up tomorrow's whole focus window?!"},
-            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Delayed sleep cuts memory consolidation and leaves your brain running in fog all next afternoon."},
-            {"beat": "desk", "speaker": "partner", "text": "Look at that work waiting on your desk for tomorrow. It needs a fully restored prefrontal cortex, not sleep debt."},
-            {"beat": "agree", "speaker": "pov", "text": "Okay, you're right... lights out, phone stays away."},
-            {"beat": "ping", "speaker": "partner", "text": "Hear those three midnight pings? One tap right now and you'll still be awake at one AM!"},
+            {"beat": "trap", "speaker": "partner", "text": "STOP! Put that glowing screen down! That's why you wake up tired even after eight hours!"},
+            {"beat": "explain", "speaker": "partner", "text": "Here is why. Bright late-night videos tell your brain it's still daytime, shutting off your sleep chemical so you stay stuck in light, shallow sleep."},
+            {"beat": "timer_react", "speaker": "pov", "text": "Wait... ten minutes on my phone ruins my sleep quality all night?!"},
+            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Late scrolling cuts deep recharge sharply—leaving you foggy and cranky all next afternoon."},
+            {"beat": "desk", "speaker": "partner", "text": "Look at the work waiting on your desk for tomorrow. Charge your phone outside the bedroom tonight so your brain actually recharges."},
+            {"beat": "agree", "speaker": "pov", "text": "Okay, fair point... lights out, phone stays away."},
+            {"beat": "ping", "speaker": "partner", "text": "Hear those three midnight pings? One tap right now and you'll still be scrolling at one AM!"},
         ]
-    elif any(k in low for k in ("morning", "7 am", "7:00", "wake", "cortisol", "sunlight", "alarm")):
+    elif any(k in low for k in ("morning", "7 am", "7:00", "wake", "sunlight", "alarm")):
         props = {
             "loc_main": "YOUR BEDROOM • 7:01 AM",
             "loc_sub": f"{handle} • Part 1",
@@ -573,83 +697,83 @@ def build_topic_matched_pov_3d_episode(
                 ["#E11D48", "BREAKING NEWS", "Tap to see what happened"],
             ],
             "phone_cta_urgent": "OPEN NOW",
-            "swarm_badges": ["99+", "PING!", "MSG", "LIVE", "LIKE", "ALERT"],
-            "scan_title": "MORNING DOPAMINE SCAN",
+            "swarm_badges": ["99+", "PING!", "MSG", "LIVE", "LIKE", "TRAP"],
+            "scan_title": "MORNING FOCUS SCAN",
             "scan_stat": extracted_num if "%" in extracted_num else "-40% FOCUS",
-            "scan_sub": "CRASH LASTS 6 HOURS",
+            "scan_sub": "BRAIN FOG FOR 6 HOURS",
             "scan_left_lbl": "7:01 AM SCROLL",
             "scan_right_lbl": "3:00 PM FOG",
-            "scan_footer": "REWARD SYSTEM: DEPLETED",
-            "laptop_hdr": "DEEP WORK • BIG PROJECT",
+            "scan_footer": "FOCUS FUEL: BURNED EARLY",
+            "laptop_hdr": "TODAY • BIG PRIORITY",
             "laptop_due": "DUE 5:00 PM",
             "laptop_title": clean_laptop_title,
             "laptop_status": "|  (0 words written...)",
-            "laptop_callout": "PROTECT YOUR FIRST 60 MINUTES",
+            "laptop_callout": "PROTECT YOUR FIRST 30 MINUTES",
             "end_top": "PART 1 • YOU DECIDE",
-            "option_a": "LOCK PHONE AWAY & GET MORNING SUNLIGHT",
-            "option_b": '"JUST TWO MINUTES" OF MORNING SCROLLING',
+            "option_a": "LEAVE PHONE AWAY FOR THE FIRST 30 MINUTES",
+            "option_b": '"JUST TWO MINUTES" OF BED SCROLLING',
             "end_sub": end_sub_line,
         }
         dialogue = [
             {"beat": "intro", "speaker": "pov", "text": "Ugh... seven AM already. Let me just check my phone for two minutes before getting up."},
             {"beat": "trap", "speaker": "partner", "text": "STOP! Don't touch that screen! You're walking straight into the seven AM focus trap!"},
-            {"beat": "explain", "speaker": "partner", "text": "Listen closely. Your brain wakes up with clean morning chemistry. One bed-scroll spikes cheap dopamine artificially, then crashes your focus for six hours."},
-            {"beat": "timer_react", "speaker": "pov", "text": "Wait... six whole hours ruined from just two minutes?!"},
-            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Your focus capacity drops forty percent, and every hard task feels twice as heavy."},
-            {"beat": "desk", "speaker": "partner", "text": "Look at that project on your desk. Guard your first hour with daylight and deep work, not a fried reward system."},
+            {"beat": "explain", "speaker": "partner", "text": "Listen closely. You wake up with fresh focus fuel. One bed-scroll burns it on fake excitement—making normal work feel painfully boring all day."},
+            {"beat": "timer_react", "speaker": "pov", "text": "Wait... six whole hours ruined from just two minutes in bed?!"},
+            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Your focus drops forty percent right after morning scrolling, and brain fog hangs on till afternoon."},
+            {"beat": "desk", "speaker": "partner", "text": "Look at that work on your desk. Keep the phone away for your first thirty minutes so your brain stays sharp."},
             {"beat": "agree", "speaker": "pov", "text": "Okay, okay... I won't check it yet."},
-            {"beat": "ping", "speaker": "partner", "text": "There it goes—three urgent alerts hitting at once! Your hand is already reaching back for it!"},
+            {"beat": "ping", "speaker": "partner", "text": "There it goes—three loud alerts hitting at once! Your hand is already reaching back for it!"},
         ]
-    elif any(k in low for k in ("multitask", "switch", "23-minute", "23 min", "residue", "interrupt", "notification")):
+    elif any(k in low for k in ("multitask", "switch", "23-minute", "23 min", "text", "interrupt", "notification", "tab")):
         props = {
             "loc_main": "YOUR DESK • 2:14 PM",
             "loc_sub": f"{handle} • Part 1",
             "series_eyebrow": "HABITSAINS POV",
             "series_title": series_title,
-            "timer_label": "DEEP FOCUS CLOCK",
+            "timer_label": "FOCUS CLOCK",
             "phone_time": "2:14",
-            "phone_norm_hdr": "TASK SWITCH TRAP",
+            "phone_norm_hdr": "1 TEXT = 23 MIN LOST",
             "phone_norm_cards": [
-                ["#3B82F6", "QUICK DM", "Costs 23 min to refocus"],
-                ["#F59E0B", "NEW EMAIL", "Leaves attention residue"],
-                ["#E11D48", "BADGE PING", "Resets working memory"],
+                ["#3B82F6", "QUICK TEXT", "Takes 10 sec, costs 23 min"],
+                ["#F59E0B", "NEW EMAIL", "Pulls mind off your work"],
+                ["#E11D48", "APP PING", "Resets your whole flow"],
             ],
-            "phone_cta_norm": "CHECK 10 SECS",
-            "phone_urgent_hdr": "3 SWITCH TRIGGERS!",
+            "phone_cta_norm": "PEEK 10 SECS",
+            "phone_urgent_hdr": "3 DISTRACTION PINGS!",
             "phone_urgent_cards": [
                 ["#E11D48", "TEAM CHAT", "Quick question right now"],
-                ["#F59E0B", "INBOX +4", "Urgent? Or distraction?"],
-                ["#E11D48", "APP ALERT", "One glance = 23m tax"],
+                ["#F59E0B", "INBOX +4", "Urgent? Or just noise?"],
+                ["#E11D48", "APP ALERT", "1 glance = 23 min lost"],
             ],
-            "phone_cta_urgent": "SWITCH NOW",
-            "swarm_badges": ["23 MIN", "SWITCH", "PING!", "TAB+", "NOISE", "TAX"],
-            "scan_title": "ATTENTION RESIDUE SCAN",
-            "scan_stat": "23 MIN TAX",
-            "scan_sub": "PER SINGLE INTERRUPTION",
-            "scan_left_lbl": "10 SEC GLANCE",
-            "scan_right_lbl": "23 MIN LOST",
-            "scan_footer": "WORKING MEMORY: FRAGMENTED",
-            "laptop_hdr": "SINGLE-TASK • PRIORITY",
+            "phone_cta_urgent": "CHECK NOW",
+            "swarm_badges": ["23 MIN", "PING!", "TEXT", "TAB+", "NOISE", "LOST"],
+            "scan_title": "FOCUS LOSS SCAN",
+            "scan_stat": "23 MIN LOST",
+            "scan_sub": "FROM ONE 10-SEC CHECK",
+            "scan_left_lbl": "10 SEC TEXT",
+            "scan_right_lbl": "23 MIN GONE",
+            "scan_footer": "BRAIN STUCK ON OLD MESSAGE",
+            "laptop_hdr": "ONE TASK • ZERO PINGS",
             "laptop_due": "DUE 5:00 PM",
             "laptop_title": clean_laptop_title,
-            "laptop_status": "|  (1 tab open, zero pings)",
-            "laptop_callout": "ONE TASK AT A TIME = 2X SPEED",
+            "laptop_status": "|  (1 tab open, phone silent)",
+            "laptop_callout": "ONE TASK AT A TIME = 2X FASTER",
             "end_top": "PART 1 • YOU DECIDE",
-            "option_a": "AIRPLANE MODE & FINISH ONE TASK CLEANLY",
-            "option_b": "PEEK AT ONE MESSAGE & PAY THE 23-MIN TAX",
+            "option_a": "AIRPLANE MODE & FINISH THIS ONE TASK",
+            "option_b": "PEEK AT 1 TEXT & LOSE 23 MINUTES",
             "end_sub": end_sub_line,
         }
         dialogue = [
             {"beat": "intro", "speaker": "pov", "text": "Ooh, my phone lit up. Let me reply for ten seconds, then jump right back to work."},
-            {"beat": "trap", "speaker": "partner", "text": "STOP! Don't switch tabs! That ten-second glance is an attention-residue trap!"},
-            {"beat": "explain", "speaker": "partner", "text": "Listen closely. Your brain can't truly multitask. Every quick check leaves attention residue stuck on the old message while your working memory scrambles to reload."},
-            {"beat": "timer_react", "speaker": "pov", "text": "Wait... ten seconds costs how much of my focus window?!"},
-            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Research shows a single interruption triggers a twenty-three minute recovery tax before deep focus returns."},
-            {"beat": "desk", "speaker": "partner", "text": "Look at that project on your desk. Keep one tab open and silence every alert until this block is done."},
+            {"beat": "trap", "speaker": "partner", "text": "STOP! Don't touch that text! A ten-second glance is way more expensive than you think!"},
+            {"beat": "explain", "speaker": "partner", "text": "Here is why. Your brain can't really multitask. Even after you put the phone down, half your mind stays stuck on that text while you try to work."},
+            {"beat": "timer_react", "speaker": "pov", "text": "Wait... ten seconds really costs how much of my focus time?!"},
+            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Studies show it takes twenty-three full minutes to get back into deep flow after one tiny interruption."},
+            {"beat": "desk", "speaker": "partner", "text": "Look at that work on your desk. Put your phone on airplane mode until this one task is finished."},
             {"beat": "agree", "speaker": "pov", "text": "Got it... airplane mode on. One task only."},
-            {"beat": "ping", "speaker": "partner", "text": "Uh-oh—three pings just lit up your phone! Your hand is already reaching to take a peek!"},
+            {"beat": "ping", "speaker": "partner", "text": "Uh-oh—three loud pings just lit up your phone! Your hand is already reaching to take a peek!"},
         ]
-    elif any(k in low for k in ("procrastin", "boring", "lazy", "laziness", "emotional", "willpower", "crave", "habit")):
+    elif any(k in low for k in ("procrastin", "boring", "lazy", "laziness", "to-do", "to do", "starting", "start", "messy desk", "clutter")):
         props = {
             "loc_main": "YOUR DESK • 2:14 PM",
             "loc_sub": f"{handle} • Part 1",
@@ -657,146 +781,146 @@ def build_topic_matched_pov_3d_episode(
             "series_title": series_title,
             "timer_label": "ACTION WINDOW",
             "phone_time": "2:14",
-            "phone_norm_hdr": "ESCAPE LOOP ACTIVE",
+            "phone_norm_hdr": "WHY YOU CAN'T START",
             "phone_norm_cards": [
-                ["#E11D48", "EASY RELIEF", "Hides task discomfort"],
-                ["#F59E0B", "ENDLESS FEED", "Feels safe, breeds guilt"],
-                ["#3B82F6", "LATER MODE", "Makes starting harder"],
+                ["#E11D48", "EASY ESCAPE", "Hides task stress fast"],
+                ["#F59E0B", "SCROLL FEED", "Feels good, breeds guilt"],
+                ["#3B82F6", "DO IT LATER", "Makes starting 2x harder"],
             ],
-            "phone_cta_norm": "AVOID TASK",
+            "phone_cta_norm": "AVOID WORK",
             "phone_urgent_hdr": "3 ESCAPE BAITS!",
             "phone_urgent_cards": [
                 ["#E11D48", "NEW VIDEO", "Instant mood relief!"],
                 ["#F59E0B", "GROUP MEME", "Just laugh for 1 min"],
-                ["#E11D48", "EASY SCROLL", "Delay hard work again"],
+                ["#E11D48", "EASY SCROLL", "Put off work again"],
             ],
             "phone_cta_urgent": "ESCAPE NOW",
-            "swarm_badges": ["DELAY", "AVOID", "SCROLL", "FEAR", "DRIFT", "TRAP"],
-            "scan_title": "AMYGDALA THREAT SCAN",
-            "scan_stat": "MOOD LOOP",
-            "scan_sub": "NOT LAZINESS—EMOTION",
-            "scan_left_lbl": "TASK STRESS",
-            "scan_right_lbl": "GUILT SPIKE",
-            "scan_footer": "BRAIN SEEKS FAST RELIEF",
-            "laptop_hdr": "5-MINUTE START RULE",
+            "swarm_badges": ["LATER", "AVOID", "SCROLL", "STRESS", "GUILT", "TRAP"],
+            "scan_title": "BRAIN ALARM SCAN",
+            "scan_stat": "NOT LAZY!",
+            "scan_sub": "BRAIN TREATS WORK AS STRESS",
+            "scan_left_lbl": "BIG TASK",
+            "scan_right_lbl": "PHONE ESCAPE",
+            "scan_footer": "START TINY TO CALM YOUR BRAIN",
+            "laptop_hdr": "5-MINUTE START TRICK",
             "laptop_due": "DUE TODAY",
             "laptop_title": clean_laptop_title,
-            "laptop_status": "|  (Write just 1 ugly line)",
-            "laptop_callout": "ACTION CALMS THE AMYGDALA",
+            "laptop_status": "|  (Just do 5 ugly minutes)",
+            "laptop_callout": "5 MINUTES BREAKS THE FREEZE",
             "end_top": "PART 1 • YOU DECIDE",
-            "option_a": "START A 5-MINUTE TINY SPRINT ON THE DESK",
-            "option_b": "SCROLL FOR MOOD RELIEF & DELAY AGAIN",
+            "option_a": "DO JUST 5 EASY MINUTES ON THE DESK NOW",
+            "option_b": "SCROLL FOR RELIEF & FEEL GUILTY LATER",
             "end_sub": end_sub_line,
         }
         dialogue = [
-            {"beat": "intro", "speaker": "pov", "text": "I know I need to start this task... I just don't feel motivated. Maybe a quick phone break first."},
-            {"beat": "trap", "speaker": "partner", "text": "STOP! Don't grab that phone! That's not laziness—it's your brain's emotional escape loop!"},
-            {"beat": "explain", "speaker": "partner", "text": "Listen closely. When a task feels boring or intimidating, your amygdala flags it as a threat and pushes you toward fast screen relief."},
-            {"beat": "timer_react", "speaker": "pov", "text": "Wait... so procrastination is mood regulation, not a discipline problem?!"},
-            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Every avoidance scroll buys temporary relief, then spikes stress and makes starting even harder."},
-            {"beat": "desk", "speaker": "partner", "text": "Look at that laptop on your desk. Shrink the first step to five tiny minutes—once you start, the resistance fades."},
-            {"beat": "agree", "speaker": "pov", "text": "Okay... just five ugly minutes. No phone."},
+            {"beat": "intro", "speaker": "pov", "text": "I know I need to start this... I just don't feel motivated at all. Maybe a quick phone break first."},
+            {"beat": "trap", "speaker": "partner", "text": "STOP! Drop that phone! You're not lazy—your brain is trying to escape stress!"},
+            {"beat": "explain", "speaker": "partner", "text": "Here is what's happening. When a task feels big or boring, your brain's alarm button fires—and pushes you toward your phone for quick comfort."},
+            {"beat": "timer_react", "speaker": "pov", "text": "Wait... so putting work off isn't laziness—my brain just wants quick relief?!"},
+            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Every avoidance scroll feels good for two minutes, then piles on stress and makes starting twice as hard."},
+            {"beat": "desk", "speaker": "partner", "text": "Look at that laptop on your desk. Tell yourself you'll only do five tiny, ugly minutes—once you start, the freeze vanishes."},
+            {"beat": "agree", "speaker": "pov", "text": "Okay... just five tiny minutes. No phone."},
             {"beat": "ping", "speaker": "partner", "text": "Three notifications just buzzed right on cue! Your brain is begging your hand to escape again!"},
         ]
-    elif any(k in low for k in ("ultradian", "90-minute", "burnout", "fatigue", "caffeine", "coffee", "recovery", "energy")):
+    elif any(k in low for k in ("break", "fried", "tired", "burnout", "fatigue", "reset", "rest", "energy")):
         props = {
             "loc_main": "YOUR DESK • 2:14 PM",
             "loc_sub": f"{handle} • Part 1",
-            "series_eyebrow": "HABITSAINS POV",
+            "series_eyebrow": "EVERYDAY SCIENCE",
             "series_title": series_title,
-            "timer_label": "ULTRADIAN CYCLE",
+            "timer_label": "ENERGY BATTERY",
             "phone_time": "2:14",
             "phone_norm_hdr": "FAKE BREAK TRAP",
             "phone_norm_cards": [
-                ["#E11D48", "SCROLL BREAK", "Zero neural recovery"],
-                ["#F59E0B", "HIGH NOISE", "Keeps cortex fatigued"],
-                ["#3B82F6", "MORE FEEDS", "Drains afternoon fuel"],
+                ["#E11D48", "SCROLL BREAK", "Drains battery even more"],
+                ["#F59E0B", "FAST VIDEOS", "Zero real mental rest"],
+                ["#3B82F6", "MORE NOISE", "Triggers 3 PM brain fog"],
             ],
             "phone_cta_norm": "FAKE REST",
-            "phone_urgent_hdr": "3 ENERGY DRAINS!",
+            "phone_urgent_hdr": "3 BATTERY DRAINS!",
             "phone_urgent_cards": [
                 ["#E11D48", "RAPID CLIPS", "Overloads tired brain"],
-                ["#F59E0B", "NEW ALERTS", "Blocks true reset"],
-                ["#E11D48", "ENDLESS FEED", "Triggers 3 PM crash"],
+                ["#F59E0B", "NEW ALERTS", "Stops your recharge"],
+                ["#E11D48", "ENDLESS FEED", "Leaves you more tired"],
             ],
             "phone_cta_urgent": "DRAIN NOW",
-            "swarm_badges": ["FATIGUE", "CRASH", "NOISE", "BURN", "FOG", "LOW"],
-            "scan_title": "COGNITIVE ENERGY SCAN",
-            "scan_stat": extracted_num if extracted_num else "90 MIN CAP",
-            "scan_sub": "BRAIN NEEDS TRUE RESET",
-            "scan_left_lbl": "FAKE BREAK",
-            "scan_right_lbl": "BURNOUT DIP",
-            "scan_footer": "RECOVERY: BLOCKED BY SCREEN",
-            "laptop_hdr": "RHYTHMIC DEEP WORK",
-            "laptop_due": "90-MIN BLOCK",
+            "swarm_badges": ["TIRED", "CRASH", "NOISE", "DRAIN", "FOG", "LOW"],
+            "scan_title": "BRAIN BATTERY SCAN",
+            "scan_stat": "0% RECHARGE",
+            "scan_sub": "SCROLLING IS NOT REST",
+            "scan_left_lbl": "PHONE BREAK",
+            "scan_right_lbl": "STILL TIRED",
+            "scan_footer": "REAL REST = NO SCREENS",
+            "laptop_hdr": "10-MINUTE BRAIN RESET",
+            "laptop_due": "SIMPLE FIX",
             "laptop_title": clean_laptop_title,
-            "laptop_status": "|  (Work deep, rest offline)",
-            "laptop_callout": "REAL REST = EYES OFF SCREENS",
+            "laptop_status": "|  (Step away for 10 quiet min)",
+            "laptop_callout": "QUIET EYES = FAST RECHARGE",
             "end_top": "PART 1 • YOU DECIDE",
-            "option_a": "TAKE A 10-MIN SCREEN-FREE RECOVERY BREAK",
-            "option_b": "SCROLL YOUR PHONE & STAY EXHAUSTED",
+            "option_a": "TAKE 10 QUIET MINUTES WITH ZERO SCREENS",
+            "option_b": "SCROLL YOUR PHONE & COME BACK MORE TIRED",
             "end_sub": end_sub_line,
         }
         dialogue = [
-            {"beat": "intro", "speaker": "pov", "text": "Two hours straight and my brain is fried. Let me take a quick break on my phone."},
-            {"beat": "trap", "speaker": "partner", "text": "STOP! Put that phone down! Scrolling on a break is the fastest way to burn out!"},
-            {"beat": "explain", "speaker": "partner", "text": "Listen closely. Your prefrontal cortex peaks in ninety-minute biological waves. Flooding it with rapid feeds during rest prevents real cognitive recovery."},
-            {"beat": "timer_react", "speaker": "pov", "text": "Wait... scrolling during breaks doesn't actually rest my brain at all?!"},
-            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Fake screen breaks keep mental fatigue locked high, tanking your output for the rest of the day."},
-            {"beat": "desk", "speaker": "partner", "text": "Look back at your desk. Step away from every screen for ten quiet minutes, then return for one clean focus wave."},
+            {"beat": "intro", "speaker": "pov", "text": "Ugh, my head feels totally fried. Let me take a quick five-minute break on my phone."},
+            {"beat": "trap", "speaker": "partner", "text": "STOP! Put that phone down! Scrolling on your break actually makes your brain MORE tired!"},
+            {"beat": "explain", "speaker": "partner", "text": "Think about it. Fast videos force your tired brain to process hundreds of flashing clips in minutes—so your battery never actually recharges."},
+            {"beat": "timer_react", "speaker": "pov", "text": "Wait... so my phone breaks aren't resting my brain at all?!"},
+            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Screen breaks give you zero real recharge, which is why you come back feeling even heavier."},
+            {"beat": "desk", "speaker": "partner", "text": "Look back at your desk. Walk away from every screen for ten quiet minutes, and watch your energy snap right back."},
             {"beat": "agree", "speaker": "pov", "text": "Alright... ten quiet minutes off-screen first."},
             {"beat": "ping", "speaker": "partner", "text": "Hear those three buzzes? Your tired brain is already pulling your hand right back to the phone!"},
         ]
     else:
-        # Universal topic-locked neuroscience POV template that explicitly names & mirrors the exact daily topic!
+        # Universal 100% plain-English everyday focus & phone trap (zero academic jargon!)
         stat_str = extracted_num if extracted_num else "-40% FOCUS"
         props = {
             "loc_main": "YOUR DESK • 2:14 PM",
             "loc_sub": f"{handle} • Part 1",
             "series_eyebrow": "HABITSAINS POV",
             "series_title": series_title,
-            "timer_label": "FOCUS WINDOW",
+            "timer_label": "FOCUS BATTERY",
             "phone_time": "2:14",
             "phone_norm_hdr": "14 FOCUS TRAPS",
             "phone_norm_cards": [
-                ["#E11D48", "FAST FEEDS", "Hijacks brain bandwidth"],
-                ["#3B82F6", "NEW PINGS", "Interrupts deep wiring"],
-                ["#F59E0B", "QUICK HIT", "Drains prefrontal fuel"],
+                ["#E11D48", "SHORT CLIPS", "Burns your focus fuel"],
+                ["#3B82F6", "GROUP CHAT", "12 unread pings waiting"],
+                ["#F59E0B", "SOCIAL FEED", "Makes real work feel dull"],
             ],
-            "phone_cta_norm": "CHECK NOW",
-            "phone_urgent_hdr": "3 FOCUS ALERTS!",
+            "phone_cta_norm": "CHECK QUICKLY",
+            "phone_urgent_hdr": "3 FOCUS TRAPS!",
             "phone_urgent_cards": [
-                ["#E11D48", "URGENT PING", "Pulls you off protocol"],
-                ["#F59E0B", "VIRAL CLIP", "Just 60 seconds?"],
-                ["#E11D48", "LIVE ALERT", "Breaks neural momentum"],
+                ["#E11D48", "VIRAL CLIP", "Instant fake excitement"],
+                ["#F59E0B", "NEW REPLY", "Pulls you off track"],
+                ["#E11D48", "TRENDING NOW", "Just 60 seconds?"],
             ],
-            "phone_cta_urgent": "OPEN NOW",
+            "phone_cta_urgent": "TAP NOW",
             "swarm_badges": ["SPIKE", "DRIFT", "PING!", "NOISE", "TRAP", "FOG"],
-            "scan_title": _clamp_prop(f"{series_title} SCAN", 22, "NEURAL FOCUS SCAN"),
+            "scan_title": "FOCUS BATTERY SCAN",
             "scan_stat": _clamp_prop(stat_str, 14, "-40% FOCUS"),
-            "scan_sub": "PREFRONTAL LOAD SPIKES",
-            "scan_left_lbl": "DISTRACTION",
-            "scan_right_lbl": "FOCUS DROP",
-            "scan_footer": "CONTROL CIRCUIT: STRAINED",
-            "laptop_hdr": "DEEP WORK • PROTOCOL",
+            "scan_sub": "EASY SCROLL -> REAL FOG",
+            "scan_left_lbl": "QUICK SCROLL",
+            "scan_right_lbl": "BRAIN FOG",
+            "scan_footer": "FOCUS FUEL: DRAINED FAST",
+            "laptop_hdr": "TODAY • BIG GOAL",
             "laptop_due": "DUE 5:00 PM",
             "laptop_title": clean_laptop_title,
-            "laptop_status": "|  (Ready for deep work)",
-            "laptop_callout": "PROTECT YOUR PREFRONTAL CORTEX",
+            "laptop_status": "|  (Ready for clean focus)",
+            "laptop_callout": "PHONE OUT OF SIGHT = EASY FOCUS",
             "end_top": "PART 1 • YOU DECIDE",
-            "option_a": "LOCK PHONE AWAY & RUN ONE CLEAN FOCUS BLOCK",
-            "option_b": "TAP ONE ALERT & LOSE MENTAL MOMENTUM",
+            "option_a": "PUT PHONE IN ANOTHER ROOM & LOCK IN",
+            "option_b": "TAP ONE ALERT & LOSE YOUR WHOLE HOUR",
             "end_sub": end_sub_line,
         }
         dialogue = [
-            {"beat": "intro", "speaker": "pov", "text": f"Ugh... my head feels scattered. Let me just check my phone for a second before I tackle {spoken_topic.lower()}."},
-            {"beat": "trap", "speaker": "partner", "text": f"STOP! Don't touch that screen! You're triggering the exact trap behind {spoken_topic.lower()}!"},
-            {"beat": "explain", "speaker": "partner", "text": "Listen closely. Your prefrontal cortex has limited daily bandwidth. Every high-novelty screen hit floods your circuits and drains deep analytical focus."},
-            {"beat": "timer_react", "speaker": "pov", "text": "Wait... one tiny check really drains my whole focus window?!"},
-            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Once distraction spikes your reward circuits, your brain's focus capacity drops sharply and stays foggy."},
-            {"beat": "desk", "speaker": "partner", "text": "Look over at your desk. Protect one clean, screen-free work block right now so your brain stays locked in."},
-            {"beat": "agree", "speaker": "pov", "text": "Okay, phone stays down. Locking into the desk now."},
-            {"beat": "ping", "speaker": "partner", "text": "Hear those three alerts hitting at once? Your hand is already reaching back toward the phone!"},
+            {"beat": "intro", "speaker": "pov", "text": "Two fourteen already... my focus is slipping. Maybe one quick scroll will wake my brain up."},
+            {"beat": "trap", "speaker": "partner", "text": "STOP! Drop that phone! That two-minute scroll is the exact reason you can't focus!"},
+            {"beat": "explain", "speaker": "partner", "text": "Here is the simple truth. Your brain runs on natural focus fuel. Fast feeds burn it on fake excitement—making real work feel ten times harder."},
+            {"beat": "timer_react", "speaker": "pov", "text": "Wait... one tiny check really drains my whole focus battery?!"},
+            {"beat": "scan", "speaker": "partner", "text": "Look at this scan. Right after a quick scroll, your focus drops forty percent and leaves your head stuck in fog."},
+            {"beat": "desk", "speaker": "partner", "text": "Look over at your desk. Put your phone in another room for thirty minutes—once it's out of sight, focus comes back fast."},
+            {"beat": "agree", "speaker": "pov", "text": "Okay, phone stays out of sight. Locking in now."},
+            {"beat": "ping", "speaker": "partner", "text": "Hear those three alerts hitting at once? Your hand is already reaching straight back for the phone!"},
         ]
 
     return {"props": props, "dialogue": dialogue}
@@ -809,10 +933,11 @@ def normalize_pov_3d_episode(
     hook: str = "",
     scenes_meta: list[dict[str, Any]] | None = None,
     config: dict[str, Any] | None = None,
+    pillar: str = "",
 ) -> dict[str, Any]:
     """Validate & length-clamp a Gemini or fallback pov_3d_episode so 3D props and 8 beats NEVER break."""
     base = build_topic_matched_pov_3d_episode(
-        topic=topic, angle=angle, hook=hook, scenes_meta=scenes_meta, config=config
+        topic=topic, angle=angle, hook=hook, scenes_meta=scenes_meta, config=config, pillar=pillar
     )
     if not isinstance(raw_ep, dict):
         return base
@@ -952,74 +1077,74 @@ def _build_english_fallback(idea: TopicIdea, config: dict[str, Any]) -> dict[str
                     "section": "HOOK",
                     "visual_headline": short_sub,
                     "bullet_points": [
-                        "Why willpower alone keeps failing",
-                        "What cognitive neuroscience actually shows",
-                        "A 3-step protocol you can test today",
+                        "Why forcing yourself keeps failing",
+                        "The simple reason your brain does this",
+                        "3 easy habits you can try today",
                     ],
-                    "on_screen_callout": "Work with your brain's biology instead of fighting it",
-                    "narration": f"{idea.hook} In the next two minutes, we break down the brain mechanism behind {topic} and the practical three-step protocol to fix it.",
-                    "visual_prompt": f"Minimalist dark editorial neuroscience intro visual about {topic}",
+                    "on_screen_callout": "Work with your brain instead of fighting it",
+                    "narration": f"{idea.hook} In the next two minutes, let's break down what is actually going on inside your head—and three dead-simple habits that fix it fast.",
+                    "visual_prompt": f"Warm cozy editorial illustration about {topic}",
                 },
                 {
                     "scene_no": 2,
-                    "section": "PART 1 • THE BRAIN MECHANISM",
-                    "visual_headline": "What Happens Inside Your Brain",
+                    "section": "PART 1 • WHY IT HAPPENS",
+                    "visual_headline": "What Actually Happens in Your Head",
                     "bullet_points": [
-                        "Prefrontal cortex fatigue under constant switching",
-                        "Neurochemical rhythms govern peak alertness",
-                        "Attention recovers only in protected blocks",
+                        "Your focus battery runs out faster than you think",
+                        "Quick phone hits burn your best energy early",
+                        "Quiet breaks recharge your mind way faster",
                     ],
-                    "on_screen_callout": "Your nervous system runs in measurable biological cycles",
-                    "narration": f"When you examine {topic} through behavioral neuroscience, a clear pattern emerges. Your prefrontal cortex has a finite daily bandwidth for deep analytical work, and ignoring biological rhythms quietly drains your focus.",
-                    "visual_prompt": "Glowing teal neural wave cycles on midnight navy grid",
+                    "on_screen_callout": "Your brain runs like a battery, not a nonstop machine",
+                    "narration": f"Here is the simple truth behind {topic}. Your brain wakes up with a fresh focus battery every day—and tiny hidden habits quietly drain it before you even start your real work.",
+                    "visual_prompt": "Glowing teal brain battery meter draining under phone alerts",
                 },
                 {
                     "scene_no": 3,
                     "section": "PART 2 • THE HIDDEN TRAP",
-                    "visual_headline": "Why Standard Advice Backfires",
+                    "visual_headline": "Why Common Advice Backfires",
                     "bullet_points": [
-                        "Pushing harder increases mental friction",
-                        "High-novelty breaks disrupt cognitive recovery",
-                        "Unstructured schedules invite constant drift",
+                        "Working longer hours creates heavier brain fog",
+                        "Scrolling on breaks doesn't actually rest your mind",
+                        "Keeping your phone nearby steals focus on autopilot",
                     ],
-                    "on_screen_callout": "Effort without recovery design leads straight to burnout",
-                    "narration": "Most productivity advice tells you to grind longer with brute discipline. Yet without managing stimulation and deliberate recovery, longer hours produce lower quality thinking and faster mental exhaustion.",
-                    "visual_prompt": "Dark contrast chart of erratic fatigue spikes versus steady rhythmic flow",
+                    "on_screen_callout": "Pushing harder with an empty battery only makes you slower",
+                    "narration": "Most advice just tells you to try harder and force more discipline. But when you take fake breaks on your phone and keep switching tabs, longer hours just leave you more exhausted.",
+                    "visual_prompt": "Contrast graphic showing messy tangled focus vs calm steady clarity",
                 },
                 {
                     "scene_no": 4,
-                    "section": "PART 3 • 3-STEP PROTOCOL",
-                    "visual_headline": "The 3-Step HabitScience Protocol",
+                    "section": "PART 3 • 3 SIMPLE FIXES",
+                    "visual_headline": "3 Easy Shifts to Try Today",
                     "bullet_points": [
-                        "Protect one distraction-free morning deep block",
-                        "Use deliberate low-stimulation recovery intervals",
-                        "Remove physical friction triggers before starting",
+                        "Keep your phone in another room for 30 minutes",
+                        "Take 10-minute breaks with zero screens",
+                        "Start any scary task with just 5 ugly minutes",
                     ],
-                    "on_screen_callout": "Design your environment so deep focus becomes the default",
-                    "narration": "Apply three concrete shifts starting tomorrow. Protect one uninterrupted morning focus block, take true low-stimulation breaks between sessions, and remove visual phone triggers before you sit down.",
-                    "visual_prompt": "Three luminous concentric teal lenses focusing warm light into clarity",
+                    "on_screen_callout": "Make the right habit easier than the distraction",
+                    "narration": "Try three tiny changes starting today. Put your phone in another room while you work, take real screen-free breaks, and shrink any hard task down to five easy minutes.",
+                    "visual_prompt": "Three clean glowing steps leading from phone clutter to calm workspace",
                 },
                 {
                     "scene_no": 5,
-                    "section": "7-DAY EXPERIMENT",
-                    "visual_headline": "Run the 7-Day Lab Challenge",
+                    "section": "7-DAY CHALLENGE",
+                    "visual_headline": "Try the 7-Day Reset",
                     "bullet_points": [
-                        "Test one protected session daily for 7 days",
-                        "Log energy and clarity scores each afternoon",
-                        "Keep the exact routine that works for you",
+                        "Test just one clean focus block each day",
+                        "Notice how much lighter afternoons feel by Day 4",
+                        "Keep the simple routine that works best for you",
                     ],
-                    "on_screen_callout": "Small repeatable protocols compound into lasting focus",
-                    "narration": f"Treat this week as a personal seven-day lab experiment and track how your clarity shifts by day four. {cta_yt}",
-                    "visual_prompt": "Clean calm 7-day progress nodes glowing in teal and amber",
+                    "on_screen_callout": "Tiny daily tweaks beat willpower every single time",
+                    "narration": f"Test this for just seven days and notice how much clearer your head feels by day four. {cta_yt}",
+                    "visual_prompt": "Calm 7-day progress trail glowing in warm amber and teal",
                 },
             ],
         },
         "shorts_reels_tiktok": {
             "title": _truncate_words(topic, 56),
-            "hook_text": "STOP FIGHTING YOUR BRAIN BIOLOGY",
-            "caption_yt_shorts": f"{idea.hook} Full breakdown on {channel.get('name', 'HabitScience Lab')}! {' '.join(hashtags_list[:4])} #Shorts",
-            "caption_tiktok": f"Most people approach {topic} backward. Here is the 3-step neuroscience protocol! {cta_soc} {' '.join(hashtags_list[:5])}",
-            "caption_ig_reels": f"Save this for your next deep-work block! {idea.hook} {cta_soc} {' '.join(hashtags_list[:5])}",
+            "hook_text": "YOUR BRAIN ISN'T LAZY—HERE'S WHY",
+            "caption_yt_shorts": f"{idea.hook} Watch the full breakdown on {channel.get('name', 'HabitSains')}! {' '.join(hashtags_list[:4])} #Shorts",
+            "caption_tiktok": f"{idea.hook} Comment A or B below! {cta_soc} {' '.join(hashtags_list[:5])}",
+            "caption_ig_reels": f"Save this for when you can't focus! {idea.hook} {cta_soc} {' '.join(hashtags_list[:5])}",
             "hashtags": hashtags_list,
             "scenes": [
                 {
@@ -1027,27 +1152,27 @@ def _build_english_fallback(idea: TopicIdea, config: dict[str, Any]) -> dict[str
                     "badge": "01 • HOOK",
                     "visual_headline": _truncate_words(topic, 34),
                     "narration": f"{idea.hook}",
-                    "visual_prompt": "Vertical dark editorial neuroscience hook graphic",
+                    "visual_prompt": "Vertical bold everyday brain habit hook visual",
                 },
                 {
                     "scene_no": 2,
-                    "badge": "02 • SCIENCE",
-                    "visual_headline": "Focus Runs in Biological Cycles",
-                    "narration": "Your brain cannot sustain peak output nonstop—ignoring cognitive cycles multiplies mental friction and destroys clarity.",
-                    "visual_prompt": "Vertical glowing teal brain rhythm waveform",
+                    "badge": "02 • WHY",
+                    "visual_headline": "Your Focus Runs Like a Battery",
+                    "narration": "Quick phone checks and fake breaks drain your focus fuel early—making normal work feel way harder than it should.",
+                    "visual_prompt": "Vertical glowing brain battery meter graphic",
                 },
                 {
                     "scene_no": 3,
-                    "badge": "03 • PROTOCOL",
-                    "visual_headline": "Protect. Recover. Repeat.",
-                    "narration": "Protect one morning deep-work block, take genuine screen-free recovery breaks, and remove distractions before you start.",
-                    "visual_prompt": "Vertical luminous teal triad protocol visual",
+                    "badge": "03 • THE FIX",
+                    "visual_headline": "Phone Away. 5 Min Start.",
+                    "narration": "Put your phone in another room, take real screen-free breaks, and start with just five tiny minutes.",
+                    "visual_prompt": "Vertical clean 3-step habit graphic",
                 },
                 {
                     "scene_no": 4,
-                    "badge": "04 • 7-DAY TEST",
-                    "visual_headline": "Try It for 7 Days",
-                    "narration": f"Test this protocol for seven days and feel the difference in your energy. {cta_soc}",
+                    "badge": "04 • TRY IT",
+                    "visual_headline": "Test This Today",
+                    "narration": f"Try this one tiny shift today and feel the difference right away. {cta_soc}",
                     "visual_prompt": "Vertical calm summary CTA graphic",
                 },
             ],
@@ -1057,6 +1182,7 @@ def _build_english_fallback(idea: TopicIdea, config: dict[str, Any]) -> dict[str
                 hook=idea.hook,
                 scenes_meta=None,
                 config=config,
+                pillar=getattr(idea, "pillar", ""),
             ),
         },
         "carousel_social": {
@@ -1394,6 +1520,7 @@ def generate_content_blueprint(
                 hook=str(loaded["meta"].get("hook") or idea.hook),
                 scenes_meta=shorts_block.get("scenes"),
                 config=config,
+                pillar=str(loaded["meta"].get("pillar") or getattr(idea, "pillar", "")),
             )
         return loaded
 
@@ -1414,10 +1541,13 @@ def generate_content_blueprint(
             hook=idea.hook,
             scenes_meta=shorts_block.get("scenes"),
             config=config,
+            pillar=getattr(idea, "pillar", ""),
         )
 
     blueprint["meta"] = {
         "topic": idea.topic,
+        "pillar": getattr(idea, "pillar", "focus_habits"),
+        "pillar_label": getattr(idea, "pillar_label", "Everyday Focus & Habits"),
         "angle": idea.angle,
         "hook": idea.hook,
         "source": idea.source,
