@@ -38,13 +38,13 @@ on:
         default: false
 
   # 2. Jadwal otomatis di Cloud (tanpa PC menyala!) — MODE NGEBUT 3x SEHARI DI JAM PRIME TIME AS!
-  # Catatan: Cron GitHub Actions memakai UTC.
-  # 14:00 UTC = 09:00 AM EST (21:00 WIB) | 17:00 UTC = 12:00 PM EST (00:00 WIB) | 21:00 UTC = 04:00 PM EST (04:00 WIB)
+  # Pakai menit off-peak (:17) agar terhindar dari antrean padat menit :00 di server GitHub Actions!
+  # 14:17 UTC = 09:17 AM EST (21:17 WIB) | 17:17 UTC = 12:17 PM EST (00:17 WIB) | 21:17 UTC = 04:17 PM EST (04:17 WIB)
   # - Instagram Reels, Instagram Carousel, & Threads langsung tayang pas jam Prime Time AS!
   # - Facebook Page Reels langsung dijadwalkan native ke slot Prime Time AS berikutnya!
   # - YouTube Long & Shorts langsung ter-upload hari ini & antre publishAt beda tanggal (+1 hari/episode)!
   schedule:
-    - cron: "0 14,17,21 * * *"
+    - cron: "17 14,17,21 * * *"
 
 permissions:
   contents: write
