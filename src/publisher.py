@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import html
 import json
 import os
 from datetime import datetime, timezone
@@ -543,21 +544,104 @@ def publish_all_platforms(
     return summary
 
 
+def _format_telegram_report_html(report_summary: dict[str, Any]) -> str:
+    """Format an executive, clickable HTML Telegram report for every pipeline run."""
+    pub = report_summary.get("publishing") or {}
+    counts = pub.get("counts") or {}
+    results = pub.get("results") or []
+    topic = html.escape(str(report_summary.get("topic", "Unknown Topic")))
+    mode = html.escape(str(report_summary.get("publish_mode", "scheduled")))
+    qa_ok = bool(report_summary.get("qa_passed_all", False))
+    elapsed = report_summary.get("elapsed_sec")
+    dur_txt = f"{round(float(elapsed) / 60.0, 1)} menit" if elapsed else "-"
+
+    status_icon = {
+        "PUBLISHED": "✅",
+        "SCHEDULED": "🗓",
+        "DRAFTED": "📝",
+        "DRY_RUN_READY": "🧪",
+        "PENDING_AUTH": "⏸",
+        "READY_FOR_CONNECTOR": "⏸",
+        "FAILED": "❌",
+    }
+
+    lines = [
+        "<b>🎬 HabitSains Studio — Laporan Produksi</b>",
+        f"📌 <b>Topik:</b> {topic}",
+        f"⚙️ <b>Mode:</b> <code>{mode}</code> | <b>QA:</b> {'✅ LOLOS' if qa_ok else '⚠️ CEK'} | ⏱ {dur_txt}",
+        (
+            f"📊 <b>Ringkasan:</b> "
+            f"Published={counts.get('published', 0)}, "
+            f"Scheduled={counts.get('scheduled', 0)}, "
+            f"Drafted={counts.get('drafted', 0)}, "
+            f"Failed={counts.get('failed', 0)}"
+        ),
+        "",
+        "<b>📡 Status Distribusi Platform:</b>",
+    ]
+    for r in results:
+        st = str(r.get("status", ""))
+        if st in ("PENDING_AUTH", "READY_FOR_CONNECTOR"):
+            continue
+        icon = status_icon.get(st, "•")
+        plat = html.escape(str(r.get("platform", "")))
+        url = str(r.get("url", "")).strip()
+        note = html.escape(str(r.get("notes", ""))[:130])
+        if url:
+            lines.append(f'{icon} <b>{plat}</b> — <code>{st}</code> (<a href="{html.escape(url)}">Buka</a>)\n    <i>{note}</i>')
+        else:
+            lines.append(f"{icon} <b>{plat}</b> — <code>{st}</code>\n    <i>{note}</i>")
+
+    gh_run_id = os.getenv("GITHUB_RUN_ID", "").strip()
+    gh_repo = os.getenv("GITHUB_REPOSITORY", "").strip()
+    if gh_run_id and gh_repo:
+        run_url = f"https://github.com/{gh_repo}/actions/runs/{gh_run_id}"
+        lines.append(f'\n🔗 <a href="{run_url}">Buka Detail &amp; Artifact di GitHub Actions</a>')
+
+    return "\n".join(lines)[:4000]
+
+
 def send_report_notification(report_summary: dict[str, Any], report_md_path: Path) -> bool:
+    sent_any = False
+
+    # 1. Telegram Bot API (Gratis, resmi, langsung ke HP dengan link clickable!)
+    tg_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    tg_chat = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+    if tg_token and tg_chat:
+        try:
+            tg_msg = _format_telegram_report_html(report_summary)
+            resp = requests.post(
+                f"https://api.telegram.org/bot{tg_token}/sendMessage",
+                json={
+                    "chat_id": tg_chat,
+                    "text": tg_msg,
+                    "parse_mode": "HTML",
+                    "disable_web_page_preview": True,
+                },
+                timeout=15,
+            )
+            if 200 <= resp.status_code < 300:
+                sent_any = True
+        except Exception:
+            pass
+
+    # 2. Optional Discord / Slack / Generic Webhook
     url = os.getenv("REPORT_NOTIFICATION_WEBHOOK_URL", "").strip()
-    if not url:
-        return False
-    counts = report_summary.get("publishing", {}).get("counts", {})
-    msg = (
-        f"**Content Automation Studio — Laporan Produksi**\n"
-        f"- Topik: {report_summary.get('topic')}\n"
-        f"- Mode: `{report_summary.get('publish_mode')}`\n"
-        f"- Status Platform: Published={counts.get('published', 0)}, Drafted={counts.get('drafted', 0)}, "
-        f"Dry-Run={counts.get('dry_run_ready', 0)}, Pending Setup={counts.get('pending_setup', 0)}\n"
-        f"- File Laporan: `{report_md_path}`"
-    )
-    try:
-        resp = requests.post(url, json={"content": msg, "text": msg}, timeout=12)
-        return 200 <= resp.status_code < 300
-    except Exception:
-        return False
+    if url:
+        counts = report_summary.get("publishing", {}).get("counts", {})
+        msg = (
+            f"**Content Automation Studio — Laporan Produksi**\n"
+            f"- Topik: {report_summary.get('topic')}\n"
+            f"- Mode: `{report_summary.get('publish_mode')}`\n"
+            f"- Status Platform: Published={counts.get('published', 0)}, Scheduled={counts.get('scheduled', 0)}, "
+            f"Drafted={counts.get('drafted', 0)}, Failed={counts.get('failed', 0)}\n"
+            f"- File Laporan: `{report_md_path}`"
+        )
+        try:
+            resp = requests.post(url, json={"content": msg, "text": msg}, timeout=12)
+            if 200 <= resp.status_code < 300:
+                sent_any = True
+        except Exception:
+            pass
+
+    return sent_any
