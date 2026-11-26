@@ -66,11 +66,14 @@ def run_pipeline(
     custom_assets_dir: Path | None = None,
     config_path: Path | None = None,
     publish_mode: str | None = None,
+    visual_style: str | None = None,
     skip_video: bool = False,
 ) -> dict[str, Any]:
     t0 = time.perf_counter()
     paths = get_project_paths()
     config = load_config(config_path=config_path, project_root=paths.root)
+    if visual_style:
+        config.setdefault("video", {})["engine_mode"] = visual_style
     effective_mode = publish_mode or config.get("publishing", {}).get("default_mode", "draft")
 
     print("[1/7] Riset & pemilihan topik...", flush=True)
@@ -216,6 +219,13 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Mode publikasi: dry-run (simulasi), draft (auto-draft aman), publish (langsung publik)",
     )
+    parser.add_argument(
+        "--visual-style",
+        type=str,
+        choices=["cozy_diorama", "minimal_line_story", "cinema_broll_html", "flat_vector_2d", "motion_hybrid", "ken_burns_images"],
+        default=None,
+        help="Override gaya visual video (default dari config/channel_config.yaml)",
+    )
     parser.add_argument("--skip-video", action="store_true", help="Lewati tahap render MP4 FFmpeg")
     args = parser.parse_args(argv)
 
@@ -226,6 +236,7 @@ def main(argv: list[str] | None = None) -> int:
         custom_assets_dir=Path(args.custom_assets).resolve() if args.custom_assets else None,
         config_path=Path(args.config).resolve() if args.config else None,
         publish_mode=args.publish_mode,
+        visual_style=args.visual_style,
         skip_video=args.skip_video,
     )
     return 0

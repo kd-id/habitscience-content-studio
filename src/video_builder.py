@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Any
 
 from src.broll_fetcher import fetch_broll_sequence, fetch_pexels_broll_clip
+from src.cozy_diorama_engine import render_cozy_diorama_video_for_pipeline
 from src.html_motion_overlay import HtmlOverlayRenderer
+from src.minimal_line_engine import render_minimal_line_video_for_pipeline
 from src.motion_engine import render_motion_scene_segment
 from src.sfx_engine import mix_cinema_soundscape
 from src.vector_2d_engine import render_flat_vector_scene_segment
@@ -162,14 +164,35 @@ def build_video_from_scenes(
     pause_sec = float(vid_cfg.get("padding_after_audio_sec", 0.30 if is_short else 0.45))
     ken_burns = bool(video_root.get("ken_burns_motion", True))
     cut_interval = float(video_root.get("broll_cut_interval_sec", 4.5))
-    # Supported Studio video engines:
-    #   "cinema_broll_html" (v6 flagship): Real HD/4K B-Roll fast 4-5s cuts + HTML5 Frosted-Glass Vox/Bento Overlays + SFX
-    #   "flat_vector_2d"    (v5): Kurzgesagt / TED-Ed 30fps Flat Vector 2D Explainer
-    #   "motion_hybrid"     (v4): Programmatic Motion Graphics + Pexels B-Roll
-    #   "motion_graphics"   (v4): Pure Programmatic Motion Graphics
-    #   "ken_burns_images"  (v3): Full-bleed AI illustrations + Ken Burns
-    video_mode = str(video_root.get("engine_mode", "cinema_broll_html")).lower().strip()
+    # Supported Saved Visual Styles (global `video.engine_mode` or per-format override `vid_cfg.engine_mode`):
+    #   "cozy_diorama"       (v8.3 flagship): Cozy Midnight Diorama + Expressive 6-Mood Blinking Character + Pastel Cream Cards + Serif Karaoke
+    #   "minimal_line_story" (v7): Dark Minimalist Mono-Line Stick-Figure Storytelling + Monospace Yellow-Highlight Subtitles
+    #   "cinema_broll_html"  (v6): Real HD/4K B-Roll fast cuts + HTML5 Frosted-Glass Vox/Bento Overlays + Cinema SFX
+    #   "flat_vector_2d"     (v5): Kurzgesagt / TED-Ed 30fps Flat Vector 2D Explainer
+    #   "motion_hybrid"      (v4): Programmatic Motion Graphics + B-Roll
+    #   "ken_burns_images"   (v3): Full-bleed AI illustrations + Ken Burns
+    video_mode = str(vid_cfg.get("engine_mode") or video_root.get("engine_mode", "cozy_diorama")).lower().strip()
     handle = str(config.get("branding", {}).get("watermark_text", "@HabitSains"))
+
+    if video_mode == "cozy_diorama":
+        render_cozy_diorama_video_for_pipeline(
+            scenes_meta=scenes_meta or [],
+            audio_bundle=audio_bundle,
+            out_video_path=out_video_path,
+            config=config,
+            is_short=is_short,
+        )
+        return probe_video_info(out_video_path)
+
+    if video_mode == "minimal_line_story":
+        render_minimal_line_video_for_pipeline(
+            scenes_meta=scenes_meta or [],
+            audio_bundle=audio_bundle,
+            out_video_path=out_video_path,
+            config=config,
+            is_short=is_short,
+        )
+        return probe_video_info(out_video_path)
 
     out_dir = out_video_path.parent
     segments_dir = out_dir / "_segments"

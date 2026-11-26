@@ -20,6 +20,15 @@ on:
           - dry-run
           - draft
           - publish
+      visual_style:
+        description: "Gaya visual video (kosongkan = default config)"
+        type: choice
+        default: "cozy_diorama"
+        options:
+          - cozy_diorama
+          - minimal_line_story
+          - cinema_broll_html
+          - flat_vector_2d
       skip_video:
         description: "Lewati render MP4 (hanya script, gambar, audio & laporan)"
         type: boolean
@@ -74,6 +83,7 @@ jobs:
         env:
           HEADLESS_CLOUD: "1"
           INPUT_MODE: ${{ github.event.inputs.publish_mode || 'draft' }}
+          INPUT_VISUAL_STYLE: ${{ github.event.inputs.visual_style || 'cozy_diorama' }}
           INPUT_TOPIC: ${{ github.event.inputs.topic }}
           INPUT_ANGLE: ${{ github.event.inputs.angle }}
           INPUT_SKIP_VIDEO: ${{ github.event.inputs.skip_video || 'false' }}
@@ -94,6 +104,9 @@ jobs:
           REPORT_NOTIFICATION_WEBHOOK_URL: ${{ secrets.REPORT_NOTIFICATION_WEBHOOK_URL }}
         run: |
           ARGS=(--publish-mode "$INPUT_MODE")
+          if [ -n "$INPUT_VISUAL_STYLE" ]; then
+            ARGS+=(--visual-style "$INPUT_VISUAL_STYLE")
+          fi
           if [ -n "$INPUT_TOPIC" ]; then
             ARGS+=(--topic "$INPUT_TOPIC")
           fi

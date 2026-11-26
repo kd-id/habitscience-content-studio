@@ -36,8 +36,14 @@ Run the pipeline from the project root:
 
 ```powershell
 cd "C:\Users\Administrator\.gemini\antigravity\scratch\content-automation-studio"
-python -m src.pipeline --brief "output\_agent_brief.json" --publish-mode draft
+python -m src.pipeline --brief "output\_agent_brief.json" --visual-style cozy_diorama --publish-mode draft
 ```
+
+- **Saved Visual Styles (`--visual-style` or `config/channel_config.yaml -> video.engine_mode`)**:
+  - `cozy_diorama` *(Studio v8.3, default)*: Cozy midnight-indigo 2D dioramas + expressive 6-mood blinking character + pastel cream highlight cards + Georgia bold serif karaoke subtitles (100% free, 16:9 & 9:16).
+  - `minimal_line_story` *(Studio v7)*: Dark matte `#0E0E0E` minimalist thin-line stick-figure & vector micro-storytelling + wide-tracked ALL-CAPS monospace yellow-highlight subtitles (100% free, 16:9 & 9:16).
+  - `cinema_broll_html` *(Studio v6)*: Real HD cinema B-roll fast cuts + HTML5/CSS3/SVG frosted-glass Vox & Bento motion overlays + cinema SFX + animated `.ass` subtitles.
+  - `flat_vector_2d` *(Studio v5)*: Kurzgesagt / TED-Ed 30fps flat vector 2D explainer.
 
 - **Publish Modes**:
   - `--publish-mode dry-run`: Full render + QA + report without external uploads.

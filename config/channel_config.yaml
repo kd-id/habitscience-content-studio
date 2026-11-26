@@ -74,12 +74,14 @@ voiceover:
   pitch: "+0Hz"
 
 video:
-  # Engine mode:
-  #   "cinema_broll_html" (v6 flagship): Real HD/4K B-Roll fast 4-5s cuts + HTML5 Frosted-Glass Vox & Bento Overlays + SFX
-  #   "flat_vector_2d"    (v5): Kurzgesagt/TED-Ed 30fps Flat Vector 2D
-  #   "motion_hybrid"     (v4): Programmatic Motion Graphics + B-Roll
-  #   "ken_burns_images"  (v3): Illustrated AI art + Ken Burns
-  engine_mode: "cinema_broll_html"
+  # Saved Visual Style Presets (ubah engine_mode atau kirim --visual-style <nama>):
+  #   "cozy_diorama"       (v8.3): Cozy Midnight Diorama + Expressive 6-Mood Character + Pastel Cream Cards + Serif Karaoke
+  #   "minimal_line_story" (v7):   Dark Minimalist Mono-Line Stick-Figure Storytelling + Monospace Yellow-Highlight Subtitles
+  #   "cinema_broll_html"  (v6):   Real HD/4K B-Roll fast cuts + HTML5 Frosted-Glass Vox & Bento Overlays + Cinema SFX
+  #   "flat_vector_2d"     (v5):   Kurzgesagt/TED-Ed 30fps Flat Vector 2D
+  #   "motion_hybrid"      (v4):   Programmatic Motion Graphics + B-Roll
+  #   "ken_burns_images"   (v3):   Illustrated AI art + Ken Burns
+  engine_mode: "cozy_diorama"
   broll_cut_interval_sec: 4.5
   cinema_sfx: true
   ken_burns_motion: true
