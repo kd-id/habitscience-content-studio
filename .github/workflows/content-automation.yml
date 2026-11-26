@@ -38,11 +38,8 @@ on:
         default: false
 
   # 2. Jadwal otomatis di Cloud (tanpa PC menyala!) — MODE NGEBUT 3x SEHARI DI JAM PRIME TIME AS!
-  # Pakai menit off-peak (:17) agar terhindar dari antrean padat menit :00 di server GitHub Actions!
+  # Repo Public (kuota Actions UNLIMITED) + kompatibel dengan pemicu eksternal cron-job.org (anti-dobel 90 menit).
   # 14:17 UTC = 09:17 AM EST (21:17 WIB) | 17:17 UTC = 12:17 PM EST (00:17 WIB) | 21:17 UTC = 04:17 PM EST (04:17 WIB)
-  # - Instagram Reels, Instagram Carousel, & Threads langsung tayang pas jam Prime Time AS!
-  # - Facebook Page Reels langsung dijadwalkan native ke slot Prime Time AS berikutnya!
-  # - YouTube Long & Shorts langsung ter-upload hari ini & antre publishAt beda tanggal (+1 hari/episode)!
   schedule:
     - cron: "17 14,17,21 * * *"
 
@@ -62,28 +59,65 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Anti-duplicate cooldown guard (skip redundant schedule if primary cron-job.org already ran < 90m ago)
+        id: guard
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          SHOULD_SKIP=$(python3 - <<'PY'
+          import json
+          from datetime import datetime, timedelta, timezone
+          from pathlib import Path
+
+          p = Path("output/history.json")
+          if not p.exists():
+              print("false")
+              raise SystemExit(0)
+          try:
+              data = json.loads(p.read_text(encoding="utf-8"))
+              last = data[-1] if data else {}
+              raw = str(last.get("generated_at_wib") or "").replace(" WIB", "").strip()
+              dt = datetime.strptime(raw, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone(timedelta(hours=7)))
+              age_min = (datetime.now(timezone(timedelta(hours=7))) - dt).total_seconds() / 60.0
+              print("true" if 0 <= age_min < 90 else "false")
+          except Exception:
+              print("false")
+          PY
+          )
+          echo "skip=$SHOULD_SKIP" >> "$GITHUB_OUTPUT"
+          if [ "$SHOULD_SKIP" = "true" ]; then
+            echo "Skipping redundant GitHub schedule trigger: an episode already completed within the last 90 minutes."
+          fi
+
       - name: Setup Python 3.12
+        if: steps.guard.outputs.skip != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: "pip"
 
       - name: Install FFmpeg & Linux TrueType fonts
+        if: steps.guard.outputs.skip != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-dejavu-core fonts-liberation
           fc-cache -f
 
       - name: Install Python dependencies
+        if: steps.guard.outputs.skip != 'true'
         run: pip install -r requirements.txt
 
       - name: Ensure Chrome/Chromium available for Studio v9 3D WebGL POV & v6 HTML5 overlays
+        if: steps.guard.outputs.skip != 'true'
         run: |
           if ! command -v google-chrome >/dev/null 2>&1 && ! command -v chromium >/dev/null 2>&1; then
             playwright install chromium
           fi
 
       - name: Run Content Automation Pipeline
+        if: steps.guard.outputs.skip != 'true'
         id: run_pipeline
         env:
           HEADLESS_CLOUD: "1"
@@ -144,11 +178,11 @@ jobs:
           echo "run_name=$(basename "$LATEST_DIR")" >> "$GITHUB_OUTPUT"
 
       - name: Verify generated media & QA checklist
-        if: ${{ github.event.inputs.skip_video != 'true' }}
+        if: ${{ steps.guard.outputs.skip != 'true' && github.event.inputs.skip_video != 'true' }}
         run: python tests/verify_pipeline.py "${{ steps.run_pipeline.outputs.run_dir }}"
 
       - name: Publish Detailed Report to GitHub Job Summary
-        if: always() && steps.run_pipeline.outputs.run_dir != ''
+        if: always() && steps.guard.outputs.skip != 'true' && steps.run_pipeline.outputs.run_dir != ''
         run: |
           REPORT="${{ steps.run_pipeline.outputs.run_dir }}/PUBLISH_REPORT.md"
           if [ -f "$REPORT" ]; then
@@ -156,7 +190,7 @@ jobs:
           fi
 
       - name: Upload All Media Assets & Report as Artifact
-        if: always() && steps.run_pipeline.outputs.run_dir != ''
+        if: always() && steps.guard.outputs.skip != 'true' && steps.run_pipeline.outputs.run_dir != ''
         uses: actions/upload-artifact@v4
         with:
           name: content-pack-${{ steps.run_pipeline.outputs.run_name }}
@@ -164,7 +198,7 @@ jobs:
           retention-days: 14
 
       - name: Persist topic history & YouTube schedule queue (anti-duplicate & distinct dates)
-        if: success()
+        if: success() && steps.guard.outputs.skip != 'true'
         run: |
           git config user.name "content-automation-bot"
           git config user.email "actions@users.noreply.github.com"
@@ -172,5 +206,6 @@ jobs:
           [ -f output/schedule_state.json ] && git add -f output/schedule_state.json
           if ! git diff --cached --quiet; then
             git commit -m "chore(state): update history & schedule queue for ${{ steps.run_pipeline.outputs.run_name }} [skip ci]"
+            git pull --rebase --autostash origin main
             git push
           fi
