@@ -75,13 +75,15 @@ voiceover:
 
 video:
   # Saved Visual Style Presets (ubah engine_mode atau kirim --visual-style <nama>):
+  #   "hybrid_cozy_3dpov"  (DEFAULT): YouTube Long 16:9 -> Cozy Diorama (v8.3) + Shorts/Reels/TikTok 9:16 -> 3D Cel-Shaded POV (v9)
+  #   "pov_3d_toon"        (v9):   3D Cel-Shaded First-Person POV Cognitive Survival + Live Focus HUD + Interactive A/B Card
   #   "cozy_diorama"       (v8.3): Cozy Midnight Diorama + Expressive 6-Mood Character + Pastel Cream Cards + Serif Karaoke
   #   "minimal_line_story" (v7):   Dark Minimalist Mono-Line Stick-Figure Storytelling + Monospace Yellow-Highlight Subtitles
   #   "cinema_broll_html"  (v6):   Real HD/4K B-Roll fast cuts + HTML5 Frosted-Glass Vox & Bento Overlays + Cinema SFX
   #   "flat_vector_2d"     (v5):   Kurzgesagt/TED-Ed 30fps Flat Vector 2D
   #   "motion_hybrid"      (v4):   Programmatic Motion Graphics + B-Roll
   #   "ken_burns_images"   (v3):   Illustrated AI art + Ken Burns
-  engine_mode: "cozy_diorama"
+  engine_mode: "hybrid_cozy_3dpov"
   broll_cut_interval_sec: 4.5
   cinema_sfx: true
   ken_burns_motion: true

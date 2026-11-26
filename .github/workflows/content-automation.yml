@@ -21,10 +21,12 @@ on:
           - draft
           - publish
       visual_style:
-        description: "Gaya visual video (kosongkan = default config)"
+        description: "Gaya visual video (default: hybrid_cozy_3dpov = Long v8.3 + Shorts v9 3D POV)"
         type: choice
-        default: "cozy_diorama"
+        default: "hybrid_cozy_3dpov"
         options:
+          - hybrid_cozy_3dpov
+          - pov_3d_toon
           - cozy_diorama
           - minimal_line_story
           - cinema_broll_html
@@ -72,7 +74,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
-      - name: Ensure Chrome/Chromium available for Studio v6 HTML5 motion overlays
+      - name: Ensure Chrome/Chromium available for Studio v9 3D WebGL POV & v6 HTML5 overlays
         run: |
           if ! command -v google-chrome >/dev/null 2>&1 && ! command -v chromium >/dev/null 2>&1; then
             playwright install chromium
@@ -83,7 +85,7 @@ jobs:
         env:
           HEADLESS_CLOUD: "1"
           INPUT_MODE: ${{ github.event.inputs.publish_mode || 'draft' }}
-          INPUT_VISUAL_STYLE: ${{ github.event.inputs.visual_style || 'cozy_diorama' }}
+          INPUT_VISUAL_STYLE: ${{ github.event.inputs.visual_style || 'hybrid_cozy_3dpov' }}
           INPUT_TOPIC: ${{ github.event.inputs.topic }}
           INPUT_ANGLE: ${{ github.event.inputs.angle }}
           INPUT_SKIP_VIDEO: ${{ github.event.inputs.skip_video || 'false' }}

@@ -7,6 +7,7 @@ from typing import Any
 
 from src.broll_fetcher import fetch_broll_sequence, fetch_pexels_broll_clip
 from src.cozy_diorama_engine import render_cozy_diorama_video_for_pipeline
+from src.habitsains_3d_pov_engine import render_pov_3d_toon_video_for_pipeline
 from src.html_motion_overlay import HtmlOverlayRenderer
 from src.minimal_line_engine import render_minimal_line_video_for_pipeline
 from src.motion_engine import render_motion_scene_segment
@@ -165,14 +166,28 @@ def build_video_from_scenes(
     ken_burns = bool(video_root.get("ken_burns_motion", True))
     cut_interval = float(video_root.get("broll_cut_interval_sec", 4.5))
     # Supported Saved Visual Styles (global `video.engine_mode` or per-format override `vid_cfg.engine_mode`):
-    #   "cozy_diorama"       (v8.3 flagship): Cozy Midnight Diorama + Expressive 6-Mood Blinking Character + Pastel Cream Cards + Serif Karaoke
+    #   "hybrid_cozy_3dpov"  (DEFAULT): YouTube Long 16:9 -> Cozy Diorama (v8.3) + Shorts/Reels/TikTok 9:16 -> 3D Cel-Shaded POV (v9)
+    #   "pov_3d_toon"        (v9): 3D Cel-Shaded First-Person POV Cognitive Survival + Live Focus HUD + Interactive A/B Endcard
+    #   "cozy_diorama"       (v8.3): Cozy Midnight Diorama + Expressive 6-Mood Blinking Character + Pastel Cream Cards + Serif Karaoke
     #   "minimal_line_story" (v7): Dark Minimalist Mono-Line Stick-Figure Storytelling + Monospace Yellow-Highlight Subtitles
     #   "cinema_broll_html"  (v6): Real HD/4K B-Roll fast cuts + HTML5 Frosted-Glass Vox/Bento Overlays + Cinema SFX
     #   "flat_vector_2d"     (v5): Kurzgesagt / TED-Ed 30fps Flat Vector 2D Explainer
     #   "motion_hybrid"      (v4): Programmatic Motion Graphics + B-Roll
     #   "ken_burns_images"   (v3): Full-bleed AI illustrations + Ken Burns
-    video_mode = str(vid_cfg.get("engine_mode") or video_root.get("engine_mode", "cozy_diorama")).lower().strip()
+    video_mode = str(vid_cfg.get("engine_mode") or video_root.get("engine_mode", "hybrid_cozy_3dpov")).lower().strip()
+    if video_mode == "hybrid_cozy_3dpov":
+        video_mode = "pov_3d_toon" if is_short else "cozy_diorama"
     handle = str(config.get("branding", {}).get("watermark_text", "@HabitSains"))
+
+    if video_mode == "pov_3d_toon":
+        render_pov_3d_toon_video_for_pipeline(
+            scenes_meta=scenes_meta or [],
+            audio_bundle=audio_bundle,
+            out_video_path=out_video_path,
+            config=config,
+            is_short=is_short,
+        )
+        return probe_video_info(out_video_path)
 
     if video_mode == "cozy_diorama":
         render_cozy_diorama_video_for_pipeline(

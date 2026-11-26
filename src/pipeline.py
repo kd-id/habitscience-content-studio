@@ -222,7 +222,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--visual-style",
         type=str,
-        choices=["cozy_diorama", "minimal_line_story", "cinema_broll_html", "flat_vector_2d", "motion_hybrid", "ken_burns_images"],
+        choices=["hybrid_cozy_3dpov", "pov_3d_toon", "cozy_diorama", "minimal_line_story", "cinema_broll_html", "flat_vector_2d", "motion_hybrid", "ken_burns_images"],
         default=None,
         help="Override gaya visual video (default dari config/channel_config.yaml)",
     )
