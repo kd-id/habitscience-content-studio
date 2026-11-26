@@ -4,6 +4,7 @@ import base64
 import html
 import json
 import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -430,12 +431,29 @@ def publish_all_platforms(
     if config.get("publishing", {}).get("save_payload_snapshots", True):
         payload_file.write_text(json.dumps(webhook_payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # Attempt Direct Free API first for each enabled platform (when mode in draft/publish)
+    # Attempt Direct Free API first for each enabled platform (when mode in draft/scheduled/publish)
+    def _call_direct_social(key_name: str, cap: str) -> dict[str, Any]:
+        if key_name == "instagram_reels":
+            return publish_instagram_reels_direct(short_vid_path, cap, mode)
+        if key_name == "tiktok":
+            return publish_tiktok_direct(short_vid_path, cap, mode)
+        if key_name == "instagram_carousel":
+            return publish_instagram_carousel_direct(slide_paths, cap, mode)
+        if key_name == "linkedin":
+            return publish_linkedin_direct(slide_paths, cap, mode)
+        if key_name == "x_threads":
+            return publish_x_and_threads_direct(carousel_meta.get("thread_x", []), carousel_meta.get("post_threads", ""), mode)
+        if key_name == "facebook":
+            return publish_facebook_reel_direct(short_vid_path, cap, mode, scheduled_publish_ts=fb_sched_ts)
+        return {"handled": False}
+
     direct_results: dict[str, dict[str, Any]] = {}
     fallback_targets: list[tuple[str, str, str, str, Any]] = []
+    label_to_social: dict[str, tuple[str, str]] = {}
 
     for item in active_social:
         key, label, fmt, caption, _ = item
+        label_to_social[label] = (key, caption)
         if mode == "dry-run":
             fallback_targets.append(item)
             continue
@@ -445,20 +463,7 @@ def publish_all_platforms(
             fallback_targets.append(item)
             continue
 
-        if key == "instagram_reels":
-            d_res = publish_instagram_reels_direct(short_vid_path, caption, mode)
-        elif key == "tiktok":
-            d_res = publish_tiktok_direct(short_vid_path, caption, mode)
-        elif key == "instagram_carousel":
-            d_res = publish_instagram_carousel_direct(slide_paths, caption, mode)
-        elif key == "linkedin":
-            d_res = publish_linkedin_direct(slide_paths, caption, mode)
-        elif key == "x_threads":
-            d_res = publish_x_and_threads_direct(carousel_meta.get("thread_x", []), carousel_meta.get("post_threads", ""), mode)
-        elif key == "facebook":
-            d_res = publish_facebook_reel_direct(short_vid_path, caption, mode, scheduled_publish_ts=fb_sched_ts)
-        else:
-            d_res = {"handled": False}
+        d_res = _call_direct_social(key, caption)
 
         if d_res.get("handled"):
             direct_results[key] = d_res
@@ -527,6 +532,109 @@ def publish_all_platforms(
                 "url": "",
                 "notes": f"{missing_hint} (Lihat docs/DIRECT_SOCIAL_API_SETUP.md; payload tersimpan di {payload_file.name}).",
             })
+
+    # 4. Automatic Delayed Auto-Reupload Recovery Pass (retries ONLY FAILED platforms after cooldown!)
+    def _is_permanent_error(note_txt: str) -> bool:
+        low = (note_txt or "").lower()
+        return any(
+            m in low
+            for m in (
+                "quotaexceeded",
+                "uploadlimitexceeded",
+                "invalid_grant",
+                "error validating access token",
+                "session has expired",
+                "oauthexception",
+            )
+        )
+
+    reupload_delays = config.get("publishing", {}).get("auto_reupload_delays_sec", [20, 45])
+    if mode != "dry-run" and isinstance(reupload_delays, list):
+        for r_idx, wait_sec in enumerate(reupload_delays, start=1):
+            failed_indices = [
+                idx
+                for idx, r in enumerate(results)
+                if r.get("status") == "FAILED" and not _is_permanent_error(str(r.get("notes", "")))
+            ]
+            if not failed_indices:
+                break
+            if float(wait_sec) > 0:
+                print(
+                    f"[publisher] Auto-reupload ronde {r_idx}/{len(reupload_delays)}: "
+                    f"menunggu {int(wait_sec)} dtk lalu mengulang {len(failed_indices)} platform yang gagal...",
+                    flush=True,
+                )
+                time.sleep(float(wait_sec))
+
+            for idx in failed_indices:
+                rec = results[idx]
+                plat = str(rec.get("platform", ""))
+                if plat in label_to_social:
+                    s_key, s_cap = label_to_social[plat]
+                    d_retry = _call_direct_social(s_key, s_cap)
+                    if d_retry.get("handled") and d_retry.get("status") != "FAILED":
+                        rec["status"] = d_retry["status"]
+                        rec["external_id"] = d_retry.get("external_id", "")
+                        rec["url"] = d_retry.get("url", "")
+                        rec["notes"] = f"{d_retry.get('notes', '')} (auto-reupload #{r_idx} sukses)"
+                        print(f"[publisher] Auto-reupload #{r_idx} SUKSES untuk {plat}!", flush=True)
+                    elif d_retry.get("notes"):
+                        rec["notes"] = str(d_retry.get("notes"))
+                elif plat == "YouTube Long (16:9)" and youtube_service:
+                    yt_cfg = platforms_cfg.get("youtube_long", {})
+                    v_p = Path(assets["youtube_long"]["video_path"]) if assets.get("youtube_long", {}).get("video_path") else None
+                    t_p = Path(assets["youtube_long"]["thumbnail_path"]) if assets.get("youtube_long", {}).get("thumbnail_path") else None
+                    priv = yt_cfg.get("publish_privacy", "public") if mode == "publish" else yt_cfg.get("draft_privacy", "private")
+                    if v_p and v_p.exists():
+                        try:
+                            up = _upload_youtube_video(
+                                service=youtube_service,
+                                video_path=v_p,
+                                title=yt_long_meta.get("title", blueprint["meta"]["topic"]),
+                                description=yt_long_meta.get("description", ""),
+                                tags=yt_long_meta.get("tags", []),
+                                category_id=str(yt_cfg.get("category_id", "28")),
+                                privacy_status=priv,
+                                made_for_kids=bool(yt_cfg.get("made_for_kids", False)),
+                                thumbnail_path=t_p,
+                                publish_at=yt_long_publish_at,
+                            )
+                            if mode == "scheduled" and yt_long_publish_at and not yt_any_scheduled and pending_sched_state is not None:
+                                yt_any_scheduled = True
+                                save_schedule_state(schedule_state_file, pending_sched_state)
+                            rec["status"] = "SCHEDULED" if (mode == "scheduled" and yt_long_publish_at) else ("PUBLISHED" if mode == "publish" else "DRAFTED")
+                            rec["external_id"] = up["video_id"]
+                            rec["url"] = up["watch_url"] if mode == "publish" else up["studio_url"]
+                            rec["notes"] = f"Upload sukses (auto-reupload #{r_idx} sukses)."
+                        except Exception as exc:
+                            rec["notes"] = f"Upload gagal (reupload #{r_idx}): {exc}"
+                elif plat == "YouTube Shorts (9:16)" and youtube_service:
+                    sh_cfg = platforms_cfg.get("youtube_shorts", {})
+                    s_p = Path(assets["shorts_reels_tiktok"]["video_path"]) if assets.get("shorts_reels_tiktok", {}).get("video_path") else None
+                    priv = sh_cfg.get("publish_privacy", "public") if mode == "publish" else sh_cfg.get("draft_privacy", "private")
+                    s_title = str(rec.get("title", blueprint["meta"]["topic"]))
+                    if s_p and s_p.exists():
+                        try:
+                            up = _upload_youtube_video(
+                                service=youtube_service,
+                                video_path=s_p,
+                                title=s_title,
+                                description=shorts_meta.get("caption_yt_shorts", ""),
+                                tags=[h.lstrip("#") for h in shorts_meta.get("hashtags", [])],
+                                category_id=str(sh_cfg.get("category_id", "28")),
+                                privacy_status=priv,
+                                made_for_kids=bool(sh_cfg.get("made_for_kids", False)),
+                                publish_at=yt_shorts_publish_at,
+                            )
+                            if mode == "scheduled" and yt_shorts_publish_at and not yt_any_scheduled and pending_sched_state is not None:
+                                yt_any_scheduled = True
+                                save_schedule_state(schedule_state_file, pending_sched_state)
+                            rec["status"] = "SCHEDULED" if (mode == "scheduled" and yt_shorts_publish_at) else ("PUBLISHED" if mode == "publish" else "DRAFTED")
+                            rec["external_id"] = up["video_id"]
+                            rec["url"] = up["watch_url"] if mode == "publish" else up["studio_url"]
+                            rec["notes"] = f"Upload Shorts sukses (auto-reupload #{r_idx} sukses)."
+                        except Exception as exc:
+                            rec["notes"] = f"Upload Shorts gagal (reupload #{r_idx}): {exc}"
 
     summary = {
         "publish_mode": mode,

@@ -272,6 +272,56 @@ class DirectSocialPublishersTest(unittest.TestCase):
             self.assertEqual(fin["video_state"], "SCHEDULED")
             self.assertEqual(fin["scheduled_publish_time"], fb_ts)
 
+    @patch("src.publisher.publish_instagram_carousel_direct")
+    @patch("src.publisher.publish_x_and_threads_direct")
+    @patch("src.publisher.publish_instagram_reels_direct")
+    def test_auto_reupload_recovers_only_failed_platforms(self, mock_ig, mock_threads, mock_carousel) -> None:
+        # IG Carousel succeeds on pass 1 (must NOT be re-uploaded!)
+        mock_carousel.return_value = {"handled": True, "status": "PUBLISHED", "external_id": "car_1", "url": "https://ig/c1", "notes": "OK"}
+        # IG Reels fails on pass 1, succeeds on delayed auto-reupload #1!
+        mock_ig.side_effect = [
+            {"handled": True, "status": "FAILED", "external_id": "c_bad", "url": "", "notes": "IG Reels binary upload gagal (400): ProcessingFailedError"},
+            {"handled": True, "status": "PUBLISHED", "external_id": "ig_ok", "url": "https://ig/r1", "notes": "IG Reels OK"},
+        ]
+        # Threads fails on pass 1, succeeds on delayed auto-reupload #1!
+        mock_threads.side_effect = [
+            {"handled": True, "status": "FAILED", "external_id": "", "url": "", "notes": "Threads publish gagal (400)"},
+            {"handled": True, "status": "PUBLISHED", "external_id": "threads:t_ok", "url": "", "notes": "Threads OK"},
+        ]
+        blueprint = {
+            "meta": {"topic": "Auto Reupload Test", "channel_name": "HabitSains"},
+            "youtube_long": {"title": "Long"},
+            "shorts_reels_tiktok": {"title": "Short", "caption_ig_reels": "IG cap", "caption_tiktok": "TT"},
+            "carousel_social": {"caption_instagram": "Car", "caption_linkedin": "LI", "thread_x": ["1/1"], "post_threads": "Hi Threads", "post_facebook": "FB"},
+        }
+        assets = {
+            "youtube_long": {"video_path": "", "thumbnail_path": ""},
+            "shorts_reels_tiktok": {"video_path": str(self.mp4)},
+            "carousel_social": {"slide_paths": [str(s) for s in self.slides]},
+        }
+        cfg = {
+            "publishing": {"default_mode": "publish", "save_payload_snapshots": True, "auto_reupload_delays_sec": [0, 0]},
+            "platforms": {
+                "youtube_long": {"enabled": False},
+                "youtube_shorts": {"enabled": False},
+                "tiktok": {"enabled": False},
+                "linkedin": {"enabled": False},
+                "facebook": {"enabled": False},
+                "instagram_reels": {"enabled": True, "adapter": "direct"},
+                "instagram_carousel": {"enabled": True, "adapter": "direct"},
+                "x_threads": {"enabled": True, "adapter": "direct"},
+            },
+        }
+        summary = publish_all_platforms(blueprint, assets, self.root, cfg, self.root, publish_mode="publish")
+        self.assertEqual(summary["counts"]["failed"], 0)
+        self.assertEqual(summary["counts"]["published"], 3)
+        self.assertEqual(mock_carousel.call_count, 1)
+        self.assertEqual(mock_ig.call_count, 2)
+        self.assertEqual(mock_threads.call_count, 2)
+        by_plat = {r["platform"]: r for r in summary["results"]}
+        self.assertIn("auto-reupload #1 sukses", by_plat["Instagram Reels"]["notes"])
+        self.assertIn("auto-reupload #1 sukses", by_plat["X & Threads"]["notes"])
+
 
 if __name__ == "__main__":
     unittest.main()
