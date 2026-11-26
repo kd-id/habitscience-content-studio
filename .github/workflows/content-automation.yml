@@ -37,11 +37,11 @@ on:
         type: boolean
         default: false
 
-  # 2. Jadwal otomatis di Cloud (tanpa PC menyala!) — MODE NGEBUT 3x SEHARI DI JAM PRIME TIME AS!
+  # 2. Jadwal otomatis di Cloud (tanpa PC menyala!) — 3x SEHARI (GLOBAL SIANG + PRIME TIME AS MALAM/DINI HARI)!
   # Repo Public (kuota Actions UNLIMITED) + kompatibel dengan pemicu eksternal cron-job.org (anti-dobel 90 menit).
-  # 14:17 UTC = 09:17 AM EST (21:17 WIB) | 17:17 UTC = 12:17 PM EST (00:17 WIB) | 21:17 UTC = 04:17 PM EST (04:17 WIB)
+  # 07:17 UTC = 14:17 WIB (Pagi Eropa/Siang Asia) | 14:17 UTC = 21:17 WIB (09:17 AM EST) | 19:17 UTC = 02:17 WIB (02:17 PM EST)
   schedule:
-    - cron: "17 14,17,21 * * *"
+    - cron: "17 7,14,19 * * *"
 
 permissions:
   contents: write

@@ -24,8 +24,8 @@ Daftar / masuk ke: https://console.cron-job.org/
 - **Title**: `HabitSains Production 3x Daily`
 - **URL**: `https://api.github.com/repos/kd-id/habitscience-content-studio/actions/workflows/content-automation.yml/dispatches`
 - **Execution schedule** (Custom — Timezone `Asia/Jakarta` / WIB):
-  - **Hours**: `0, 4, 21`
-  - **Minutes**: `17` *(jalan tepat jam 00:17, 04:17, dan 21:17 WIB setiap hari)*
+  - **Hours**: `2, 14, 21`
+  - **Minutes**: `17` *(jalan tepat jam 14:17, 21:17, dan 02:17 WIB setiap hari)*
 - **Advanced tab**:
   - **Request method**: `POST`
   - **Headers** (tambahkan 3 header):
