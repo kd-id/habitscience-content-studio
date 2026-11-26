@@ -549,6 +549,7 @@ def publish_all_platforms(
         )
 
     reupload_delays = config.get("publishing", {}).get("auto_reupload_delays_sec", [20, 45])
+    reupload_recovered: list[dict[str, Any]] = []
     if mode != "dry-run" and isinstance(reupload_delays, list):
         for r_idx, wait_sec in enumerate(reupload_delays, start=1):
             failed_indices = [
@@ -577,6 +578,7 @@ def publish_all_platforms(
                         rec["external_id"] = d_retry.get("external_id", "")
                         rec["url"] = d_retry.get("url", "")
                         rec["notes"] = f"{d_retry.get('notes', '')} (auto-reupload #{r_idx} sukses)"
+                        reupload_recovered.append(dict(rec))
                         print(f"[publisher] Auto-reupload #{r_idx} SUKSES untuk {plat}!", flush=True)
                     elif d_retry.get("notes"):
                         rec["notes"] = str(d_retry.get("notes"))
@@ -606,6 +608,7 @@ def publish_all_platforms(
                             rec["external_id"] = up["video_id"]
                             rec["url"] = up["watch_url"] if mode == "publish" else up["studio_url"]
                             rec["notes"] = f"Upload sukses (auto-reupload #{r_idx} sukses)."
+                            reupload_recovered.append(dict(rec))
                         except Exception as exc:
                             rec["notes"] = f"Upload gagal (reupload #{r_idx}): {exc}"
                 elif plat == "YouTube Shorts (9:16)" and youtube_service:
@@ -633,13 +636,24 @@ def publish_all_platforms(
                             rec["external_id"] = up["video_id"]
                             rec["url"] = up["watch_url"] if mode == "publish" else up["studio_url"]
                             rec["notes"] = f"Upload Shorts sukses (auto-reupload #{r_idx} sukses)."
+                            reupload_recovered.append(dict(rec))
                         except Exception as exc:
                             rec["notes"] = f"Upload Shorts gagal (reupload #{r_idx}): {exc}"
+
+    if reupload_recovered:
+        still_failed = [r for r in results if r.get("status") == "FAILED"]
+        send_reupload_telegram_report(
+            topic=str(blueprint.get("meta", {}).get("topic", "HabitSains Episode")),
+            recovered_items=reupload_recovered,
+            still_failed_items=still_failed,
+            publish_mode=mode,
+        )
 
     summary = {
         "publish_mode": mode,
         "executed_at": datetime.now(timezone.utc).isoformat(),
         "payload_snapshot": str(payload_file),
+        "auto_reupload_recovered": [str(r.get("platform", "")) for r in reupload_recovered],
         "results": results,
         "counts": {
             "total": len(results),
@@ -677,11 +691,13 @@ def _format_telegram_report_html(report_summary: dict[str, Any]) -> str:
         "FAILED": "❌",
     }
 
+    recovered_list = pub.get("auto_reupload_recovered") or []
     pillar_lbl = html.escape(str(report_summary.get("pillar_label") or report_summary.get("pillar") or ""))
     lines = [
         "<b>🎬 HabitSains Studio — Laporan Produksi</b>",
         f"📌 <b>Topik:</b> {topic}",
         *([f"🧭 <b>Pillar Jadwal:</b> {pillar_lbl}"] if pillar_lbl else []),
+        *([f"🔄 <b>Auto-Reupload Pulih:</b> {html.escape(', '.join(recovered_list))}"] if recovered_list else []),
         f"⚙️ <b>Mode:</b> <code>{mode}</code> | <b>QA:</b> {'✅ LOLOS' if qa_ok else '⚠️ CEK'} | ⏱ {dur_txt}",
         (
             f"📊 <b>Ringkasan:</b> "
@@ -713,6 +729,59 @@ def _format_telegram_report_html(report_summary: dict[str, Any]) -> str:
         lines.append(f'\n🔗 <a href="{run_url}">Buka Detail &amp; Artifact di GitHub Actions</a>')
 
     return "\n".join(lines)[:4000]
+
+
+def send_reupload_telegram_report(
+    topic: str,
+    recovered_items: list[dict[str, Any]],
+    still_failed_items: list[dict[str, Any]] | None = None,
+    publish_mode: str = "scheduled",
+) -> bool:
+    """Send an instant Telegram update whenever failed platforms are successfully re-uploaded."""
+    tg_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    tg_chat = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+    if not tg_token or not tg_chat or not recovered_items:
+        return False
+
+    still_failed = still_failed_items or []
+    lines = [
+        "<b>🔄 HabitSains Studio — Update Re-Upload Berhasil!</b>",
+        f"📌 <b>Topik:</b> {html.escape(topic)}",
+        f"⚙️ <b>Mode:</b> <code>{html.escape(publish_mode)}</code> | <b>Pulih:</b> {len(recovered_items)} | <b>Sisa Gagal:</b> {len(still_failed)}",
+        "",
+        "<b>✅ Platform Berhasil Diunggah Ulang:</b>",
+    ]
+    for r in recovered_items:
+        plat = html.escape(str(r.get("platform", "")))
+        st = html.escape(str(r.get("status", "PUBLISHED")))
+        url = str(r.get("url", "")).strip()
+        note = html.escape(str(r.get("notes", ""))[:140])
+        if url:
+            lines.append(f'✅ <b>{plat}</b> — <code>{st}</code> (<a href="{html.escape(url)}">Buka</a>)\n    <i>{note}</i>')
+        else:
+            lines.append(f"✅ <b>{plat}</b> — <code>{st}</code>\n    <i>{note}</i>")
+
+    if still_failed:
+        lines.append("\n<b>⚠️ Masih Gagal:</b>")
+        for r in still_failed:
+            plat = html.escape(str(r.get("platform", "")))
+            note = html.escape(str(r.get("notes", ""))[:120])
+            lines.append(f"❌ <b>{plat}</b> — <i>{note}</i>")
+
+    try:
+        resp = requests.post(
+            f"https://api.telegram.org/bot{tg_token}/sendMessage",
+            json={
+                "chat_id": tg_chat,
+                "text": "\n".join(lines)[:4000],
+                "parse_mode": "HTML",
+                "disable_web_page_preview": True,
+            },
+            timeout=15,
+        )
+        return 200 <= resp.status_code < 300
+    except Exception:
+        return False
 
 
 def send_report_notification(report_summary: dict[str, Any], report_md_path: Path) -> bool:

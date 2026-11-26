@@ -272,10 +272,11 @@ class DirectSocialPublishersTest(unittest.TestCase):
             self.assertEqual(fin["video_state"], "SCHEDULED")
             self.assertEqual(fin["scheduled_publish_time"], fb_ts)
 
+    @patch("src.publisher.send_reupload_telegram_report", return_value=True)
     @patch("src.publisher.publish_instagram_carousel_direct")
     @patch("src.publisher.publish_x_and_threads_direct")
     @patch("src.publisher.publish_instagram_reels_direct")
-    def test_auto_reupload_recovers_only_failed_platforms(self, mock_ig, mock_threads, mock_carousel) -> None:
+    def test_auto_reupload_recovers_only_failed_platforms(self, mock_ig, mock_threads, mock_carousel, mock_tg_reup) -> None:
         # IG Carousel succeeds on pass 1 (must NOT be re-uploaded!)
         mock_carousel.return_value = {"handled": True, "status": "PUBLISHED", "external_id": "car_1", "url": "https://ig/c1", "notes": "OK"}
         # IG Reels fails on pass 1, succeeds on delayed auto-reupload #1!
@@ -321,6 +322,8 @@ class DirectSocialPublishersTest(unittest.TestCase):
         by_plat = {r["platform"]: r for r in summary["results"]}
         self.assertIn("auto-reupload #1 sukses", by_plat["Instagram Reels"]["notes"])
         self.assertIn("auto-reupload #1 sukses", by_plat["X & Threads"]["notes"])
+        self.assertEqual(summary["auto_reupload_recovered"], ["Instagram Reels", "X & Threads"])
+        self.assertEqual(mock_tg_reup.call_count, 1)
 
 
 if __name__ == "__main__":
