@@ -36,7 +36,7 @@ visual:
     numbers, NO watermarks anywhere in the image.
 
 ai:
-  text_model: "gemini-3.8-flash"
+  text_model: "gemini-2.5-flash"
   # Free Cloud Image Generation order:
   # 1) Antigravity --custom-assets (100% Free locally)
   # 2) Cloudflare Workers AI FLUX.1-schnell (100% Free tier in Cloud / GitHub Actions!)

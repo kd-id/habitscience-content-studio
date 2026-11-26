@@ -151,18 +151,31 @@ def publish_instagram_reels_direct(video_path: Path | None, caption: str, publis
             return {"handled": True, "status": "FAILED", "external_id": "", "url": "", "notes": f"IG Reels init tidak mengembalikan id/uri: {init_resp.text[:200]}"}
 
         # Step 2: Upload raw MP4 binary directly to Meta's rupload.facebook.com
-        video_bytes = video_path.read_bytes()
-        up_resp = requests.post(
-            upload_uri,
-            headers={
-                "Authorization": f"OAuth {token}",
-                "offset": "0",
-                "file_size": str(len(video_bytes)),
-                "Content-Type": "application/octet-stream",
-            },
-            data=video_bytes,
-            timeout=180,
-        )
+        # NOTE: Do NOT send Content-Type header — Meta's rupload rejects 'application/octet-stream' with HTTP 400 ProcessingFailedError!
+        file_size = video_path.stat().st_size
+        up_resp = None
+        last_exc: Exception | None = None
+        for attempt in range(2):
+            try:
+                with video_path.open("rb") as fh:
+                    up_resp = requests.post(
+                        upload_uri,
+                        headers={
+                            "Authorization": f"OAuth {token}",
+                            "offset": "0",
+                            "file_size": str(file_size),
+                        },
+                        data=fh,
+                        timeout=240,
+                    )
+                last_exc = None
+                break
+            except requests.RequestException as exc:
+                last_exc = exc
+                if attempt == 0:
+                    time.sleep(2)
+        if last_exc is not None or up_resp is None:
+            return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": f"IG Reels upload error: {last_exc}"}
         if not up_resp.ok:
             return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": f"IG Reels binary upload gagal ({up_resp.status_code}): {up_resp.text[:240]}"}
 
@@ -321,18 +334,31 @@ def publish_facebook_reel_direct(video_path: Path | None, description: str, publ
         if not video_id or not upload_url:
             return {"handled": True, "status": "FAILED", "external_id": "", "url": "", "notes": f"FB Reels start tanpa video_id/upload_url: {start_resp.text[:200]}"}
 
-        # Step 2: binary upload to rupload.facebook.com
-        video_bytes = video_path.read_bytes()
-        up_resp = requests.post(
-            upload_url,
-            headers={
-                "Authorization": f"OAuth {page_token}",
-                "file_offset": "0",
-                "Content-Type": "application/octet-stream",
-            },
-            data=video_bytes,
-            timeout=180,
-        )
+        # Step 2: binary upload to rupload.facebook.com (Meta strictly requires lowercase 'offset' & 'file_size', NO Content-Type!)
+        file_size = video_path.stat().st_size
+        up_resp = None
+        last_exc: Exception | None = None
+        for attempt in range(2):
+            try:
+                with video_path.open("rb") as fh:
+                    up_resp = requests.post(
+                        upload_url,
+                        headers={
+                            "Authorization": f"OAuth {page_token}",
+                            "offset": "0",
+                            "file_size": str(file_size),
+                        },
+                        data=fh,
+                        timeout=240,
+                    )
+                last_exc = None
+                break
+            except requests.RequestException as exc:
+                last_exc = exc
+                if attempt == 0:
+                    time.sleep(2)
+        if last_exc is not None or up_resp is None:
+            return {"handled": True, "status": "FAILED", "external_id": video_id, "url": "", "notes": f"FB Reels upload error: {last_exc}"}
         if not up_resp.ok:
             return {"handled": True, "status": "FAILED", "external_id": video_id, "url": "", "notes": f"FB Reels binary upload gagal ({up_resp.status_code}): {up_resp.text[:220]}"}
 

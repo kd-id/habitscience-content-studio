@@ -201,6 +201,16 @@ def select_topic(
 
     if pool:
         top = pool[0]
+        if lang == "en":
+            return TopicIdea(
+                topic=top["title"],
+                angle=f"Science-backed breakdown and actionable protocol for {niche}",
+                hook=f"New research just sparked debate on {top['title']} — and here is what it actually means for your brain.",
+                source="google_news_rss",
+                source_url=top.get("url", ""),
+                keywords=[w for w in slugify(top["title"]).split("-") if len(w) > 2][:6] + ["neuroscience", "focus"],
+                discovered_at=now_iso,
+            )
         return TopicIdea(
             topic=top["title"],
             angle=f"Analisis tren & cara praktik langsung untuk niche {niche}",
@@ -212,6 +222,22 @@ def select_topic(
         )
 
     # Evergreen offline fallback
+    if lang == "en":
+        fallback_topics = [
+            "Why Checking Your Phone at 7 AM Cuts Deep Focus by 40% for 6 Hours",
+            "Attention Residue: The Hidden 23-Minute Tax Behind Every Quick Notification",
+            "The 5-Minute Neural Activation Rule to Beat Procrastination Automatically",
+        ]
+        chosen = next((t for t in fallback_topics if slugify(t) not in used_slugs), fallback_topics[0])
+        return TopicIdea(
+            topic=chosen,
+            angle="Evidence-based neuroscience breakdown with a practical 3-step daily protocol",
+            hook=f"Most people blame willpower—when the real bottleneck behind {chosen} is basic brain chemistry.",
+            source="evergreen_fallback",
+            keywords=["neuroscience", "focus", "dopamine", "deep work", "habits"],
+            discovered_at=now_iso,
+        )
+
     fallback_topics = [
         "Cara Membangun Pabrik Konten AI Otomatis untuk YouTube dan Sosmed",
         "Strategi Repurpose 1 Ide Konten Menjadi 7 Format Siap Publish",

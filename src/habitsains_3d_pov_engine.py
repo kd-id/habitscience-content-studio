@@ -1581,8 +1581,9 @@ def render_pov_3d_toon_video_for_pipeline(
     cmd = [
         "ffmpeg", "-y",
         "-f", "image2pipe", "-vcodec", "mjpeg", "-r", str(fps), "-i", "pipe:0",
-        "-vf", f"scale={target_w}:{target_h}:flags=lanczos",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-pix_fmt", "yuv420p", "-an",
+        "-vf", f"scale={target_w}:{target_h}:flags=lanczos:in_range=full:out_range=tv,format=yuv420p",
+        "-c:v", "libx264", "-profile:v", "main", "-level:v", "4.0", "-preset", "veryfast", "-crf", "21",
+        "-pix_fmt", "yuv420p", "-color_range", "tv", "-an",
         str(silent_mp4),
     ]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
