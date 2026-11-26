@@ -126,5 +126,32 @@
       "failed": 2
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-26_145539_how-do-video-games-affect-brain-deve/PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-26_213223_dopamine-supports-coupling-of-attent",
+    "slug": "dopamine-supports-coupling-of-attention-related",
+    "topic": "Dopamine Supports Coupling of Attention-Related Networks",
+    "generated_at_wib": "2026-11-26 21:47:08 WIB",
+    "publish_mode": "scheduled",
+    "visual_style_long": "cozy_diorama",
+    "visual_style_short": "pov_3d_toon",
+    "external_ids": {
+      "YouTube Long (16:9)": "msjbalDs-QY",
+      "YouTube Shorts (9:16)": "O8itVKXQfLc",
+      "Instagram Reels": "17875363980643025",
+      "Instagram Carousel": "17918364459471028",
+      "X & Threads": "threads:18140640016644833",
+      "Facebook Page Reels": "1679406323549773"
+    },
+    "counts": {
+      "total": 8,
+      "published": 3,
+      "scheduled": 3,
+      "drafted": 0,
+      "dry_run_ready": 0,
+      "pending_setup": 2,
+      "failed": 0
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-26_213223_dopamine-supports-coupling-of-attent/PUBLISH_REPORT.md"
   }
 ]
