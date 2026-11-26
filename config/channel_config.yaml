@@ -140,8 +140,16 @@ platforms:
     adapter: "direct"
 
 publishing:
-  default_mode: "draft"
+  default_mode: "scheduled"
   save_payload_snapshots: true
+  schedule:
+    # US Eastern Prime Time slots (UTC):
+    # YouTube Long = 16:00 UTC (11:00 AM EST / 23:00 WIB)
+    # YouTube Shorts = 19:00 UTC (02:00 PM EST / 02:00 WIB)
+    # Each newly produced episode auto-queues onto the NEXT distinct calendar date!
+    youtube_long_hour_utc: 16
+    youtube_shorts_hour_utc: 19
+    us_prime_hours_utc: [14, 17, 21]
 
 trends:
   locale_hl: "en-US"

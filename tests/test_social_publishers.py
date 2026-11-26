@@ -5,10 +5,16 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from src.publisher import publish_all_platforms
+from src.scheduler_state import (
+    allocate_youtube_schedule_slots,
+    compute_facebook_prime_schedule_ts,
+    save_schedule_state,
+)
 from src.social_publishers import (
     _oauth1_header,
     publish_facebook_reel_direct,
@@ -228,6 +234,43 @@ class DirectSocialPublishersTest(unittest.TestCase):
         summary = publish_all_platforms(bp, assets, self.root, cfg, self.root, publish_mode="dry-run")
         self.assertEqual(summary["counts"]["total"], 8)
         self.assertEqual(summary["counts"]["dry_run_ready"], 8)
+
+    @patch("src.social_publishers.requests.get")
+    @patch("src.social_publishers.requests.post")
+    def test_scheduled_mode_distinct_youtube_dates_and_fb_native_schedule(self, mock_post: MagicMock, mock_get: MagicMock) -> None:
+        state_file = self.root / "schedule_state.json"
+        now = datetime(2026, 11, 26, 14, 0, 0, tzinfo=timezone.utc)  # 09:00 AM EST / 21:00 WIB
+
+        # Simulate 3 Mode Ngebut runs on the SAME day -> must allocate 3 DISTINCT consecutive dates!
+        l1, s1, st1 = allocate_youtube_schedule_slots(state_file, now_utc=now)
+        save_schedule_state(state_file, st1)
+        l2, s2, st2 = allocate_youtube_schedule_slots(state_file, now_utc=now)
+        save_schedule_state(state_file, st2)
+        l3, s3, st3 = allocate_youtube_schedule_slots(state_file, now_utc=now)
+        save_schedule_state(state_file, st3)
+
+        self.assertEqual((l1, s1), ("2026-11-26T16:00:00Z", "2026-11-26T19:00:00Z"))
+        self.assertEqual((l2, s2), ("2026-11-27T16:00:00Z", "2026-11-27T19:00:00Z"))
+        self.assertEqual((l3, s3), ("2026-11-28T16:00:00Z", "2026-11-28T19:00:00Z"))
+
+        # Facebook US Prime Time slot must be strictly >= now+20m (17:00 UTC = 12:00 PM EST!)
+        fb_ts = compute_facebook_prime_schedule_ts(now_utc=now)
+        self.assertEqual(fb_ts, int(datetime(2026, 11, 26, 17, 0, 0, tzinfo=timezone.utc).timestamp()))
+
+        # Verify Facebook Reels native SCHEDULED payload
+        env = {"META_ACCESS_TOKEN": "tok_meta", "FB_PAGE_ID": "fb_1"}
+        with patch.dict(os.environ, env, clear=True):
+            mock_get.return_value = _mock_resp(200, {"access_token": "page_tok"})
+            mock_post.side_effect = [
+                _mock_resp(200, {"video_id": "v_sched", "upload_url": "https://rupload.facebook.com/video-upload/v_sched"}),
+                _mock_resp(200, {"success": True}),
+                _mock_resp(200, {"success": True}),
+            ]
+            res = publish_facebook_reel_direct(self.mp4, "FB Scheduled Reel", "scheduled", scheduled_publish_ts=fb_ts)
+            self.assertEqual(res["status"], "SCHEDULED")
+            fin = mock_post.call_args_list[2].kwargs["json"]
+            self.assertEqual(fin["video_state"], "SCHEDULED")
+            self.assertEqual(fin["scheduled_publish_time"], fb_ts)
 
 
 if __name__ == "__main__":

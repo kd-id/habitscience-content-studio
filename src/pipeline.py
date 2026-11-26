@@ -215,9 +215,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--publish-mode",
         type=str,
-        choices=["dry-run", "draft", "publish"],
+        choices=["dry-run", "draft", "scheduled", "publish"],
         default=None,
-        help="Mode publikasi: dry-run (simulasi), draft (auto-draft aman), publish (langsung publik)",
+        help="Mode publikasi: dry-run (simulasi), draft (auto-draft), scheduled (antre beda tanggal YT + US Prime Time sosmed), publish (langsung publik)",
     )
     parser.add_argument(
         "--visual-style",

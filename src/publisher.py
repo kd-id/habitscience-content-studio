@@ -9,6 +9,11 @@ from typing import Any
 
 import requests
 
+from src.scheduler_state import (
+    allocate_youtube_schedule_slots,
+    compute_facebook_prime_schedule_ts,
+    save_schedule_state,
+)
 from src.social_publishers import (
     publish_facebook_reel_direct,
     publish_instagram_carousel_direct,
@@ -98,8 +103,16 @@ def _upload_youtube_video(
     privacy_status: str,
     made_for_kids: bool,
     thumbnail_path: Path | None = None,
+    publish_at: str | None = None,
 ) -> dict[str, Any]:
     from googleapiclient.http import MediaFileUpload
+
+    status_obj: dict[str, Any] = {
+        "privacyStatus": "private" if publish_at else privacy_status,
+        "selfDeclaredMadeForKids": made_for_kids,
+    }
+    if publish_at:
+        status_obj["publishAt"] = publish_at
 
     body = {
         "snippet": {
@@ -108,10 +121,7 @@ def _upload_youtube_video(
             "tags": tags[:25],
             "categoryId": str(category_id),
         },
-        "status": {
-            "privacyStatus": privacy_status,
-            "selfDeclaredMadeForKids": made_for_kids,
-        },
+        "status": status_obj,
     }
     media = MediaFileUpload(str(video_path), mimetype="video/mp4", resumable=True)
     request = service.videos().insert(part="snippet,status", body=body, media_body=media)
@@ -177,11 +187,14 @@ def publish_all_platforms(
     """
     Execute multi-platform publishing according to publish_mode:
       - 'dry-run': validates assets & builds full payload snapshots without calling external APIs.
-      - 'draft': uploads YouTube as private draft & sends status='draft' to social webhook/connectors.
-      - 'publish': uploads YouTube as public & sends status='publish' to social webhook/connectors.
+      - 'draft': uploads YouTube as private draft & keeps social media in draft/container mode.
+      - 'scheduled': YouTube Long & Shorts upload immediately and auto-queue onto distinct consecutive
+        dates at US Prime Time via `publishAt` (`output/schedule_state.json`); Facebook Reels schedules
+        natively at US Prime Time; Instagram Reels/Carousel & Threads publish live at the US Prime Time run.
+      - 'publish': uploads YouTube & all connected platforms immediately as public.
     """
     mode = publish_mode.lower().strip()
-    if mode not in ("dry-run", "draft", "publish"):
+    if mode not in ("dry-run", "draft", "scheduled", "publish"):
         mode = "draft"
 
     platforms_cfg = config.get("platforms", {})
@@ -193,7 +206,22 @@ def publish_all_platforms(
     youtube_service = None
     youtube_auth_err = ""
 
-    if mode in ("draft", "publish") and (
+    # Prepare distinct-date YouTube US Prime Time schedule slots when mode == 'scheduled'
+    schedule_state_file = project_root / "output" / "schedule_state.json"
+    yt_long_publish_at: str | None = None
+    yt_shorts_publish_at: str | None = None
+    pending_sched_state: dict[str, Any] | None = None
+    yt_any_scheduled = False
+    fb_sched_ts: int | None = None
+
+    if mode == "scheduled":
+        yt_long_publish_at, yt_shorts_publish_at, pending_sched_state = allocate_youtube_schedule_slots(
+            schedule_state_file, config=config
+        )
+        prime_hrs = tuple(config.get("publishing", {}).get("schedule", {}).get("us_prime_hours_utc", [14, 17, 21]))
+        fb_sched_ts = compute_facebook_prime_schedule_ts(prime_hours_utc=prime_hrs)
+
+    if mode in ("draft", "scheduled", "publish") and (
         platforms_cfg.get("youtube_long", {}).get("enabled", True)
         or platforms_cfg.get("youtube_shorts", {}).get("enabled", True)
     ):
@@ -219,7 +247,7 @@ def publish_all_platforms(
                 "target_privacy": privacy,
                 "external_id": "",
                 "url": "",
-                "notes": "Simulasi sukses. File video, subtitle, dan thumbnail siap diupload sebagai draft/publish.",
+                "notes": "Simulasi sukses. File video, subtitle, dan thumbnail siap diupload sebagai draft/scheduled/publish.",
             })
         elif youtube_service and video_path and video_path.exists():
             try:
@@ -233,17 +261,22 @@ def publish_all_platforms(
                     privacy_status=privacy,
                     made_for_kids=bool(yt_cfg.get("made_for_kids", False)),
                     thumbnail_path=thumb_path,
+                    publish_at=yt_long_publish_at,
                 )
+                if mode == "scheduled" and yt_long_publish_at:
+                    yt_any_scheduled = True
+                res_st = "SCHEDULED" if (mode == "scheduled" and yt_long_publish_at) else ("PUBLISHED" if mode == "publish" else "DRAFTED")
+                sched_txt = f", publishAt={yt_long_publish_at}" if yt_long_publish_at else ""
                 results.append({
                     "platform": "YouTube Long (16:9)",
                     "format": "Video 1920x1080 + Thumbnail",
                     "mode": mode,
-                    "status": "PUBLISHED" if mode == "publish" else "DRAFTED",
+                    "status": res_st,
                     "title": yt_long_meta.get("title", ""),
-                    "target_privacy": privacy,
+                    "target_privacy": "scheduled" if yt_long_publish_at else privacy,
                     "external_id": up["video_id"],
-                    "url": up["studio_url"] if mode == "draft" else up["watch_url"],
-                    "notes": f"Upload sukses (privacy={privacy}, thumbnail={up['thumbnail_uploaded']}){up.get('thumb_note', '')}.",
+                    "url": up["watch_url"] if mode == "publish" else up["studio_url"],
+                    "notes": f"Upload sukses (privacy={privacy}{sched_txt}, thumbnail={up['thumbnail_uploaded']}){up.get('thumb_note', '')}.",
                 })
             except Exception as exc:
                 results.append({
@@ -302,17 +335,22 @@ def publish_all_platforms(
                     category_id=str(sh_cfg.get("category_id", "28")),
                     privacy_status=privacy,
                     made_for_kids=bool(sh_cfg.get("made_for_kids", False)),
+                    publish_at=yt_shorts_publish_at,
                 )
+                if mode == "scheduled" and yt_shorts_publish_at:
+                    yt_any_scheduled = True
+                res_st = "SCHEDULED" if (mode == "scheduled" and yt_shorts_publish_at) else ("PUBLISHED" if mode == "publish" else "DRAFTED")
+                sched_txt = f", publishAt={yt_shorts_publish_at}" if yt_shorts_publish_at else ""
                 results.append({
                     "platform": "YouTube Shorts (9:16)",
                     "format": "Video 1080x1920",
                     "mode": mode,
-                    "status": "PUBLISHED" if mode == "publish" else "DRAFTED",
+                    "status": res_st,
                     "title": short_title,
-                    "target_privacy": privacy,
+                    "target_privacy": "scheduled" if yt_shorts_publish_at else privacy,
                     "external_id": up["video_id"],
-                    "url": up["studio_url"] if mode == "draft" else up["watch_url"],
-                    "notes": f"Upload Shorts sukses (privacy={privacy}).",
+                    "url": up["watch_url"] if mode == "publish" else up["studio_url"],
+                    "notes": f"Upload Shorts sukses (privacy={privacy}{sched_txt}).",
                 })
             except Exception as exc:
                 results.append({
@@ -338,6 +376,10 @@ def publish_all_platforms(
                 "url": "",
                 "notes": youtube_auth_err or "OAuth YouTube belum dihubungkan.",
             })
+
+    # Persist advanced YouTube schedule date ONLY when at least one YouTube upload succeeded!
+    if yt_any_scheduled and pending_sched_state is not None:
+        save_schedule_state(schedule_state_file, pending_sched_state)
 
     # 3. Direct Free Official APIs (Instagram Reels/Carousel, TikTok, Facebook Reels, LinkedIn, X/Threads)
     #    with automatic fallback to PUBLISH_WEBHOOK_URL for any platform without direct credentials.
@@ -409,7 +451,7 @@ def publish_all_platforms(
         elif key == "x_threads":
             d_res = publish_x_and_threads_direct(carousel_meta.get("thread_x", []), carousel_meta.get("post_threads", ""), mode)
         elif key == "facebook":
-            d_res = publish_facebook_reel_direct(short_vid_path, caption, mode)
+            d_res = publish_facebook_reel_direct(short_vid_path, caption, mode, scheduled_publish_ts=fb_sched_ts)
         else:
             d_res = {"handled": False}
 
@@ -423,7 +465,7 @@ def publish_all_platforms(
     webhook_ok = False
     webhook_msg = ""
     webhook_resp: dict[str, Any] = {}
-    if mode in ("draft", "publish") and fallback_targets and os.getenv("PUBLISH_WEBHOOK_URL", "").strip():
+    if mode in ("draft", "scheduled", "publish") and fallback_targets and os.getenv("PUBLISH_WEBHOOK_URL", "").strip():
         fb_keys = {k for k, *_ in fallback_targets}
         fb_payload = {**webhook_payload, "targets": [t for t in webhook_payload["targets"] if t["platform_key"] in fb_keys]}
         webhook_ok, webhook_msg, webhook_resp = _dispatch_social_webhook(fb_payload)
@@ -489,6 +531,7 @@ def publish_all_platforms(
         "counts": {
             "total": len(results),
             "published": sum(1 for r in results if r["status"] == "PUBLISHED"),
+            "scheduled": sum(1 for r in results if r["status"] == "SCHEDULED"),
             "drafted": sum(1 for r in results if r["status"] == "DRAFTED"),
             "dry_run_ready": sum(1 for r in results if r["status"] == "DRY_RUN_READY"),
             "pending_setup": sum(1 for r in results if r["status"] in ("PENDING_AUTH", "READY_FOR_CONNECTOR")),

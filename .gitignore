@@ -13,6 +13,7 @@ config/youtube_token.json
 # kecuali history.json untuk mencegah duplikasi topik di GitHub Actions
 output/*
 !output/history.json
+!output/schedule_state.json
 !output/.gitkeep
 
 # Cached downloaded B-roll video clips (Studio v6)

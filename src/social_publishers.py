@@ -184,14 +184,14 @@ def publish_instagram_reels_direct(video_path: Path | None, caption: str, publis
         if not ok:
             return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": status_msg}
 
-        # Step 4: Draft vs Publish
-        if publish_mode != "publish":
+        # Step 4: Draft vs Publish/Scheduled (in scheduled mode, cron runs directly at US Prime Time!)
+        if publish_mode not in ("publish", "scheduled"):
             return {
                 "handled": True,
                 "status": "DRAFTED",
                 "external_id": container_id,
                 "url": "",
-                "notes": f"Reels binary berhasil diunggah & lolos verifikasi Meta (container={container_id}, siap tayang). Gunakan mode publish untuk merilis ke feed IG.",
+                "notes": f"Reels binary berhasil diunggah & lolos verifikasi Meta (container={container_id}, siap tayang). Gunakan mode publish/scheduled untuk merilis ke feed IG.",
             }
 
         pub_resp = requests.post(
@@ -269,13 +269,13 @@ def publish_instagram_carousel_direct(slide_paths: list[Path], caption: str, pub
         if not ok:
             return {"handled": True, "status": "FAILED", "external_id": parent_id, "url": "", "notes": status_msg}
 
-        if publish_mode != "publish":
+        if publish_mode not in ("publish", "scheduled"):
             return {
                 "handled": True,
                 "status": "DRAFTED",
                 "external_id": parent_id,
                 "url": "",
-                "notes": f"Carousel {len(child_ids)} slide berhasil diunggah ke container Meta (id={parent_id}). Gunakan mode publish untuk tayang live.",
+                "notes": f"Carousel {len(child_ids)} slide berhasil diunggah ke container Meta (id={parent_id}). Gunakan mode publish/scheduled untuk tayang live.",
             }
 
         pub_resp = requests.post(
@@ -309,7 +309,12 @@ def publish_instagram_carousel_direct(slide_paths: list[Path], caption: str, pub
 # 3. Facebook Page Reels — Direct Binary Upload + Native DRAFT / PUBLISHED
 # ---------------------------------------------------------------------------
 
-def publish_facebook_reel_direct(video_path: Path | None, description: str, publish_mode: str) -> dict[str, Any]:
+def publish_facebook_reel_direct(
+    video_path: Path | None,
+    description: str,
+    publish_mode: str,
+    scheduled_publish_ts: int | None = None,
+) -> dict[str, Any]:
     token = os.getenv("FB_PAGE_ACCESS_TOKEN", "").strip() or os.getenv("META_ACCESS_TOKEN", "").strip()
     fb_page_id = os.getenv("FB_PAGE_ID", "").strip()
     if not token or not fb_page_id:
@@ -362,28 +367,40 @@ def publish_facebook_reel_direct(video_path: Path | None, description: str, publ
         if not up_resp.ok:
             return {"handled": True, "status": "FAILED", "external_id": video_id, "url": "", "notes": f"FB Reels binary upload gagal ({up_resp.status_code}): {up_resp.text[:220]}"}
 
-        # Step 3: finish (supports native DRAFT or PUBLISHED!)
-        video_state = "PUBLISHED" if publish_mode == "publish" else "DRAFT"
+        # Step 3: finish (supports native DRAFT, SCHEDULED at US Prime Time, or PUBLISHED!)
+        fin_body: dict[str, Any] = {
+            "upload_phase": "finish",
+            "video_id": video_id,
+            "description": description[:2200],
+            "access_token": page_token,
+        }
+        if publish_mode == "scheduled" and scheduled_publish_ts:
+            video_state = "SCHEDULED"
+            fin_body["video_state"] = "SCHEDULED"
+            fin_body["scheduled_publish_time"] = int(scheduled_publish_ts)
+        elif publish_mode == "publish":
+            video_state = "PUBLISHED"
+            fin_body["video_state"] = "PUBLISHED"
+        else:
+            video_state = "DRAFT"
+            fin_body["video_state"] = "DRAFT"
+
         fin_resp = requests.post(
             f"{META_GRAPH_BASE}/{fb_page_id}/video_reels",
-            json={
-                "upload_phase": "finish",
-                "video_id": video_id,
-                "video_state": video_state,
-                "description": description[:2200],
-                "access_token": page_token,
-            },
+            json=fin_body,
             timeout=45,
         )
         if not fin_resp.ok:
             return {"handled": True, "status": "FAILED", "external_id": video_id, "url": "", "notes": f"FB Reels finish gagal ({fin_resp.status_code}): {fin_resp.text[:220]}"}
 
+        res_status = "PUBLISHED" if video_state == "PUBLISHED" else ("SCHEDULED" if video_state == "SCHEDULED" else "DRAFTED")
+        sched_note = f", scheduled_unix={scheduled_publish_ts}" if video_state == "SCHEDULED" else ""
         return {
             "handled": True,
-            "status": "PUBLISHED" if video_state == "PUBLISHED" else "DRAFTED",
+            "status": res_status,
             "external_id": video_id,
-            "url": f"https://www.facebook.com/reel/{video_id}" if video_state == "PUBLISHED" else f"https://business.facebook.com/latest/content_library",
-            "notes": f"Facebook Page Reel sukses ({video_state}, video_id={video_id}).",
+            "url": f"https://www.facebook.com/reel/{video_id}" if video_state == "PUBLISHED" else "https://business.facebook.com/latest/content_library",
+            "notes": f"Facebook Page Reel sukses ({video_state}, video_id={video_id}{sched_note}).",
         }
     except Exception as exc:
         return {"handled": True, "status": "FAILED", "external_id": "", "url": "", "notes": f"FB Reels error: {exc}"}
@@ -541,14 +558,14 @@ def publish_linkedin_direct(slide_paths: list[Path], caption: str, publish_mode:
     if not token or not author_urn:
         return {"handled": False, "status": "PENDING_AUTH", "external_id": "", "url": "", "notes": "LINKEDIN_ACCESS_TOKEN / LINKEDIN_AUTHOR_URN belum diset."}
 
-    if publish_mode != "publish" and not author_urn.startswith("urn:li:organization:"):
+    if publish_mode not in ("publish", "scheduled") and not author_urn.startswith("urn:li:organization:"):
         # LinkedIn personal profiles (w_member_social) do not support DRAFT lifecycleState via API.
         return {
             "handled": True,
             "status": "DRAFTED",
             "external_id": "",
             "url": "",
-            "notes": "Kredensial LinkedIn valid. Mode draft tidak memposting langsung ke profil personal (ubah ke publish untuk tayang otomatis).",
+            "notes": "Kredensial LinkedIn valid. Mode draft tidak memposting langsung ke profil personal (ubah ke publish/scheduled untuk tayang otomatis).",
         }
 
     headers = {
@@ -584,7 +601,7 @@ def publish_linkedin_direct(slide_paths: list[Path], caption: str, publish_mode:
                 return {"handled": True, "status": "FAILED", "external_id": "", "url": "", "notes": f"LinkedIn image PUT gagal ({put_resp.status_code}): {put_resp.text[:200]}"}
             uploaded_urns.append(img_urn)
 
-        lifecycle = "PUBLISHED" if publish_mode == "publish" else "DRAFT"
+        lifecycle = "PUBLISHED" if publish_mode in ("publish", "scheduled") else "DRAFT"
         payload: dict[str, Any] = {
             "author": author_urn,
             "commentary": caption[:2950],
@@ -690,7 +707,7 @@ def publish_x_and_threads_direct(thread_tweets: list[str], threads_text: str, pu
                 notes.append(f"Threads container gagal ({c_resp.status_code}): {c_resp.text[:140]}")
             else:
                 cid = str(c_resp.json().get("id", ""))
-                if publish_mode == "publish":
+                if publish_mode in ("publish", "scheduled"):
                     p_resp = requests.post(
                         f"{THREADS_API_BASE}/{th_uid}/threads_publish",
                         data={"creation_id": cid, "access_token": th_token},
@@ -713,7 +730,7 @@ def publish_x_and_threads_direct(thread_tweets: list[str], threads_text: str, pu
 
     # B) X (Twitter API v2 Free Tier)
     if has_x and thread_tweets:
-        if publish_mode != "publish":
+        if publish_mode not in ("publish", "scheduled"):
             notes.append(f"X API siap ({len(thread_tweets)} tweet — mode draft dilewati agar tidak langsung tweet publik)")
         else:
             try:
