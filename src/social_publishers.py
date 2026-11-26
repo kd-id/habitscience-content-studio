@@ -129,33 +129,42 @@ def publish_instagram_reels_direct(video_path: Path | None, caption: str, publis
         return {"handled": True, "status": "FAILED", "external_id": "", "url": "", "notes": "File video 9:16 untuk Instagram Reels tidak ditemukan."}
 
     try:
-        # Step 1: Initialize resumable upload session (strict lowercase 'resumable')
-        init_resp = requests.post(
-            f"{META_GRAPH_BASE}/{ig_id}/media",
-            data={
-                "media_type": "REELS",
-                "upload_type": "resumable",
-                "caption": caption[:2200],
-                "share_to_feed": "true",
-                "access_token": token,
-            },
-            timeout=30,
-        )
-        if not init_resp.ok:
-            return {"handled": True, "status": "FAILED", "external_id": "", "url": "", "notes": f"IG Reels init gagal ({init_resp.status_code}): {init_resp.text[:240]}"}
-
-        init_data = init_resp.json()
-        container_id = str(init_data.get("id", ""))
-        upload_uri = str(init_data.get("uri", ""))
-        if not container_id or not upload_uri:
-            return {"handled": True, "status": "FAILED", "external_id": "", "url": "", "notes": f"IG Reels init tidak mengembalikan id/uri: {init_resp.text[:200]}"}
-
-        # Step 2: Upload raw MP4 binary directly to Meta's rupload.facebook.com
-        # NOTE: Do NOT send Content-Type header — Meta's rupload rejects 'application/octet-stream' with HTTP 400 ProcessingFailedError!
+        # Step 1 & 2: Initialize resumable upload session + upload binary to Meta rupload.facebook.com.
+        # Retry with a FRESH container session if Meta's rupload edge returns transient 400 ProcessingFailedError/5xx.
         file_size = video_path.stat().st_size
+        container_id = ""
         up_resp = None
-        last_exc: Exception | None = None
-        for attempt in range(2):
+        last_err_note = ""
+
+        for session_try in range(2):
+            init_resp = requests.post(
+                f"{META_GRAPH_BASE}/{ig_id}/media",
+                data={
+                    "media_type": "REELS",
+                    "upload_type": "resumable",
+                    "caption": caption[:2200],
+                    "share_to_feed": "true",
+                    "access_token": token,
+                },
+                timeout=30,
+            )
+            if not init_resp.ok:
+                last_err_note = f"IG Reels init gagal ({init_resp.status_code}): {init_resp.text[:240]}"
+                if session_try == 0:
+                    time.sleep(3)
+                    continue
+                return {"handled": True, "status": "FAILED", "external_id": "", "url": "", "notes": last_err_note}
+
+            init_data = init_resp.json()
+            container_id = str(init_data.get("id", ""))
+            upload_uri = str(init_data.get("uri", ""))
+            if not container_id or not upload_uri:
+                return {"handled": True, "status": "FAILED", "external_id": "", "url": "", "notes": f"IG Reels init tidak mengembalikan id/uri: {init_resp.text[:200]}"}
+
+            # Small propagation pause so Meta's rupload shard recognizes the freshly minted container_id
+            time.sleep(1.5)
+
+            # NOTE: Do NOT send Content-Type header — Meta's rupload rejects 'application/octet-stream' with HTTP 400 ProcessingFailedError!
             try:
                 with video_path.open("rb") as fh:
                     up_resp = requests.post(
@@ -168,16 +177,23 @@ def publish_instagram_reels_direct(video_path: Path | None, caption: str, publis
                         data=fh,
                         timeout=240,
                     )
-                last_exc = None
-                break
             except requests.RequestException as exc:
-                last_exc = exc
-                if attempt == 0:
-                    time.sleep(2)
-        if last_exc is not None or up_resp is None:
-            return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": f"IG Reels upload error: {last_exc}"}
-        if not up_resp.ok:
-            return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": f"IG Reels binary upload gagal ({up_resp.status_code}): {up_resp.text[:240]}"}
+                last_err_note = f"IG Reels upload error: {exc}"
+                up_resp = None
+                if session_try == 0:
+                    time.sleep(4)
+                    continue
+                return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": last_err_note}
+
+            if up_resp.ok:
+                break
+            last_err_note = f"IG Reels binary upload gagal ({up_resp.status_code}): {up_resp.text[:240]}"
+            if session_try == 0:
+                time.sleep(4)
+                continue
+
+        if up_resp is None or not up_resp.ok:
+            return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": last_err_note or "IG Reels binary upload gagal"}
 
         # Step 3: Poll until Meta finishes ingesting the video
         ok, status_msg = _poll_ig_container(container_id, token, timeout_sec=150)
@@ -708,19 +724,29 @@ def publish_x_and_threads_direct(thread_tweets: list[str], threads_text: str, pu
             else:
                 cid = str(c_resp.json().get("id", ""))
                 if publish_mode in ("publish", "scheduled"):
-                    p_resp = requests.post(
-                        f"{THREADS_API_BASE}/{th_uid}/threads_publish",
-                        data={"creation_id": cid, "access_token": th_token},
-                        timeout=25,
-                    )
-                    if p_resp.ok:
+                    # Meta Threads API needs a brief propagation window after creating the container before threads_publish
+                    p_resp = None
+                    for wait_s in (2.5, 4.0, 6.0):
+                        time.sleep(wait_s)
+                        p_resp = requests.post(
+                            f"{THREADS_API_BASE}/{th_uid}/threads_publish",
+                            data={"creation_id": cid, "access_token": th_token},
+                            timeout=25,
+                        )
+                        if p_resp.ok:
+                            break
+                        if p_resp.status_code not in (400, 429, 500, 502, 503):
+                            break
+                    if p_resp is not None and p_resp.ok:
                         tid = str(p_resp.json().get("id", cid))
                         ext_ids.append(f"threads:{tid}")
                         any_pub = True
                         notes.append(f"Threads tayang (id={tid})")
                     else:
                         any_fail = True
-                        notes.append(f"Threads publish gagal ({p_resp.status_code})")
+                        sc = p_resp.status_code if p_resp is not None else "?"
+                        body_txt = p_resp.text[:160] if p_resp is not None else ""
+                        notes.append(f"Threads publish gagal ({sc}): {body_txt}")
                 else:
                     ext_ids.append(f"threads_draft:{cid}")
                     notes.append(f"Threads container siap (draft id={cid})")
