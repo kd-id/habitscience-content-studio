@@ -151,6 +151,12 @@ publishing:
     youtube_shorts_hour_utc: 19
     us_prime_hours_utc: [14, 17, 21]
 
+comment_bot:
+  enabled: true
+  # Safe daily YouTube reply cap (4 replies * 50 units = 200 units/day so 3x daily video uploads never hit quota!)
+  youtube_daily_reply_cap: 4
+  max_replies_per_platform_per_run: 6
+
 trends:
   locale_hl: "en-US"
   locale_gl: "US"

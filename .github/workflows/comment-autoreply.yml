@@ -1,0 +1,72 @@
+name: Comment Auto-Reply Bot (All Platforms)
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Simulasi saja (jangan kirim balasan)"
+        type: boolean
+        default: false
+  # Jalan otomatis setiap 3 jam (~20 detik/run, hemat kuota GitHub Actions!)
+  schedule:
+    - cron: "30 */3 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: comment-autoreply-bot
+  cancel-in-progress: false
+
+jobs:
+  reply-comments:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install lightweight dependencies
+        run: pip install requests python-dotenv pyyaml google-genai google-api-python-client google-auth-oauthlib
+
+      - name: Run Multi-Platform Natural Comment Auto-Reply Bot
+        env:
+          HEADLESS_CLOUD: "1"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
+          YOUTUBE_CLIENT_SECRET_JSON: ${{ secrets.YOUTUBE_CLIENT_SECRET_JSON }}
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          if [ "$INPUT_DRY_RUN" = "true" ]; then
+            python -m src.comment_bot --dry-run
+          else
+            python -m src.comment_bot
+          fi
+
+      - name: Persist replied comment IDs & A/B vote tallies
+        if: success() && github.event.inputs.dry_run != 'true'
+        run: |
+          if [ -f output/replied_comments.json ]; then
+            git config user.name "content-automation-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add -f output/replied_comments.json
+            if ! git diff --cached --quiet; then
+              git commit -m "chore(comments): persist replied IDs & A/B vote tally [skip ci]"
+              git push
+            fi
+          fi

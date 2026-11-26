@@ -25,7 +25,10 @@ from src.social_publishers import (
 )
 
 
-YOUTUBE_SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+YOUTUBE_SCOPES = [
+    "https://www.googleapis.com/auth/youtube.upload",
+    "https://www.googleapis.com/auth/youtube.force-ssl",
+]
 
 
 def _decode_json_env(raw_val: str) -> dict[str, Any] | None:
@@ -63,9 +66,10 @@ def _get_youtube_service(project_root: Path):
     if env_token_raw:
         token_info = _decode_json_env(env_token_raw)
         if token_info:
-            creds = Credentials.from_authorized_user_info(token_info, YOUTUBE_SCOPES)
+            # Pass scopes=None so existing youtube.upload-only tokens keep working seamlessly until re-auth
+            creds = Credentials.from_authorized_user_info(token_info)
     elif token_path.exists():
-        creds = Credentials.from_authorized_user_file(str(token_path), YOUTUBE_SCOPES)
+        creds = Credentials.from_authorized_user_file(str(token_path))
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
