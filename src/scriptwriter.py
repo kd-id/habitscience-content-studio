@@ -183,15 +183,47 @@ Return ONLY valid JSON with this exact schema:
     ]
   }},
     "carousel_social": {{
-    "title": "Carousel title",
+    "title": "Human editorial magazine title (max 58 chars)",
     "slides": [
       {{
         "slide_no": 1,
-        "badge": "SLIDE 1/5 • COVER",
-        "headline": "Soulful reflective cover headline",
-        "body": "Concise 1-2 sentence insight",
-        "highlight": "Key takeaway or verified citation",
-        "visual_prompt": "Serene luminous Islamic twilight/geometric art for this slide (strictly NO prophets, NO faces, NO text)"
+        "badge": "EDITORIAL COVER",
+        "headline": "Short soulful editorial cover headline (4-8 words, warm & human — NO clickbait)",
+        "body": "1-2 gentle human sentences drawing the reader in (max 24 words)",
+        "highlight": "Short quiet kicker (3-5 words)",
+        "visual_prompt": "Serene luminous Islamic twilight/geometric art (strictly NO prophets, NO faces, NO text)"
+      }},
+      {{
+        "slide_no": 2,
+        "badge": "THE SACRED SOURCE",
+        "headline": "Short context title for the verified verse/Hadith",
+        "body": "1 short warm reflection sentence explaining the depth of this verified source (Slide 2 auto-renders the verified full-harakat Arabic calligraphy, transliteration & translation above this note)",
+        "highlight": "Verified citation",
+        "visual_prompt": "Illuminated manuscript framing (NO text)"
+      }},
+      {{
+        "slide_no": 3,
+        "badge": "EVERYDAY MIND SCIENCE",
+        "headline": "Clear 4-7 word title explaining what changes in the mind",
+        "body": "2 plain-English Grade 6-7 sentences explaining why this Sunnah calms the brain (ZERO textbook jargon)",
+        "highlight": "Calm clarity insight",
+        "visual_prompt": "Minimalist calm mind diagram (NO text)"
+      }},
+      {{
+        "slide_no": 4,
+        "badge": "TODAY'S PRACTICE",
+        "headline": "How to Live This Today (3-6 words)",
+        "body": "1) First gentle 1-sentence step. 2) Second gentle 1-sentence step. 3) Third gentle 1-sentence step.",
+        "highlight": "One warm memorable 1-line margin takeaway",
+        "visual_prompt": "Pocket journal checklist aesthetic (NO text)"
+      }},
+      {{
+        "slide_no": 5,
+        "badge": "KEEPSAKE",
+        "headline": "Memorable standalone keepsake quote (8-12 words)",
+        "body": "Warm 1-sentence closing inviting readers to bookmark & share peace",
+        "highlight": "Save for a noisy day",
+        "visual_prompt": "Minimalist keepsake poster art (NO text)"
       }}
     ],
     "caption_instagram": "Warm reflective Instagram carousel caption with verified citation + save/share CTA + hashtags",

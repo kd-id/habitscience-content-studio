@@ -681,6 +681,35 @@ def generate_carousel_slides(
     carousel_dir: Path,
     custom_assets_dir: Path | None = None,
 ) -> list[Path]:
+    meta = blueprint.get("meta") if isinstance(blueprint.get("meta"), dict) else {}
+    pillar = str(meta.get("pillar") or "").strip().lower()
+    vis_style = str(config.get("visual", {}).get("style", "")).strip().lower()
+    bgm_mode = str(config.get("video", {}).get("ambient_bgm_mode", "")).strip().lower()
+    is_islamic = (
+        isinstance(meta.get("dalil"), dict)
+        or pillar in {
+            "minute_wisdom_dua",
+            "prophetic_habits",
+            "sunnah_paper_story",
+            "quran_mental_peace",
+            "sunnah_particle_map",
+            "hadith_cinematic_story",
+        }
+        or vis_style == "islamic_luminous"
+        or bgm_mode == "nature_only"
+    )
+    if is_islamic and not (custom_assets_dir and _find_custom_asset(custom_assets_dir, "carousel_slide_1")):
+        try:
+            from src.islamic_carousel_engine import render_islamic_editorial_carousel
+
+            return render_islamic_editorial_carousel(blueprint=blueprint, config=config, carousel_dir=carousel_dir)
+        except Exception as exc:
+            print(
+                f"[carousel] Editorial Chromium carousel unavailable ({type(exc).__name__}): {str(exc)[:140]}; "
+                "falling back to Pillow.",
+                flush=True,
+            )
+
     branding = config.get("branding", {})
     style = config.get("visual", {}).get("style", "minimalist_ink_sketch")
     w, h = 1080, 1350

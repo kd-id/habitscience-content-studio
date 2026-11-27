@@ -261,6 +261,45 @@ class TestIslamicVisualsV10(unittest.TestCase):
                     self.assertIn("sunburst_3d", html)
                     self.assertIn("window._assetsReady", html)
 
+    def test_v125_six_pillar_human_editorial_carousels_and_amiri_rtl(self) -> None:
+        from src.islamic_carousel_engine import CAROUSEL_THEMES, build_islamic_carousel_html
+
+        cfg = load_config()
+        seen_themes: set[str] = set()
+        for pillar_id, bank in PILLAR_TOPIC_BANKS.items():
+            sample = bank[0]
+            bp = {
+                "meta": {
+                    "topic": sample["topic"],
+                    "angle": sample["angle"],
+                    "hook": sample["hook"],
+                    "pillar": pillar_id,
+                    "channel_handle": "@HabitSains",
+                    "dalil": sample["dalil"],
+                },
+                "carousel_social": {
+                    "slides": [
+                        {"slide_no": 1, "badge": "COVER", "headline": sample["topic"], "body": sample["hook"], "highlight": ""},
+                        {"slide_no": 2, "badge": "SOURCE", "headline": "Verified Wisdom", "body": "Reflect slowly on these words.", "highlight": sample["dalil"]["citation"]},
+                        {"slide_no": 3, "badge": "SCIENCE", "headline": "How It Calms Your Brain", "body": "Quiet Prophetic rhythm lowers mental noise.", "highlight": ""},
+                        {"slide_no": 4, "badge": "PRACTICE", "headline": "Try This Today", "body": "1) Pause for one breath. 2) Whisper Dhikr. 3) Keep it daily.", "highlight": "Consistency beats intensity."},
+                        {"slide_no": 5, "badge": "KEEPSAKE", "headline": "Hold On To Peace", "body": "Save this reminder for a busy day.", "highlight": "Save & share"},
+                    ]
+                },
+            }
+            html_doc, theme_id = build_islamic_carousel_html(bp, cfg)
+            seen_themes.add(theme_id)
+            self.assertIn("AmiriCalligraphy", html_doc)
+            self.assertIn("direction: rtl", html_doc)
+            self.assertIn(sample["dalil"]["arabic"], html_doc)
+            self.assertIn(sample["dalil"]["citation"], html_doc)
+            for s_idx in range(1, 6):
+                self.assertIn(f'id="slide_0{s_idx}"', html_doc)
+            if pillar_id == "sunnah_paper_story":
+                self.assertIn("data:image/png;base64,", html_doc)
+        self.assertEqual(len(seen_themes), 6)
+        self.assertEqual(set(CAROUSEL_THEMES.keys()), set(PILLAR_TOPIC_BANKS.keys()))
+
     def test_four_act_storytelling_staging_across_all_30_topics_and_6_modes(self) -> None:
         # Every single curated topic must resolve a valid 4-Act visual plan
         valid_hooks = {"phone_chaos", "anger_heat", "heavy_wall", "rushing_calendar", "comparison_scroll", "needle_ocean", "racing_mind"}
