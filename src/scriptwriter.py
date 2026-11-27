@@ -15,20 +15,33 @@ def _build_gemini_prompt(idea: TopicIdea, config: dict[str, Any]) -> str:
     channel = config.get("channel", {})
     lang = channel.get("language", "en")
     if lang == "en":
-        pillar_id = getattr(idea, "pillar", "focus_habits") or "focus_habits"
-        pillar_label = getattr(idea, "pillar_label", "Everyday Focus & Habits") or "Everyday Focus & Habits"
+        pillar_id = getattr(idea, "pillar", "prophetic_habits") or "prophetic_habits"
+        pillar_label = getattr(idea, "pillar_label", "Prophetic Habits & Daily Sunnah") or "Prophetic Habits & Daily Sunnah"
+        dalil = getattr(idea, "dalil", None) or {}
+        dalil_block = ""
+        if isinstance(dalil, dict) and dalil.get("citation"):
+            dalil_block = (
+                "\nVERIFIED AUTHENTIC ISLAMIC SOURCE (LOCKED — USE THIS EXACT SOURCE & NEVER INVENT OTHER VERSE/HADITH NUMBERS):\n"
+                f"- Arabic: {dalil.get('arabic', '')}\n"
+                f"- Transliteration: {dalil.get('transliteration', '')}\n"
+                f"- Translation: {dalil.get('translation', '')}\n"
+                f"- Verified Citation: {dalil.get('citation', '')}\n"
+            )
         pillar_hint = {
-            "pov_survival": "Style focus: Thrilling First-Person 3D POV countdown/survival brain challenge (@you.have.72hours vibe) where every distraction costs precious time or battery!",
-            "everyday_science": "Style focus: Fun, surprising everyday brain/body science that makes viewers say 'WAIT—THAT is why that happens to me?!'",
-            "focus_habits": "Style focus: Relatable everyday phone/focus/procrastination struggle + 1 super-simple habit trick anyone can try right now.",
-        }.get(pillar_id, "Style focus: Super-simple everyday brain & habit storytelling.")
-        return f"""You are a Viral YouTube & Reels Storyteller (think Ali Abdaal meets Kurzgesagt and @you.have.72hours).
-Create an original, ultra-clear Master Content Blueprint in SUPER-SIMPLE everyday spoken English so ANY regular viewer immediately understands the exact point in 2 seconds.
+            "prophetic_habits": "Style focus (Minute Wisdom + 5 Duas vibe): Calm, luminous, practical breakdown of a Prophetic daily habit or authentic Dua—step by step—and why everyday brain & habit science confirms its calm power.",
+            "quran_mental_peace": "Style focus (Surah Ar-Ra'd contemplative vibe): Deeply serene, heart-touching reflection on a verified Qur'anic verse for mental peace, gratitude, or resilience, bridged naturally to how it calms stress & racing thoughts.",
+            "sunnah_brain_science": "Style focus (Al-Kahfi visual-map + Hadith Qudsi ocean-metaphor vibe): Moving storytelling using vivid everyday metaphors, unpacking a verified Sahih Hadith alongside modern brain & health science.",
+            "pov_survival": "Style focus: Thrilling First-Person 3D POV countdown/survival brain challenge.",
+            "everyday_science": "Style focus: Fun, surprising everyday brain/body science.",
+            "focus_habits": "Style focus: Relatable everyday phone/focus/procrastination struggle + 1 super-simple habit trick.",
+        }.get(pillar_id, "Style focus: Warm, reflective Prophetic wisdom & everyday brain science storytelling.")
+        return f"""You are a Master Reflective Islamic Wisdom & Brain Science Storyteller (combining the serenity of Minute Wisdom, Omar Suleiman's clarity, and modern everyday habit science).
+Create an original, deeply moving, crystal-clear Master Content Blueprint in warm, simple everyday spoken English so ANY viewer worldwide feels calm, inspired, and immediately understands both the authentic Islamic wisdom AND the everyday science behind it.
 
 Channel Profile:
 - Name: {channel.get('name')} ({channel.get('handle')})
 - Scheduled Pillar: {pillar_label} ({pillar_id}) — {pillar_hint}
-- Audience: Everyday viewers worldwide (busy workers, students, anyone glued to their phone)
+- Audience: {channel.get('target_audience')}
 - Tone: {channel.get('tone')}
 - YouTube CTA: {channel.get('cta_youtube')}
 - Social CTA: {channel.get('cta_social')}
@@ -38,53 +51,53 @@ Core Idea:
 - Unique Angle: {idea.angle}
 - Opening Hook: {idea.hook}
 - Keywords: {", ".join(idea.keywords or [])}
-
-PLAIN-ENGLISH CLARITY RULES (CRITICAL — GRADE 6-7 LEVEL):
-- Talk like a smart friend explaining something over coffee—short sentences, simple everyday words, ZERO textbook/college jargon.
-- STRICTLY FORBIDDEN words anywhere in titles, props, or narration: "prefrontal cortex", "amygdala", "coupling", "neural correlates", "cognitive load", "memory consolidation", "executive function", "ultradian", "melatonin", "cortical", "bandwidth".
-- Instead use crystal-clear everyday words: "focus battery", "brain fuel", "your brain's alarm button", "sleep chemical", "mental fog", "fake excitement", "autopilot scrolling".
-- Every video MUST make 3 things instantly obvious: (1) the relatable moment, (2) the simple reason WHY it happens, (3) 1 easy action to try today.
-- Every scene MUST have a distinct visual storytelling metaphor in `visual_prompt` (strictly NO text/letters).
+{dalil_block}
+ISLAMIC ACCURACY, ADAB & PLAIN-ENGLISH RULES (STRICT — NON-NEGOTIABLE):
+1. ZERO FABRICATION: NEVER invent, guess, or fabricate Qur'an verse numbers or Hadith collection numbers. Anchor the script around the EXACT Verified Citation provided above.
+2. ADAB & RESPECT: Speak of Allah and Prophet Muhammad (peace be upon him) with sincere reverence and calm dignity. In EVERY `visual_prompt`, strictly forbid depicting Prophets, sacred figures, or human faces—use luminous mosque silhouettes, twilight skies, calm water reflections, starlight, geometric gold patterns, open landscapes, rain, or glowing symbolic light instead.
+3. PLAIN EVERYDAY ENGLISH (GRADE 6-7 CLARITY): Warm, soulful, short spoken sentences—ZERO dry college textbook jargon! STRICTLY FORBIDDEN words anywhere in titles, props, or narration: "prefrontal cortex", "amygdala", "coupling", "neural correlates", "cognitive load", "memory consolidation", "executive function", "ultradian", "melatonin", "cortical", "bandwidth".
+4. STORY FLOW: Every video MUST flow smoothly through: (1) a quiet relatable modern struggle, (2) the authentic Qur'an/Sunnah wisdom & citation, (3) the simple everyday brain/habit science showing WHY it heals or sharpens the mind, (4) one gentle step to practice today + soft save/share reminder.
+5. Shorts narration MUST total ~95–120 spoken words across 6 calm beats (~40–50 seconds at natural calm pace, strictly under 55 seconds!).
 
 Return ONLY valid JSON with this exact schema:
 {{
   "youtube_long": {{
-    "title": "High-CTR curiosity + benefit title (max 68 chars)",
+    "title": "Soulful high-CTR curiosity + wisdom title (max 68 chars)",
     "alt_titles": ["A/B Alt 1", "A/B Alt 2", "A/B Alt 3"],
-    "description": "Engaging YouTube description with story hook, research takeaways, chapter timestamps, CTA, and hashtags",
+    "description": "Warm YouTube description with reflective hook, verified Qur'an/Hadith citation, everyday science takeaways, chapter timestamps, CTA, and hashtags",
     "tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8"],
     "thumbnail": {{
-      "badge": "SHORT BADGE (2-3 words)",
+      "badge": "SHORT BADGE (2-3 words, e.g. PROPHETIC HABIT)",
       "headline": "PUNCHY THUMBNAIL TEXT (2-4 words)",
-      "subheadline": "Short curiosity subtitle (4-7 words)",
-      "visual_prompt": "Dramatic cinematic illustrated storytelling thumbnail concept placed on the RIGHT half, rich volumetric lighting, strictly NO text"
+      "subheadline": "Short reflective subtitle (4-7 words)",
+      "visual_prompt": "Luminous serene Islamic architectural/nature editorial illustration (mosque dome silhouette, twilight gold light, calm water reflection — strictly NO prophets, NO faces, NO text)"
     }},
     "scenes": [
       {{
         "scene_no": 1,
-        "section": "HOOK / THE STORY / BRAIN MECHANISM / HIDDEN TRAP / SHIFT 1 / SHIFT 2 / SHIFT 3 / 7-DAY CHALLENGE",
+        "section": "HOOK / THE STRUGGLE / THE SUNNAH OR AYAH / THE SCIENCE / SHIFT 1 / SHIFT 2 / DAILY PRACTICE / CLOSING",
         "visual_headline": "Crisp short editorial title (max 6 words)",
         "bullet_points": ["Point 1", "Point 2", "Point 3"],
-        "on_screen_callout": "1-line punchy insight",
-        "narration": "Engaging presenter storytelling narration, 2-3 vivid spoken sentences (~12-16 seconds when spoken).",
-        "visual_prompt": "Distinct cinematic illustrated storytelling metaphor for this exact beat (Kurzgesagt / Johnny Harris / Aperture art vibe, strictly NO text/letters)"
+        "on_screen_callout": "1-line calm insight",
+        "narration": "Calm, warm, thoughtful storytelling narration, 2-3 clear spoken sentences (~12-16 seconds when spoken).",
+        "visual_prompt": "Serene luminous Islamic landscape or symbolic light illustration for this exact beat (strictly NO prophets, NO human faces, NO text)"
       }}
     ]
   }},
   "shorts_reels_tiktok": {{
-    "title": "Punchy curiosity vertical title",
-    "hook_text": "3-second visual hook",
-    "caption_yt_shorts": "YouTube Shorts caption + hashtags",
-    "caption_tiktok": "TikTok caption + comment trigger + hashtags",
-    "caption_ig_reels": "Instagram Reels caption + save/share CTA + hashtags",
-    "hashtags": ["#Neuroscience", "#Focus", "#HabitScience", "#DeepWork", "#Productivity"],
+    "title": "Reflective curiosity vertical title",
+    "hook_text": "3-second calm visual hook",
+    "caption_yt_shorts": "YouTube Shorts caption with verified citation + hashtags",
+    "caption_tiktok": "TikTok caption with gentle reflection question + hashtags",
+    "caption_ig_reels": "Instagram Reels caption with verified citation + save/share CTA + hashtags",
+    "hashtags": ["#IslamicReminders", "#Sunnah", "#QuranWisdom", "#HabitSains", "#MentalPeace"],
     "scenes": [
       {{
         "scene_no": 1,
-        "badge": "01 • HOOK",
-        "visual_headline": "Short punchy vertical hook (max 5 words)",
-        "narration": "Fast, charismatic 1-2 sentence spoken beat (~6-8 seconds).",
-        "visual_prompt": "Distinct vertical 9:16 cinematic illustrated storytelling scene (strictly NO text/letters)"
+        "badge": "01 • REFLECT",
+        "visual_headline": "Short crisp vertical headline (max 5 words)",
+        "narration": "Warm, calm, clear 1-2 sentence spoken beat (~6-8 seconds).",
+        "visual_prompt": "Serene vertical 9:16 luminous Islamic sky/nature/geometry visual (strictly NO prophets, NO faces, NO text)"
       }}
     ],
     "pov_3d_episode": {{
@@ -92,48 +105,48 @@ Return ONLY valid JSON with this exact schema:
         "scene_env": "Pick BEST matching 3D world: sunrise_bedroom | midnight_study | sunny_cafe_desk | survival_bunker | focus_lab",
         "action_pattern": "Pick BEST matching 3D camera blocking: nightstand_to_desk | desk_face_down | partner_first_confrontation | coffee_window_pan",
         "hero_prop": "Pick BEST 3D hero prop: alarm_phone | face_down_phone | coffee_mug | hazard_beacon",
-        "loc_main": "YOUR DESK • 2:14 PM (or YOUR BEDROOM • 7:01 AM / 11:42 PM matching topic)",
+        "loc_main": "YOUR ROOM • 5:15 AM",
         "series_title": "SHORT 2-4 WORD ALL-CAPS TITLE (max 20 chars)",
-        "phone_time": "2:14",
-        "phone_norm_hdr": "SHORT HEADER (max 19 chars, e.g. 14 FOCUS TRAPS)",
+        "phone_time": "5:15",
+        "phone_norm_hdr": "SHORT HEADER (max 19 chars)",
         "phone_norm_cards": [
           ["#E11D48", "CARD 1 TITLE (max 15 chars)", "Short topic bait (max 24 chars)"],
           ["#3B82F6", "CARD 2 TITLE (max 15 chars)", "Short topic bait (max 24 chars)"],
           ["#F59E0B", "CARD 3 TITLE (max 15 chars)", "Short topic bait (max 24 chars)"]
         ],
         "phone_cta_norm": "SWIPE NOW (max 15 chars)",
-        "phone_urgent_hdr": "3 URGENT TRAPS! (max 19 chars)",
+        "phone_urgent_hdr": "3 DISTRACTIONS! (max 19 chars)",
         "phone_urgent_cards": [
-          ["#E11D48", "ALERT 1 (max 15 chars)", "Temptation subtext (max 24 chars)"],
-          ["#F59E0B", "ALERT 2 (max 15 chars)", "Temptation subtext (max 24 chars)"],
-          ["#E11D48", "ALERT 3 (max 15 chars)", "Temptation subtext (max 24 chars)"]
+          ["#E11D48", "ALERT 1 (max 15 chars)", "Subtext (max 24 chars)"],
+          ["#F59E0B", "ALERT 2 (max 15 chars)", "Subtext (max 24 chars)"],
+          ["#E11D48", "ALERT 3 (max 15 chars)", "Subtext (max 24 chars)"]
         ],
         "phone_cta_urgent": "TAP NOW (max 15 chars)",
-        "swarm_badges": ["SPIKE", "DRIFT", "PING!", "NOISE", "TRAP", "FOG"],
-        "scan_title": "TOPIC BRAIN SCAN (max 22 chars)",
-        "scan_stat": "-40% FOCUS (max 14 chars)",
+        "swarm_badges": ["NOISE", "RUSH", "PING!", "WORRY", "SCROLL", "FOG"],
+        "scan_title": "CALM MIND READOUT (max 22 chars)",
+        "scan_stat": "+45% CALM (max 14 chars)",
         "scan_sub": "SHORT MECHANISM SUB (max 24 chars)",
-        "scan_left_lbl": "TRIGGER (max 15 chars)",
+        "scan_left_lbl": "SUNNAH (max 15 chars)",
         "scan_right_lbl": "RESULT (max 15 chars)",
         "scan_footer": "SHORT STATUS FOOTER (max 25 chars)",
-        "laptop_hdr": "DEEP WORK • PRIORITY (max 22 chars)",
-        "laptop_due": "DUE 5:00 PM",
-        "laptop_title": "Topic-matched task title (max 26 chars)",
+        "laptop_hdr": "DAILY HABIT (max 22 chars)",
+        "laptop_due": "START TODAY",
+        "laptop_title": "Topic-matched habit title (max 26 chars)",
         "laptop_status": "|  (Short status max 26 chars)",
         "laptop_callout": "SHORT ACTIONABLE RULE (max 30 chars)",
-        "option_a": "CONCRETE SCIENCE-BACKED HABIT CHOICE (max 44 chars)",
-        "option_b": "TEMPTING BAD-HABIT CHOICE (max 44 chars)",
-        "end_sub": "Part 2 reveals what happens to your brain next"
+        "option_a": "CALM SUNNAH HABIT CHOICE (max 44 chars)",
+        "option_b": "NOISY AUTOPILOT CHOICE (max 44 chars)",
+        "end_sub": "Save this reminder for tomorrow"
       }},
       "dialogue": [
-        {{"beat": "intro", "speaker": "pov", "text": "10-16 words: POV looks at the ringing alarm & glowing phone on nightstand, voicing the relatable temptation tied directly to THIS topic."}},
-        {{"beat": "trap", "speaker": "partner", "text": "10-16 words: Starts with STOP! or WAIT! right as 3D warning cards erupt around the phone, naming the exact trap in THIS topic."}},
-        {{"beat": "explain", "speaker": "partner", "text": "16-24 words: Prefrontal Cortex guide faces POV eye-to-eye and explains the real neuroscience mechanism of THIS exact topic."}},
-        {{"beat": "timer_react", "speaker": "pov", "text": "7-12 words: Shocked POV reaction right as the FOCUS WINDOW countdown timer activates on screen."}},
-        {{"beat": "scan", "speaker": "partner", "text": "12-18 words: Explicitly says Look at this scan and cites the EXACT scan_stat & effect displayed on the 3D Brain Scan tablet."}},
-        {{"beat": "desk", "speaker": "partner", "text": "12-18 words: Explicitly points left to the 3D laptop on the study desk and gives the concrete habit fix for THIS topic."}},
-        {{"beat": "agree", "speaker": "pov", "text": "5-10 words: POV turns back to guide and commits to the habit fix."}},
-        {{"beat": "ping", "speaker": "partner", "text": "11-17 words: Reacts directly as 3 urgent alerts buzz on the nightstand phone and POV's hand reaches back toward it!"}}
+        {{"beat": "intro", "speaker": "pov", "text": "10-16 words: Relatable modern habit struggle tied directly to THIS topic."}},
+        {{"beat": "trap", "speaker": "partner", "text": "10-16 words: Names the hidden distraction trap tied to THIS topic."}},
+        {{"beat": "explain", "speaker": "partner", "text": "16-24 words: Explains the authentic Sunnah/Qur'an wisdom and everyday brain science clearly."}},
+        {{"beat": "timer_react", "speaker": "pov", "text": "7-12 words: Thoughtful reaction."}},
+        {{"beat": "scan", "speaker": "partner", "text": "12-18 words: Cites the exact calm mental benefit."}},
+        {{"beat": "desk", "speaker": "partner", "text": "12-18 words: Gives one gentle step to practice today."}},
+        {{"beat": "agree", "speaker": "pov", "text": "5-10 words: Commits calmly to trying the habit."}},
+        {{"beat": "ping", "speaker": "partner", "text": "11-17 words: Reminds viewer to protect their calm when noise returns."}}
       ]
     }}
   }},
@@ -143,26 +156,25 @@ Return ONLY valid JSON with this exact schema:
       {{
         "slide_no": 1,
         "badge": "SLIDE 1/5 • COVER",
-        "headline": "High-curiosity cover headline",
+        "headline": "Soulful reflective cover headline",
         "body": "Concise 1-2 sentence insight",
-        "highlight": "Key takeaway or metric",
-        "visual_prompt": "Dramatic editorial illustration concept for this slide"
+        "highlight": "Key takeaway or verified citation",
+        "visual_prompt": "Serene luminous Islamic twilight/geometric art for this slide (strictly NO prophets, NO faces, NO text)"
       }}
     ],
-    "caption_instagram": "Storytelling Instagram carousel caption + save CTA + hashtags",
-    "caption_linkedin": "Insightful LinkedIn post with structured bullets + discussion question",
-    "thread_x": ["1/5 Hook tweet + 🧵", "2/5 Insight", "3/5 Mechanism", "4/5 Protocol", "5/5 CTA"],
-    "post_threads": "Short conversational Threads post",
-    "post_facebook": "Engaging Facebook Page post",
-    "hashtags": ["#HabitScience", "#Neuroscience", "#Focus", "#DeepWork"]
+    "caption_instagram": "Warm reflective Instagram carousel caption with verified citation + save/share CTA + hashtags",
+    "caption_linkedin": "Thoughtful LinkedIn reflection connecting timeless Prophetic wisdom with everyday focus science + gentle question",
+    "thread_x": ["1/5 Reflective hook + 🧵", "2/5 Authentic wisdom & citation", "3/5 Everyday mind science", "4/5 One gentle daily habit", "5/5 Save/share CTA"],
+    "post_threads": "Short warm reflective Threads post with verified wisdom",
+    "post_facebook": "Engaging warm Facebook Page post with verified citation & question",
+    "hashtags": ["#IslamicReminders", "#Sunnah", "#QuranWisdom", "#HabitSains", "#PeaceOfMind"]
   }}
 }}
 
-Strict beat counts for fast, engaging visual pacing:
-- youtube_long.scenes MUST have 8 distinct visual beats (~12-16s each, total ~2 minutes of captivating storytelling).
-- shorts_reels_tiktok.scenes MUST have 6 punchy vertical beats (~6-8s each, total ~38-48 seconds, strictly under 58 seconds).
-- shorts_reels_tiktok.pov_3d_episode MUST have ALL 8 beat-locked 2-speaker dialogue lines (intro, trap, explain, timer_react, scan, desk, agree, ping) totaling 85-118 words (~40-50 seconds spoken) so EVERY spoken line directly matches what the 3D POV camera is showing (nightstand phone -> floating 3D cards -> partner face-to-face -> HUD timer -> 3D Brain Scan tablet -> 3D desk laptop -> commitment -> 3 urgent vibrating alerts -> [A]/[B] choice).
-- carousel_social.slides MUST have exactly 5 slides (Cover, 3 Core Science Insights, Actionable CTA).
+Strict beat counts:
+- youtube_long.scenes MUST have 8 distinct calm visual beats (~12-16s each, total ~2 minutes).
+- shorts_reels_tiktok.scenes MUST have 6 crisp vertical beats (~6-8s each, total ~38-48 seconds, strictly under 55 seconds).
+- carousel_social.slides MUST have exactly 5 slides (Cover, Verified Wisdom/Citation, Everyday Brain Science, Practical Daily Step, Gentle Closing CTA).
 """
 
     lang_label = "Bahasa Indonesia"
@@ -1100,15 +1112,214 @@ def normalize_pov_3d_episode(
 def _build_english_fallback(idea: TopicIdea, config: dict[str, Any]) -> dict[str, Any]:
     channel = config.get("channel", {})
     topic = idea.topic
-    cta_yt = channel.get("cta_youtube", "Subscribe for science-backed focus and habit protocols every week.")
-    cta_soc = channel.get("cta_social", "Save this post and comment 'PROTOCOL' for the checklist.")
+    cta_yt = channel.get("cta_youtube", "Subscribe to HabitSains for daily Prophetic habits, Qur'an peace, and calm focus science.")
+    cta_soc = channel.get("cta_social", "Save this Sunnah reminder for your week and share it with someone who needs calm today.")
     short_title = _truncate_words(topic, 58)
     short_sub = _truncate_words(topic, 48)
-    keywords = idea.keywords or ["neuroscience", "focus", "habits", "deep work", "productivity"]
+    dalil = getattr(idea, "dalil", None) if isinstance(getattr(idea, "dalil", None), dict) else None
+    keywords = idea.keywords or ["sunnah", "quran", "prophetic habits", "mental peace", "brain science"]
     hashtags_list = [f"#{slugify(k, 22).replace('-', '')}" for k in keywords[:4] if slugify(k, 22)]
-    for tag in ("#Neuroscience", "#Focus", "#HabitScience"):
+    for tag in ("#IslamicReminders", "#Sunnah", "#HabitSains"):
         if tag not in hashtags_list:
             hashtags_list.append(tag)
+
+    if dalil:
+        citation = str(dalil.get("citation") or "AUTHENTIC SUNNAH")
+        translation = str(dalil.get("translation") or "")
+        translit = str(dalil.get("transliteration") or "")
+        pillar_lbl = getattr(idea, "pillar_label", "Prophetic Wisdom & Science")
+        return {
+            "youtube_long": {
+                "title": _truncate_words(topic, 68),
+                "alt_titles": [
+                    f"{short_title} ({citation})",
+                    f"Why This Sunnah Calms Your Mind: {short_sub}",
+                    f"{short_title} — Prophetic Wisdom & Brain Science",
+                ],
+                "description": (
+                    f"{idea.hook}\n\n"
+                    f"Authentic Reference ({citation}):\n"
+                    f"\"{translation}\"\n"
+                    f"({translit})\n\n"
+                    f"In this calm reflection on {channel.get('name', 'HabitSains')}, we explore {topic}—connecting timeless Islamic wisdom with simple everyday brain and habit science.\n\n"
+                    f"{cta_yt}\n\n"
+                    + " ".join(hashtags_list)
+                ),
+                "tags": list(dict.fromkeys(keywords + ["islamic habits", "sunnah", "quran wisdom", "mental peace", "habit science"])),
+                "thumbnail": {
+                    "badge": _truncate_words(pillar_lbl, 20).upper(),
+                    "headline": _truncate_words(topic, 26).upper(),
+                    "subheadline": citation,
+                    "visual_prompt": f"Luminous serene Islamic twilight mosque dome reflected in calm water with soft antique gold glow, representing {topic}, strictly NO prophets, NO faces, NO text",
+                },
+                "scenes": [
+                    {
+                        "scene_no": 1,
+                        "section": "REFLECT",
+                        "visual_headline": short_sub,
+                        "bullet_points": ["A quiet modern struggle", "Timeless Prophetic guidance", "One gentle shift for today"],
+                        "on_screen_callout": citation,
+                        "narration": f"{idea.hook} Take a quiet breath for a moment and reflect on how timeless Islamic wisdom speaks directly to what our minds struggle with today.",
+                        "visual_prompt": "Serene twilight sky transitioning over calm water and distant mosque silhouette, strictly NO faces, NO text",
+                    },
+                    {
+                        "scene_no": 2,
+                        "section": "THE WISDOM",
+                        "visual_headline": f"Verified Guidance: {citation}",
+                        "bullet_points": [citation, translit[:60], "Timeless clarity for the heart"],
+                        "on_screen_callout": translation[:72],
+                        "narration": f"In {citation}, we are gently reminded: {translation} Pause and let the calm weight of those words settle inside your heart.",
+                        "visual_prompt": "Antique gold geometric starlight radiating softly in obsidian night sky, strictly NO faces, NO text",
+                    },
+                    {
+                        "scene_no": 3,
+                        "section": "THE SCIENCE",
+                        "visual_headline": "Why Your Brain Responds to Peace",
+                        "bullet_points": ["Lowers racing stress loops", "Restores clear steady focus", "Builds lasting calm habits"],
+                        "on_screen_callout": idea.angle[:72],
+                        "narration": f"What is remarkable is how everyday brain and habit science echoes this exact rhythm. {idea.angle}. When your daily routine aligns with peace instead of constant noise, your energy stops burning out.",
+                        "visual_prompt": "Luminous glowing particles forming calm balanced waves over deep indigo sky, strictly NO faces, NO text",
+                    },
+                    {
+                        "scene_no": 4,
+                        "section": "THE HIDDEN NOISE",
+                        "visual_headline": "What Quietly Steals Your Calm",
+                        "bullet_points": ["Nonstop rushing and alerts", "Harsh all-or-nothing pressure", "Forgetting to pause and breathe"],
+                        "on_screen_callout": "Peace starts when you step off autopilot",
+                        "narration": "Modern life pushes us to rush nonstop, compare ourselves to strangers, and expect instant results. That constant pressure leaves both the heart and the mind exhausted before evening even arrives.",
+                        "visual_prompt": "Gentle rain falling onto dark earth turning into peaceful rippling water, strictly NO faces, NO text",
+                    },
+                    {
+                        "scene_no": 5,
+                        "section": "TODAY'S PRACTICE",
+                        "visual_headline": "One Gentle Step to Start Today",
+                        "bullet_points": ["Begin with one quiet minute", "Anchor your intention sincerely", "Repeat calmly every single day"],
+                        "on_screen_callout": "Small sincere consistency beats rare intensity",
+                        "narration": "You do not need to overhaul your entire life overnight. Choose one small, sincere moment today to practice this wisdom calmly, and let steady daily repetition reshape your peace of mind.",
+                        "visual_prompt": "Soft golden dawn sunrise rising over lush peaceful meadow, strictly NO faces, NO text",
+                    },
+                    {
+                        "scene_no": 6,
+                        "section": "CLOSING",
+                        "visual_headline": "Carry This Peace Forward",
+                        "bullet_points": ["Save for hard days", "Practice calmly this week", "Share the reminder"],
+                        "on_screen_callout": cta_soc[:72],
+                        "narration": f"May this reminder bring clarity to your mind and quiet peace to your heart today. {cta_yt}",
+                        "visual_prompt": "Tranquil starry crescent moon glowing gently over calm reflective horizon, strictly NO faces, NO text",
+                    },
+                ],
+            },
+            "shorts_reels_tiktok": {
+                "title": _truncate_words(topic, 56),
+                "hook_text": _truncate_words(topic, 40).upper(),
+                "caption_yt_shorts": f"{idea.hook}\nReference: {citation}\n{cta_soc} {' '.join(hashtags_list[:4])} #Shorts",
+                "caption_tiktok": f"{idea.hook}\nSource: {citation} — {cta_soc} {' '.join(hashtags_list[:5])}",
+                "caption_ig_reels": f"{idea.hook}\n\n\"{translation}\"\n— {citation}\n\n{cta_soc}\n\n{' '.join(hashtags_list[:5])}",
+                "hashtags": hashtags_list,
+                "scenes": [
+                    {
+                        "scene_no": 1,
+                        "badge": "01 • REFLECT",
+                        "visual_headline": _truncate_words(topic, 36),
+                        "narration": f"{idea.hook}",
+                        "visual_prompt": "Vertical serene twilight sky and crescent over calm water, strictly NO faces, NO text",
+                    },
+                    {
+                        "scene_no": 2,
+                        "badge": "02 • WISDOM",
+                        "visual_headline": citation,
+                        "narration": f"In {citation}, we are reminded: {translation}",
+                        "visual_prompt": "Vertical luminous antique gold starlight on dark obsidian backdrop, strictly NO faces, NO text",
+                    },
+                    {
+                        "scene_no": 3,
+                        "badge": "03 • CALM MIND",
+                        "visual_headline": "Why Your Mind Needs This",
+                        "narration": f"{idea.angle}. When you slow down and honor this simple rhythm, racing thoughts settle and real clarity returns.",
+                        "visual_prompt": "Vertical golden particles flowing into peaceful concentric ripples, strictly NO faces, NO text",
+                    },
+                    {
+                        "scene_no": 4,
+                        "badge": "04 • PRACTICE",
+                        "visual_headline": "One Small Step Today",
+                        "narration": "Start small and sincere today. Even one quiet minute practiced with steady consistency slowly transforms your heart and focus.",
+                        "visual_prompt": "Vertical gentle sunrise over peaceful green meadow, strictly NO faces, NO text",
+                    },
+                    {
+                        "scene_no": 5,
+                        "badge": "05 • SHARE PEACE",
+                        "visual_headline": "Save & Share This Reminder",
+                        "narration": f"{cta_soc}",
+                        "visual_prompt": "Vertical starry night sky reflecting softly in tranquil pool, strictly NO faces, NO text",
+                    },
+                ],
+                "pov_3d_episode": build_topic_matched_pov_3d_episode(
+                    topic=topic,
+                    angle=idea.angle,
+                    hook=idea.hook,
+                    scenes_meta=None,
+                    config=config,
+                    pillar=getattr(idea, "pillar", ""),
+                ),
+            },
+            "carousel_social": {
+                "title": short_title,
+                "slides": [
+                    {
+                        "slide_no": 1,
+                        "badge": "SLIDE 1/5 • COVER",
+                        "headline": short_title,
+                        "body": idea.hook,
+                        "highlight": f"Verified Source: {citation} ->",
+                        "visual_prompt": "Luminous midnight and antique gold Islamic architectural cover, strictly NO faces, NO text",
+                    },
+                    {
+                        "slide_no": 2,
+                        "badge": "SLIDE 2/5 • VERIFIED SOURCE",
+                        "headline": citation,
+                        "body": f"\"{translation}\"",
+                        "highlight": translit[:72],
+                        "visual_prompt": "Minimalist antique gold Islamic geometry on deep indigo, strictly NO faces, NO text",
+                    },
+                    {
+                        "slide_no": 3,
+                        "badge": "SLIDE 3/5 • MIND SCIENCE",
+                        "headline": "Why Everyday Science Agrees",
+                        "body": f"{idea.angle}. Quiet, steady habits protect your mental battery far better than nonstop rushing.",
+                        "highlight": "Inner calm unlocks sharper daily clarity",
+                        "visual_prompt": "Glowing peaceful waves and starlight on deep night sky, strictly NO faces, NO text",
+                    },
+                    {
+                        "slide_no": 4,
+                        "badge": "SLIDE 4/5 • DAILY STEP",
+                        "headline": "How to Practice Gently Today",
+                        "body": "Pause for one calm minute, renew your intention sincerely, and keep the habit small enough to repeat every day.",
+                        "highlight": "Small consistent steps change everything",
+                        "visual_prompt": "Soft golden dawn horizon over calm water, strictly NO faces, NO text",
+                    },
+                    {
+                        "slide_no": 5,
+                        "badge": "SLIDE 5/5 • REMINDER",
+                        "headline": "Save & Share the Peace",
+                        "body": "Keep this reminder close on heavy days and share it with a friend who needs a moment of calm.",
+                        "highlight": cta_soc,
+                        "visual_prompt": "Serene crescent moon above tranquil meadow, strictly NO faces, NO text",
+                    },
+                ],
+                "caption_instagram": f"{idea.hook}\n\n\"{translation}\"\n— {citation}\n\nSwipe through to see how this timeless Islamic guidance aligns with everyday mind & habit science.\n\n{cta_soc}\n\n{' '.join(hashtags_list)}",
+                "caption_linkedin": f"{idea.hook}\n\nTimeless reminder ({citation}): \"{translation}\"\n\nWhy this matters for daily clarity: {idea.angle}.\n\nWhich small calm habit anchors your workday the most?\n\n{' '.join(hashtags_list)}",
+                "thread_x": [
+                    f"1/5 {idea.hook} 🧵",
+                    f"2/5 Verified reminder ({citation}): \"{translation}\"",
+                    f"3/5 Why your mind responds so deeply: {idea.angle}.",
+                    "4/5 Start small today: one quiet minute, sincere intention, gentle daily consistency.",
+                    f"5/5 {cta_soc}",
+                ],
+                "post_threads": f"{idea.hook}\n\n\"{translation}\" ({citation})\n\nSmall calm habits practiced sincerely change far more than frantic rushing.",
+                "post_facebook": f"{idea.hook}\n\n\"{translation}\"\n— {citation}\n\n{idea.angle}.\n\n{cta_soc}\n{' '.join(hashtags_list)}",
+                "hashtags": hashtags_list,
+            },
+        }
 
     return {
         "youtube_long": {
@@ -1612,8 +1823,9 @@ def generate_content_blueprint(
 
     blueprint["meta"] = {
         "topic": idea.topic,
-        "pillar": getattr(idea, "pillar", "focus_habits"),
-        "pillar_label": getattr(idea, "pillar_label", "Everyday Focus & Habits"),
+        "pillar": getattr(idea, "pillar", "prophetic_habits"),
+        "pillar_label": getattr(idea, "pillar_label", "Prophetic Habits & Daily Sunnah"),
+        "dalil": dict(idea.dalil) if isinstance(getattr(idea, "dalil", None), dict) else None,
         "angle": idea.angle,
         "hook": idea.hook,
         "source": idea.source,

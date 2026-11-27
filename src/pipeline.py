@@ -166,6 +166,7 @@ def run_pipeline(
             config,
             is_short=False,
             scenes_meta=blueprint["youtube_long"]["scenes"],
+            topic_meta=blueprint.get("meta"),
         )
         short_video_info = build_video_from_scenes(
             short_scene_imgs,
@@ -261,7 +262,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--visual-style",
         type=str,
-        choices=["hybrid_cozy_3dpov", "pov_3d_toon", "cozy_diorama", "minimal_line_story", "cinema_broll_html", "flat_vector_2d", "motion_hybrid", "ken_burns_images"],
+        choices=[
+            "hybrid_cozy_3dpov",
+            "islamic_luminous_sky",
+            "islamic_gold_visualizer",
+            "islamic_particle_map",
+            "pov_3d_toon",
+            "cozy_diorama",
+            "minimal_line_story",
+            "cinema_broll_html",
+            "flat_vector_2d",
+            "motion_hybrid",
+            "ken_burns_images",
+        ],
         default=None,
         help="Override gaya visual video (default dari config/channel_config.yaml)",
     )

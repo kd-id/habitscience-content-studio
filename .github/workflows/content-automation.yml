@@ -22,11 +22,14 @@ on:
           - publish
           - dry-run
       visual_style:
-        description: "Gaya visual video (default: hybrid_cozy_3dpov = Long v8.3 + Shorts v9 3D POV)"
+        description: "Gaya visual video (default: hybrid_cozy_3dpov = otomatis rotasi 3 gaya Studio v10 Islami per Pillar)"
         type: choice
         default: "hybrid_cozy_3dpov"
         options:
           - hybrid_cozy_3dpov
+          - islamic_luminous_sky
+          - islamic_gold_visualizer
+          - islamic_particle_map
           - pov_3d_toon
           - cozy_diorama
           - minimal_line_story
@@ -98,11 +101,11 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Install FFmpeg & Linux TrueType fonts
+      - name: Install FFmpeg & Linux TrueType + Arabic Calligraphy fonts
         if: steps.guard.outputs.skip != 'true'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-dejavu-core fonts-liberation
+          sudo apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-dejavu-core fonts-liberation fonts-hosny-amiri fonts-noto-core
           fc-cache -f
 
       - name: Install Python dependencies

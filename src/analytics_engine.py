@@ -43,8 +43,23 @@ from src.social_publishers import META_GRAPH_BASE, THREADS_API_BASE, _resolve_fb
 
 WIB = timezone(timedelta(hours=7))
 
-CANDIDATE_SHORT_STYLES = ["pov_3d_toon", "cozy_diorama", "minimal_line_story", "cinema_broll_html"]
-CANDIDATE_LONG_STYLES = ["cozy_diorama", "minimal_line_story", "cinema_broll_html"]
+CANDIDATE_SHORT_STYLES = [
+    "islamic_luminous_sky",
+    "islamic_gold_visualizer",
+    "islamic_particle_map",
+    "pov_3d_toon",
+    "cozy_diorama",
+    "minimal_line_story",
+    "cinema_broll_html",
+]
+CANDIDATE_LONG_STYLES = [
+    "islamic_luminous_sky",
+    "islamic_gold_visualizer",
+    "islamic_particle_map",
+    "cozy_diorama",
+    "minimal_line_story",
+    "cinema_broll_html",
+]
 
 
 def _parse_iso_duration_sec(iso_dur: str) -> int:

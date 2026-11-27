@@ -1,4 +1,4 @@
-"""Procedural Royalty-Free Cinema Sound Design Engine (Whoosh Transitions + UI Pop + Ambient Score)."""
+"""Procedural Royalty-Free Sound Design Engine (100% Instrument-Free Nature Soundscapes + Legacy Cinema Mode)."""
 
 from __future__ import annotations
 
@@ -33,6 +33,113 @@ def _generate_ui_pop_wav(out_wav: Path) -> Path:
     return out_wav
 
 
+def _nature_bed_spec(preset: str, duration_sec: float, vol_db: float) -> tuple[list[str], str]:
+    """Build 100% instrument-free natural soundscape (zero musical notes, zero drums, zero synths).
+
+    Presets:
+      - dawn_breeze : Soft early-morning Fajr wind & warm air flow
+      - gentle_rain : Peaceful distant soft rain ambiance
+      - calm_water  : Tranquil flowing stream / gentle ocean tide
+    """
+    dur = max(duration_sec + 0.5, 2.0)
+    fade_out_st = max(duration_sec - 2.0, 0.4)
+    p = (preset or "dawn_breeze").lower().strip()
+
+    if p == "gentle_rain":
+        inp = ["-f", "lavfi", "-t", f"{dur:.2f}", "-i", "anoisesrc=color=pink:sample_rate=48000"]
+        flt = (
+            f"highpass=f=260,lowpass=f=2600,aformat=channel_layouts=stereo,"
+            f"tremolo=f=0.14:d=0.28,volume={vol_db:.1f}dB,"
+            f"afade=t=in:st=0:d=1.4,afade=t=out:st={fade_out_st:.2f}:d=1.8"
+        )
+        return inp, flt
+
+    if p == "calm_water":
+        inp = ["-f", "lavfi", "-t", f"{dur:.2f}", "-i", "anoisesrc=color=brown:sample_rate=48000"]
+        flt = (
+            f"highpass=f=110,lowpass=f=1250,aformat=channel_layouts=stereo,"
+            f"tremolo=f=0.18:d=0.42,volume={vol_db + 1.5:.1f}dB,"
+            f"afade=t=in:st=0:d=1.5,afade=t=out:st={fade_out_st:.2f}:d=1.8"
+        )
+        return inp, flt
+
+    # Default: dawn_breeze (airy morning wind, super calm behind spoken narration)
+    inp = ["-f", "lavfi", "-t", f"{dur:.2f}", "-i", "anoisesrc=color=pink:sample_rate=48000"]
+    flt = (
+        f"highpass=f=140,lowpass=f=980,aformat=channel_layouts=stereo,"
+        f"tremolo=f=0.11:d=0.38,volume={vol_db + 1.0:.1f}dB,"
+        f"afade=t=in:st=0:d=1.5,afade=t=out:st={fade_out_st:.2f}:d=1.8"
+    )
+    return inp, flt
+
+
+def mix_nature_voice_soundscape(
+    master_voice: Path,
+    duration_sec: float,
+    out_audio: Path,
+    config: dict[str, Any],
+    preset: str = "dawn_breeze",
+    tempo: float = 1.0,
+) -> Path:
+    """Mix narrator voiceover with 100% instrument-free nature ambiance (48kHz stereo AAC, Meta/YT safe)."""
+    video_root = config.get("video", {})
+    enable_bgm = bool(video_root.get("ambient_bgm", True))
+    vol_db = float(video_root.get("ambient_bgm_volume_db", -27))
+
+    voice_af_parts = ["aformat=sample_rates=48000:channel_layouts=stereo"]
+    if tempo and abs(tempo - 1.0) > 0.01:
+        clamped = min(max(tempo, 0.8), 1.35)
+        voice_af_parts.insert(0, f"atempo={clamped:.4f}")
+    voice_af_parts.append("volume=+0.8dB")
+    voice_af = ",".join(voice_af_parts)
+
+    if not enable_bgm:
+        subprocess.run(
+            [
+                "ffmpeg", "-y", "-i", str(master_voice),
+                "-af", voice_af,
+                "-ar", "48000", "-ac", "2", "-c:a", "aac", "-b:a", "192k",
+                str(out_audio),
+            ],
+            capture_output=True, text=True, check=True,
+        )
+        return out_audio
+
+    try:
+        nature_in, nature_flt = _nature_bed_spec(preset=preset, duration_sec=duration_sec, vol_db=vol_db)
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", str(master_voice),
+            *nature_in,
+            "-filter_complex",
+            (
+                f"[0:a]{voice_af}[vo];"
+                f"[1:a]{nature_flt}[nat];"
+                "[vo][nat]amix=inputs=2:duration=first:dropout_transition=2:normalize=0,"
+                "alimiter=limit=0.95[out]"
+            ),
+            "-map", "[out]",
+            "-ar", "48000", "-ac", "2", "-c:a", "aac", "-b:a", "192k",
+            str(out_audio),
+        ]
+        subprocess.run(cmd, capture_output=True, text=True, check=True)
+        if out_audio.exists() and out_audio.stat().st_size > 1024:
+            return out_audio
+    except Exception as exc:
+        print(f"[sfx] Nature soundscape fallback ({type(exc).__name__}): {str(exc)[:140]}", flush=True)
+
+    subprocess.run(
+        [
+            "ffmpeg", "-y", "-i", str(master_voice),
+            "-af", voice_af,
+            "-ar", "48000", "-ac", "2", "-c:a", "aac", "-b:a", "192k",
+            str(out_audio),
+        ],
+        capture_output=True, text=True, check=True,
+    )
+    return out_audio
+
+
 def mix_cinema_soundscape(
     master_voice: Path,
     scene_start_times_sec: list[float],
@@ -41,8 +148,19 @@ def mix_cinema_soundscape(
     config: dict[str, Any],
     work_dir: Path,
 ) -> Path:
-    """Mix presenter voiceover + subtle warm ambient score + cinema whoosh/pop SFX at exact cut points."""
+    """Mix presenter voiceover + subtle ambiance (respects `ambient_bgm_mode: nature_only` for 100% instrument-free audio)."""
     video_root = config.get("video", {})
+    bgm_mode = str(video_root.get("ambient_bgm_mode", "nature_only")).lower().strip()
+    if bgm_mode == "nature_only":
+        preset = str(video_root.get("nature_preset", "dawn_breeze")).strip()
+        return mix_nature_voice_soundscape(
+            master_voice=master_voice,
+            duration_sec=duration_sec,
+            out_audio=out_audio,
+            config=config,
+            preset=preset,
+        )
+
     enable_bgm = bool(video_root.get("ambient_bgm", True))
     enable_sfx = bool(video_root.get("cinema_sfx", True))
     if not enable_bgm and not enable_sfx:
@@ -85,7 +203,6 @@ def mix_cinema_soundscape(
         if enable_sfx and scene_start_times_sec:
             _generate_whoosh_wav(whoosh_wav)
             _generate_ui_pop_wav(pop_wav)
-            # Limit SFX events cleanly so FFmpeg filter graph stays lean & snappy
             for s_i, st_sec in enumerate(scene_start_times_sec[:10]):
                 delay_ms = max(int(round(st_sec * 1000)), 0)
                 if s_i > 0:
@@ -105,7 +222,7 @@ def mix_cinema_soundscape(
             f"{''.join(mix_labels)}amix=inputs={len(mix_labels)}:duration=first:dropout_transition=2:normalize=0[out]"
         )
 
-        cmd = ["ffmpeg", "-y", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[out]", "-c:a", "aac", "-b:a", "192k", str(out_audio)]
+        cmd = ["ffmpeg", "-y", *inputs, "-filter_complex", ";".join(filter_parts), "-map", "[out]", "-ar", "48000", "-ac", "2", "-c:a", "aac", "-b:a", "192k", str(out_audio)]
         subprocess.run(cmd, capture_output=True, text=True, check=True)
         if out_audio.exists() and out_audio.stat().st_size > 1024:
             return out_audio

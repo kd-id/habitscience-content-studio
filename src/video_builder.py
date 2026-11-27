@@ -9,6 +9,7 @@ from src.broll_fetcher import fetch_broll_sequence, fetch_pexels_broll_clip
 from src.cozy_diorama_engine import render_cozy_diorama_video_for_pipeline
 from src.habitsains_3d_pov_engine import render_pov_3d_toon_video_for_pipeline
 from src.html_motion_overlay import HtmlOverlayRenderer
+from src.islamic_visual_engine import ISLAMIC_VISUAL_MODES, render_islamic_visual_video_for_pipeline
 from src.minimal_line_engine import render_minimal_line_video_for_pipeline
 from src.motion_engine import render_motion_scene_segment
 from src.sfx_engine import mix_cinema_soundscape
@@ -178,8 +179,20 @@ def build_video_from_scenes(
     #   "ken_burns_images"   (v3): Full-bleed AI illustrations + Ken Burns
     video_mode = str(vid_cfg.get("engine_mode") or video_root.get("engine_mode", "hybrid_cozy_3dpov")).lower().strip()
     if video_mode == "hybrid_cozy_3dpov":
-        video_mode = "pov_3d_toon" if is_short else "cozy_diorama"
+        video_mode = "islamic_luminous_sky"
     handle = str(config.get("branding", {}).get("watermark_text", "@HabitSains"))
+
+    if video_mode in ISLAMIC_VISUAL_MODES:
+        render_islamic_visual_video_for_pipeline(
+            mode=video_mode,
+            scenes_meta=scenes_meta or [],
+            audio_bundle=audio_bundle,
+            out_video_path=out_video_path,
+            config=config,
+            is_short=is_short,
+            topic_meta=topic_meta,
+        )
+        return probe_video_info(out_video_path)
 
     if video_mode == "pov_3d_toon":
         render_pov_3d_toon_video_for_pipeline(

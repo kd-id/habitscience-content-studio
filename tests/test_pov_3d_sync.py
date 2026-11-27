@@ -59,7 +59,14 @@ class TestPov3DSyncAndPillars(unittest.TestCase):
             # Exact non-colliding rotation across 2 full daily cycles (6 runs)
             self.assertEqual(
                 seen_pillars,
-                ["focus_habits", "everyday_science", "pov_survival", "focus_habits", "everyday_science", "pov_survival"],
+                [
+                    "prophetic_habits",
+                    "quran_mental_peace",
+                    "sunnah_brain_science",
+                    "prophetic_habits",
+                    "quran_mental_peace",
+                    "sunnah_brain_science",
+                ],
             )
 
     def test_zero_jargon_plain_english_across_all_three_pillars(self) -> None:
@@ -129,7 +136,7 @@ class TestPov3DSyncAndPillars(unittest.TestCase):
         self.assertEqual(len(rot), 3)
         short_styles = [p.get("visual_style_short") for p in rot]
         self.assertEqual(len(set(short_styles)), 3, f"Expected 3 distinct short visual styles across pillars, got {short_styles}")
-        self.assertEqual(short_styles, ["pov_3d_toon", "cinema_broll_html", "minimal_line_story"])
+        self.assertEqual(short_styles, ["islamic_luminous_sky", "islamic_gold_visualizer", "islamic_particle_map"])
 
     def test_different_titles_in_same_3d_style_get_distinct_worlds_and_actions(self) -> None:
         cfg = {"branding": {"watermark_text": "@HabitSains"}}

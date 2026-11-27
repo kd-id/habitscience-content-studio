@@ -1,39 +1,38 @@
 channel:
   name: "HabitSains"
   handle: "@HabitSains"
-  niche: "Science-Backed Focus, Habits & Cognitive Performance"
-  target_audience: "Ambitious professionals, founders, students, and lifelong learners worldwide"
+  niche: "Prophetic Habits, Authentic Sunnah, Qur'an Wisdom & Modern Brain Science"
+  target_audience: "Global Muslim & mindful audiences seeking inner peace, Prophetic daily habits, authentic Qur'an/Hadith wisdom, and calm focus backed by everyday science"
   language: "en"
-  tone: "warm, super-simple everyday conversational English (grade 6-7 level), zero academic jargon, immediately relatable stories, punchy hooks"
-  cta_youtube: "Subscribe to HabitSains and grab the free 7-Day Focus Reset Protocol in the description to rewire your attention."
-  cta_social: "Save this for your next deep-work session and comment 'RESET' to get the 7-Day Protocol checklist."
+  tone: "warm, deeply calm, reverent, reflective everyday English (grade 6-7 clarity), zero academic jargon, authentic verified Qur'an & Sahih Hadith wisdom bridged naturally to everyday mind & habit science"
+  cta_youtube: "Subscribe to HabitSains for daily Prophetic habits, Qur'an peace, and calm focus science. Share this reminder with someone who needs peace today."
+  cta_social: "Save this Sunnah reminder for your week and share it with someone who needs calm today."
 
 branding:
-  # Studio v5 — Flat Vector 2D Explainer Palette (Kurzgesagt / TED-Ed vibe)
-  primary_color: "#2DD4BF"
-  secondary_color: "#FF7666"
-  accent_color: "#FBBF24"
-  bg_dark: "#121338"
-  bg_card: "#1D2052"
+  # Studio v10 — Islamic Luminous Midnight, Antique Gold & Emerald Palette
+  primary_color: "#F4C95D"
+  secondary_color: "#38BDF8"
+  accent_color: "#34D399"
+  bg_dark: "#081226"
+  bg_card: "#101E3A"
   text_primary: "#F8FAFC"
-  text_muted: "#C7D2FE"
+  text_muted: "#CBD5E1"
   watermark_text: "@HabitSains"
   font_bold: "bahnschrift.ttf"
   font_regular: "segoeui.ttf"
 
 visual:
-  style: "cinematic_illustrated"
+  style: "islamic_luminous"
   cinematic_full_bleed: true
-  # Hide heavy lower-third when full-bleed art is active so animated .ASS captions shine unobstructed
+  # Hide heavy lower-third when full-bleed art is active so animated captions shine unobstructed
   minimal_chapter_overlay: true
   prompt_prefix: >-
-    Rich cinematic illustrated storytelling artwork inspired by Kurzgesagt, Johnny
-    Harris, and high-budget science documentary illustration. Dramatic volumetric
-    lighting, expressive visual storytelling metaphor, deep midnight indigo shadows
-    balanced with luminous teal (#14B8A6), electric cyan (#38BDF8), and warm amber
-    gold (#F59E0B) highlights, crisp editorial composition with subtle darker space
-    near the bottom edge for subtitles. Strictly NO text, NO letters, NO words, NO
-    numbers, NO watermarks anywhere in the image.
+    Serene, luminous Islamic editorial illustration and atmospheric architectural
+    artwork: glowing mosque silhouettes reflected in calm water at twilight, antique
+    gold Islamic geometric starlight, tranquil desert dawn and lush green gardens,
+    deep midnight indigo (#081226) balanced with luminous warm gold (#F4C95D) and
+    soft emerald (#34D399) light. Strictly NO depiction of Prophets or sacred figures,
+    NO human faces, NO text, NO letters, NO numbers, NO watermarks anywhere in the image.
 
 ai:
   text_model: "gemini-3.8-flash"
@@ -50,52 +49,54 @@ ai:
 voiceover:
   provider: "gemini_tts"
   gemini_tts_model: "gemini-3.8-flash-tts"
-  # Expressive Presenter / Storyteller voices
-  gemini_voice_long: "Puck"
-  gemini_voice_shorts: "Zephyr"
+  # Warm, calm, reflective documentary narrator voices
+  gemini_voice_long: "Charon"
+  gemini_voice_shorts: "Puck"
   style_prompt_long: >-
-    Speak as a charismatic, warm, captivating YouTube science host and master
-    storyteller (similar in vocal energy to Johnny Harris meets Ali Abdaal and
-    Veritasium). Vary your pitch and rhythm naturally: open with genuine intrigue,
-    lean in on surprising discoveries, add crisp conversational micro-pauses before
-    key twists, and sound warm and encouraging on practical takeaways—never flat,
-    never monotone, never robotic. Read ONLY the spoken transcript below naturally:
+    Speak as a deeply calm, warm, thoughtful reflective storyteller sharing Prophetic
+    wisdom, Qur'anic peace, and everyday brain science. Use a gentle, grounded pace
+    with natural thoughtful pauses before key reflections—sincere, soothing, clear,
+    and respectful, never rushed, never hyped, never robotic. Read ONLY the spoken
+    transcript below naturally:
   style_prompt_shorts: >-
-    Speak as a magnetic, expressive science storyteller and presenter for short-form
-    video. Hook attention in the first second with curiosity, use lively dynamic
-    inflection, punch key numbers and turning points, and keep natural human flow.
-    Read ONLY the spoken transcript below naturally:
+    Speak with a warm, serene, deeply reflective and clear storytelling voice for
+    short-form wisdom videos. Open softly with quiet intrigue, breathe naturally on
+    meaningful lines, and leave viewers feeling calm and inspired—never loud, never
+    rushed, never monotone. Read ONLY the spoken transcript below naturally:
   loudnorm: true
-  # Edge TTS fallback
+  # Edge TTS fallback (calm natural pace, zero rushed hype)
   voice_long: "en-US-BrianNeural"
-  voice_shorts: "en-US-AvaNeural"
-  rate_long: "+2%"
-  rate_shorts: "+8%"
+  voice_shorts: "en-US-AndrewMultilingualNeural"
+  rate_long: "-2%"
+  rate_shorts: "+0%"
   pitch: "+0Hz"
 
 video:
   # Saved Visual Style Presets (ubah engine_mode atau kirim --visual-style <nama>):
-  #   "hybrid_cozy_3dpov"  (DEFAULT): YouTube Long 16:9 -> Cozy Diorama (v8.3) + Shorts/Reels/TikTok 9:16 -> 3D Cel-Shaded POV (v9)
-  #   "pov_3d_toon"        (v9):   3D Cel-Shaded First-Person POV Cognitive Survival + Live Focus HUD + Interactive A/B Card
-  #   "cozy_diorama"       (v8.3): Cozy Midnight Diorama + Expressive 6-Mood Character + Pastel Cream Cards + Serif Karaoke
-  #   "minimal_line_story" (v7):   Dark Minimalist Mono-Line Stick-Figure Storytelling + Monospace Yellow-Highlight Subtitles
-  #   "cinema_broll_html"  (v6):   Real HD/4K B-Roll fast cuts + HTML5 Frosted-Glass Vox & Bento Overlays + Cinema SFX
-  #   "flat_vector_2d"     (v5):   Kurzgesagt/TED-Ed 30fps Flat Vector 2D
-  #   "motion_hybrid"      (v4):   Programmatic Motion Graphics + B-Roll
+  #   "islamic_luminous_sky"    (v10 Pillar 1): Sky-Cycle Mosque Reflection / Nature Transformation + Amiri Calligraphy + Step Counter
+  #   "islamic_gold_visualizer" (v10 Pillar 2): Obsidian & 24k Gold Radial Sunburst Visualizer + Word-by-Word Gold Karaoke
+  #   "islamic_particle_map"    (v10 Pillar 3): Cosmic Morphing Particle Constellations + Gold Dalil + Outlined Reflective Subtitles
+  #   "hybrid_cozy_3dpov"       (DEFAULT auto-router): Routes automatically via per-Pillar styles below!
+  #   "pov_3d_toon"        (v9):   3D Cel-Shaded First-Person POV
+  #   "cozy_diorama"       (v8.3): Cozy Midnight Diorama
+  #   "minimal_line_story" (v7):   Dark Minimalist Mono-Line Stick-Figure Storytelling
+  #   "cinema_broll_html"  (v6):   Real HD/4K B-Roll + HTML5 Frosted-Glass Overlays
+  #   "flat_vector_2d"     (v5):   Flat Vector 2D Explainer
+  #   "motion_hybrid"      (v4):   Programmatic Motion Graphics
   #   "ken_burns_images"   (v3):   Illustrated AI art + Ken Burns
   engine_mode: "hybrid_cozy_3dpov"
-  # Beda gaya visual otomatis per Pillar (Pillar 1=3D POV, Pillar 2=Cinema B-Roll HD, Pillar 3=Minimal Stick-Figure)
-  # agar tidak pernah ada 2 video berurutan yang tampilannya terlihat sama!
+  # Beda gaya visual otomatis per Pillar Studio v10 (100% berbeda antar 3 slot harian!)
   pillar_visual_styles: true
-  # Closed-Loop Visual Style Optimizer (aktif sebagai fallback bila pillar_visual_styles: false)
+  # Closed-Loop Visual Style Optimizer (fallback bila pillar_visual_styles: false)
   auto_optimize_style: true
   style_explore_every_n_runs: 5
   broll_cut_interval_sec: 4.5
-  cinema_sfx: true
+  cinema_sfx: false
   ken_burns_motion: true
-  # Subtle calm warm ambient drone/pad behind voiceover (-27 dB, 100% royalty-free)
-  # Put your own track at assets/bgm.mp3 to override the built-in ambient pad!
+  # 100% Instrument-Free Nature Soundscapes ONLY (dawn_breeze / gentle_rain / calm_water — ZERO musical instruments!)
   ambient_bgm: true
+  ambient_bgm_mode: "nature_only"
+  nature_preset: "dawn_breeze"
   ambient_bgm_volume_db: -27
   animated_ass_subtitles: true
   youtube_long:
@@ -165,28 +166,28 @@ comment_bot:
 
 content_pillars:
   rotation:
-    - id: "focus_habits"
-      label: "Everyday Focus & Habits"
-      description: "Simple everyday phone habits, focus tricks, and beating procrastination without academic jargon."
-      visual_style_long: "cozy_diorama"
-      visual_style_short: "pov_3d_toon"
-    - id: "everyday_science"
-      label: "Fun Everyday Science"
-      description: "Light, surprising everyday brain & body facts (coffee crash, tired after 8h sleep, shower ideas, fake scroll breaks, naps, stress)."
-      visual_style_long: "cinema_broll_html"
-      visual_style_short: "cinema_broll_html"
-    - id: "pov_survival"
-      label: "3D POV Brain Challenge"
-      description: "Thrilling First-Person countdown/survival brain challenges (@you.have.72hours vibe) with urgent [A]/[B] decisions."
-      visual_style_long: "cozy_diorama"
-      visual_style_short: "minimal_line_story"
+    - id: "prophetic_habits"
+      label: "Prophetic Habits & Daily Sunnah"
+      description: "Daily Prophetic routines, morning/night habits, Qailulah rest, Istiqamah consistency, and authentic Duas bridged naturally to everyday focus & habit science."
+      visual_style_long: "islamic_luminous_sky"
+      visual_style_short: "islamic_luminous_sky"
+    - id: "quran_mental_peace"
+      label: "Qur'an Wisdom & Mental Peace"
+      description: "Authentic Qur'anic verses on inner calm (Sakinah), Dhikr, gratitude (Shukr), relief with hardship (Yusr), and Tawakkul paired with everyday mind & stress science."
+      visual_style_long: "islamic_gold_visualizer"
+      visual_style_short: "islamic_gold_visualizer"
+    - id: "sunnah_brain_science"
+      label: "Sunnah, Hadith & Brain Science"
+      description: "Reflective storytelling & visual metaphors unpacking authentic Sahih Hadith and Prophetic principles alongside modern brain & health science."
+      visual_style_long: "islamic_particle_map"
+      visual_style_short: "islamic_particle_map"
 
 trends:
   locale_hl: "en-US"
   locale_gl: "US"
   locale_ceid: "US:en"
   queries:
-    - "why checking phone ruins focus habit everyday"
-    - "why coffee makes you crash tired after sleeping 8 hours"
-    - "digital detox no phone challenge focus brain"
+    - "islamic habits sunnah morning routine focus calm"
+    - "quran mental peace anxiety gratitude science"
+    - "prophetic sunnah fasting sleep health science"
   custom_rss_feeds: []
