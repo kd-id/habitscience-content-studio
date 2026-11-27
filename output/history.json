@@ -269,5 +269,34 @@
       "failed": 0
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-28_003028_why-reading-surah-al-kahf-every-frid/PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-28_022031_a-needle-in-the-ocean-why-we-should",
+    "slug": "a-needle-in-the-ocean-why-we-should-never-make-s",
+    "topic": "A Needle in the Ocean: Why We Should Never Make Small Duas (Hadith Qudsi)",
+    "pillar": "hadith_cinematic_story",
+    "pillar_label": "Reflective Hadith & Qur'an Metaphors",
+    "generated_at_wib": "2026-11-28 02:31:06 WIB",
+    "publish_mode": "scheduled",
+    "visual_style_long": "islamic_cinematic_metaphor",
+    "visual_style_short": "islamic_cinematic_metaphor",
+    "external_ids": {
+      "YouTube Long (16:9)": "zaTtlf0PhR8",
+      "YouTube Shorts (9:16)": "Aj0lzHK_GOE",
+      "Instagram Reels": "18121227815075043",
+      "Instagram Carousel": "18037752602911758",
+      "X & Threads": "threads:18046791887841749",
+      "Facebook Page Reels": "2549115875498049"
+    },
+    "counts": {
+      "total": 8,
+      "published": 3,
+      "scheduled": 3,
+      "drafted": 0,
+      "dry_run_ready": 0,
+      "pending_setup": 2,
+      "failed": 0
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-28_022031_a-needle-in-the-ocean-why-we-should/PUBLISH_REPORT.md"
   }
 ]
