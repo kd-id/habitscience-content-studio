@@ -3,11 +3,21 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 from PIL import Image
+
+
+def _probe_mean_volume_db(path: Path) -> float:
+    res = subprocess.run(
+        ["ffmpeg", "-i", str(path), "-af", "volumedetect", "-f", "null", "-"],
+        capture_output=True, text=True, check=False,
+    )
+    m = re.search(r"mean_volume:\s*(-?\d+(?:\.\d+)?)\s*dB", res.stderr or "")
+    return float(m.group(1)) if m else -99.0
 
 
 def check_video(path: Path, expected_w: int, expected_h: int, max_sec: float | None = None) -> dict:
@@ -34,12 +44,15 @@ def check_video(path: Path, expected_w: int, expected_h: int, max_sec: float | N
     assert duration > 2.0, f"Video too short: {duration}s"
     if max_sec is not None:
         assert duration <= max_sec, f"Video exceeds {max_sec}s limit: {duration}s"
+    mean_db = _probe_mean_volume_db(path)
+    assert mean_db > -40.0, f"Video audio appears silent/muted ({mean_db} dB) in {path}!"
     return {
         "file": path.name,
         "resolution": f"{v_streams[0]['width']}x{v_streams[0]['height']}",
         "video_codec": v_streams[0]["codec_name"],
         "audio_codec": a_streams[0]["codec_name"],
         "duration_sec": round(duration, 2),
+        "mean_volume_db": mean_db,
         "size_mb": round(path.stat().st_size / (1024 * 1024), 2),
     }
 

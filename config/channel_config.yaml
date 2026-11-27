@@ -64,9 +64,9 @@ voiceover:
     meaningful lines, and leave viewers feeling calm and inspired—never loud, never
     rushed, never monotone. Read ONLY the spoken transcript below naturally:
   loudnorm: true
-  # Edge TTS fallback (calm natural pace, zero rushed hype)
+  # Edge TTS fallback (verified warm calm narrators, zero rushed hype)
   voice_long: "en-US-BrianNeural"
-  voice_shorts: "en-US-AndrewMultilingualNeural"
+  voice_shorts: "en-US-ChristopherNeural"
   rate_long: "-2%"
   rate_shorts: "+0%"
   pitch: "+0Hz"

@@ -1456,7 +1456,7 @@ def build_habitsains_3d_pov_demo(
     work_dir.mkdir(parents=True, exist_ok=True)
 
     voice_partner = "en-US-ChristopherNeural"
-    voice_pov = "en-US-AndrewMultilingualNeural"
+    voice_pov = "en-US-GuyNeural"
 
     dialogue_events: list[dict[str, Any]] = []
     beat_starts: dict[str, float] = {}
@@ -1926,7 +1926,7 @@ def render_pov_3d_toon_video_for_pipeline(
 
     # Synthesize true 2-speaker neural dialogue (ChristopherNeural Brain Guide vs AndrewMultilingualNeural POV)
     voice_partner = "en-US-ChristopherNeural"
-    voice_pov = "en-US-AndrewMultilingualNeural"
+    voice_pov = "en-US-GuyNeural"
     raw_clips: list[dict[str, Any]] = []
     print(f"[v9-pov] Synthesizing 8 beat-locked 2-speaker POV lines for: {props.get('series_title')}...", flush=True)
     for idx, line in enumerate(script_lines):

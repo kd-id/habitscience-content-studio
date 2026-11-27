@@ -521,11 +521,29 @@ async def _generate_track_async(
                     use_gemini = False
 
         if engine_used == "edge_tts":
-            try:
-                timings = await _synthesize_single_scene_edge(narration, edge_voice, edge_rate, edge_pitch, part_mp3)
-                if not part_mp3.exists() or part_mp3.stat().st_size < 256:
+            fallback_voices = list(dict.fromkeys([
+                edge_voice,
+                "en-US-BrianNeural",
+                "en-US-ChristopherNeural",
+                "en-US-GuyNeural",
+                "en-US-AvaNeural",
+            ]))
+            edge_ok = False
+            for cand_voice in fallback_voices:
+                try:
+                    timings = await _synthesize_single_scene_edge(narration, cand_voice, edge_rate, edge_pitch, part_mp3)
+                    if part_mp3.exists() and part_mp3.stat().st_size >= 1024:
+                        edge_ok = True
+                        if cand_voice != edge_voice:
+                            print(f"[voiceover] Switched Edge TTS voice from {edge_voice} -> {cand_voice}", flush=True)
+                            edge_voice = cand_voice
+                        break
                     raise RuntimeError("Empty TTS output")
-            except Exception:
+                except Exception as exc:
+                    print(f"[voiceover] Edge TTS {cand_voice} failed ({type(exc).__name__}): {str(exc)[:140]}", flush=True)
+                    part_mp3.unlink(missing_ok=True)
+            if not edge_ok:
+                print(f"[voiceover] WARNING: All Edge TTS voices failed on scene {idx}; falling back to silence.", flush=True)
                 est_dur = max(len(narration.split()) / 2.4, 3.0)
                 _create_fallback_silent_audio(part_mp3, duration_sec=est_dur)
 
