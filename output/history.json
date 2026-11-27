@@ -182,5 +182,34 @@
       "failed": 0
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-27_053744_why-leaving-your-phone-face-down-sti/PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-27_184910_why-friday-jumuah-is-designed-as-you",
+    "slug": "why-friday-jumuah-is-designed-as-your-weekly-spi",
+    "topic": "Why Friday (Jumu'ah) Is Designed as Your Weekly Spiritual and Mental Reset",
+    "pillar": "sunnah_paper_story",
+    "pillar_label": "Sunnah Craft Stories",
+    "generated_at_wib": "2026-11-27 19:00:23 WIB",
+    "publish_mode": "scheduled",
+    "visual_style_long": "islamic_paper_craft",
+    "visual_style_short": "islamic_paper_craft",
+    "external_ids": {
+      "YouTube Long (16:9)": "pf0p1RqBXLU",
+      "YouTube Shorts (9:16)": "9K5N7ma3z54",
+      "Instagram Reels": "18654283804062177",
+      "Instagram Carousel": "18037288082855208",
+      "X & Threads": "threads:18002292969021014",
+      "Facebook Page Reels": "1163653472977576"
+    },
+    "counts": {
+      "total": 8,
+      "published": 2,
+      "scheduled": 3,
+      "drafted": 0,
+      "dry_run_ready": 0,
+      "pending_setup": 2,
+      "failed": 1
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-27_184910_why-friday-jumuah-is-designed-as-you/PUBLISH_REPORT.md"
   }
 ]
