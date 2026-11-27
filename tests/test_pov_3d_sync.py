@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 from src.config_loader import slugify
 from src.habitsains_3d_pov_engine import _schedule_pov_dialogue_events
-from src.ideation import PILLAR_TOPIC_BANKS, _looks_academic_jargon, select_next_pillar, select_topic
+from src.ideation import PILLAR_TOPIC_BANKS, _is_near_duplicate_topic, _looks_academic_jargon, select_next_pillar, select_topic
 from src.scriptwriter import (
     REQUIRED_POV_BEATS,
     build_topic_matched_pov_3d_episode,
@@ -153,6 +153,16 @@ class TestPov3DSyncAndPillars(unittest.TestCase):
         self.assertEqual(len(combos), 5, f"Expected 5 unique 3D setups, got {combos}")
         self.assertGreaterEqual(len(envs), 4)
         self.assertEqual(len(actions), 4)
+
+    def test_near_duplicate_topic_shield_blocks_paraphrases_but_allows_part2(self) -> None:
+        used_topics = ["Why Leaving Your Phone Face Down Still Destroys Your Focus"]
+        used_slugs = {slugify(t) for t in used_topics}
+        # Exact & paraphrased repeats MUST be blocked
+        self.assertTrue(_is_near_duplicate_topic("Why Leaving Your Phone Face Down Still Destroys Your Focus", used_topics, used_slugs))
+        self.assertTrue(_is_near_duplicate_topic("Why Putting Your Phone Face Down Destroys Focus", used_topics, used_slugs))
+        # Fresh topic & legitimate Part 2 sequel MUST be allowed
+        self.assertFalse(_is_near_duplicate_topic("Why Drinking Coffee Right After Waking Up Makes You Crash at 2 PM", used_topics, used_slugs))
+        self.assertFalse(_is_near_duplicate_topic("Part 2: Leaving Your Phone Face Down — What Happens Next", used_topics, used_slugs))
 
 
 if __name__ == "__main__":

@@ -252,6 +252,41 @@ _ACADEMIC_JARGON_MARKERS: tuple[str, ...] = (
 )
 
 
+def _core_topic_tokens(title: str) -> set[str]:
+    stop = {
+        "why", "how", "the", "your", "you", "what", "does", "do", "is", "are", "of", "to", "in",
+        "for", "and", "a", "an", "on", "with", "that", "this", "from", "all", "day", "still",
+        "just", "even", "after", "when", "makes", "make", "really", "actually", "brain", "focus",
+    }
+    return {w for w in slugify(title or "", max_length=120).split("-") if len(w) >= 3 and w not in stop}
+
+
+def _is_near_duplicate_topic(candidate: str, used_topics: list[str], used_slugs: set[str]) -> bool:
+    """Block both exact slug matches AND paraphrased near-duplicates of already-produced videos."""
+    if not candidate or not candidate.strip():
+        return True
+    cand_slug = slugify(candidate)
+    if cand_slug in used_slugs:
+        return True
+    cand_is_p2 = "part 2" in candidate.lower() or "part-2" in cand_slug
+    cand_toks = _core_topic_tokens(candidate)
+    if len(cand_toks) < 2:
+        return False
+    for prev in used_topics:
+        prev_is_p2 = "part 2" in (prev or "").lower()
+        # Allow a genuine Part 2 sequel to reference Part 1's topic (but never duplicate an existing Part 2!)
+        if cand_is_p2 != prev_is_p2:
+            continue
+        prev_toks = _core_topic_tokens(prev)
+        if len(prev_toks) < 2:
+            continue
+        overlap = len(cand_toks & prev_toks)
+        smaller = min(len(cand_toks), len(prev_toks))
+        if smaller > 0 and (overlap / smaller) >= 0.65:
+            return True
+    return False
+
+
 def _looks_academic_jargon(title: str) -> bool:
     low = (title or "").lower()
     if not low.strip():
@@ -389,6 +424,7 @@ def _rank_topic_with_gemini(
     used_slugs: set[str],
     pillar: dict[str, str],
     winning_patterns: list[str] | None = None,
+    used_topics: list[str] | None = None,
 ) -> TopicIdea | None:
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
@@ -426,7 +462,7 @@ def _rank_topic_with_gemini(
                 "   - Good examples for everyday_science: 'Why Coffee Right After Waking Up Makes You Crash at 2 PM', 'Why You Still Feel Tired After Sleeping 8 Hours'\n"
                 "   - Good examples for pov_survival: '72 Hours Without Your Phone: Hour 1 Brain Test', 'You Have 6 Hours Left—One Phone Tap Resets the Clock'\n"
                 "3. Strictly FORBID jargon words: coupling, prefrontal, correlates, modulates, cortical, striatal, cognitive load, executive function, adolescents.\n"
-                f"4. Avoid previously used slugs: {sorted(list(used_slugs))[:18]}\n"
+                f"4. NEVER repeat or paraphrase ANY of these already-produced videos: {json.dumps((used_topics or [])[-25:], ensure_ascii=False)}\n"
                 f"{pat_txt}\n"
                 f"Optional inspiration news headlines (ONLY use if you rewrite into plain everyday English matching pillar '{pillar_id}'):\n"
                 f"{json.dumps(candidates[:10], ensure_ascii=False, indent=2)}\n\n"
@@ -453,8 +489,8 @@ def _rank_topic_with_gemini(
         if not picked_topic or (lang == "en" and _looks_academic_jargon(picked_topic)):
             print(f"[ideation] Rejected overly academic/empty Gemini topic: {picked_topic!r}; using curated pillar bank.", flush=True)
             return None
-        if slugify(picked_topic) in used_slugs:
-            print(f"[ideation] Rejected duplicate Gemini topic: {picked_topic!r}; using curated pillar bank.", flush=True)
+        if _is_near_duplicate_topic(picked_topic, used_topics or [], used_slugs):
+            print(f"[ideation] Rejected duplicate/paraphrased Gemini topic: {picked_topic!r}; using curated pillar bank.", flush=True)
             return None
         return TopicIdea(
             topic=picked_topic,
@@ -475,15 +511,17 @@ def _pick_from_pillar_bank(
     pillar: dict[str, str],
     used_slugs: set[str],
     now_iso: str,
+    used_topics: list[str] | None = None,
 ) -> TopicIdea:
     pillar_id = pillar.get("id", "focus_habits")
     pillar_label = pillar.get("label", "Everyday Focus & Habits")
     bank = PILLAR_TOPIC_BANKS.get(pillar_id) or PILLAR_TOPIC_BANKS["focus_habits"]
-    chosen = next((item for item in bank if slugify(item["topic"]) not in used_slugs), None)
+    prev_topics = used_topics or []
+    chosen = next((item for item in bank if not _is_near_duplicate_topic(item["topic"], prev_topics, used_slugs)), None)
     if chosen is None:
         # Try any unused topic across other banks before wrapping around
         for alt_bank in PILLAR_TOPIC_BANKS.values():
-            chosen = next((item for item in alt_bank if slugify(item["topic"]) not in used_slugs), None)
+            chosen = next((item for item in alt_bank if not _is_near_duplicate_topic(item["topic"], prev_topics, used_slugs)), None)
             if chosen is not None:
                 break
     if chosen is None:
@@ -542,6 +580,7 @@ def select_topic(
         )
 
     used_slugs = {item.get("slug", "") for item in history}
+    used_topics = [str(item.get("topic") or "") for item in history if item.get("topic")]
     insights = _load_analytics_insights(history_file)
 
     # Closed-Loop Sequel Engine: every 3rd run, automatically produce a Part 2 / sequel
@@ -550,7 +589,7 @@ def select_topic(
     if len(history) > 0 and (len(history) % 3 == 0) and int(insights.get("total_views_all_platforms", 0)) > 0:
         for seq in sequels:
             seq_topic = str(seq.get("topic") or "").strip()
-            if seq_topic and slugify(seq_topic) not in used_slugs:
+            if seq_topic and not _is_near_duplicate_topic(seq_topic, used_topics, used_slugs):
                 return TopicIdea(
                     topic=seq_topic,
                     angle=str(seq.get("angle") or f"Direct Part 2 sequel expanding our most-watched {niche} episode").strip(),
@@ -564,7 +603,7 @@ def select_topic(
                 )
 
     candidates = discover_trending_candidates(config)
-    fresh = [c for c in candidates if slugify(c["title"]) not in used_slugs]
+    fresh = [c for c in candidates if not _is_near_duplicate_topic(c["title"], used_topics, used_slugs)]
     pool = fresh or candidates
 
     gemini_pick = _rank_topic_with_gemini(
@@ -573,6 +612,7 @@ def select_topic(
         used_slugs,
         pillar=pillar,
         winning_patterns=insights.get("winning_patterns"),
+        used_topics=used_topics,
     )
     if gemini_pick:
         return gemini_pick
@@ -580,7 +620,7 @@ def select_topic(
     # For English HabitSains: NEVER dump raw academic Google News titles straight into a video!
     # Always select a crisp, zero-jargon, everyday topic from the active rotating pillar bank.
     if lang == "en":
-        return _pick_from_pillar_bank(pillar, used_slugs, now_iso)
+        return _pick_from_pillar_bank(pillar, used_slugs, now_iso, used_topics=used_topics)
 
     if pool:
         top = pool[0]
