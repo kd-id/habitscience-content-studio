@@ -78,8 +78,25 @@ def run_pipeline(
     effective_mode = publish_mode or config.get("publishing", {}).get("default_mode", "draft")
 
     # Select topic & active Pillar FIRST so visual style can rotate distinctly per Pillar!
+    # Anti-Rancu lock: if user explicitly overrides --visual-style to one of the 6 locked Islamic engines,
+    # automatically lock topic & script selection to that exact matching Pillar!
+    preferred_pillar: str | None = None
+    if visual_style and visual_style != "hybrid_cozy_3dpov":
+        for _p in ((config.get("content_pillars") or {}).get("rotation") or []):
+            if isinstance(_p, dict) and (
+                _p.get("visual_style_short") == visual_style or _p.get("visual_style_long") == visual_style
+            ):
+                preferred_pillar = str(_p.get("id"))
+                break
+
     print("[1/7] Riset & pemilihan topik...", flush=True)
-    idea = select_topic(config=config, history_file=paths.history_file, manual_topic=topic, manual_angle=angle)
+    idea = select_topic(
+        config=config,
+        history_file=paths.history_file,
+        manual_topic=topic,
+        manual_angle=angle,
+        preferred_pillar=preferred_pillar,
+    )
 
     vid_cfg = config.setdefault("video", {})
     base_mode = str(vid_cfg.get("engine_mode", "hybrid_cozy_3dpov")).lower().strip()

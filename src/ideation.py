@@ -829,12 +829,18 @@ def select_topic(
     history_file: Path,
     manual_topic: str | None = None,
     manual_angle: str | None = None,
+    preferred_pillar: str | None = None,
 ) -> TopicIdea:
     now_iso = datetime.now(timezone.utc).isoformat()
     channel = config.get("channel", {})
     niche = channel.get("niche", "AI & Produktivitas")
     history = load_history(history_file)
     pillar = select_next_pillar(history, config)
+    if preferred_pillar:
+        configured = (config.get("content_pillars") or {}).get("rotation") or DEFAULT_CONTENT_PILLARS
+        matched_p = next((p for p in configured if isinstance(p, dict) and p.get("id") == preferred_pillar), None)
+        if matched_p:
+            pillar = {"id": str(matched_p["id"]), "label": str(matched_p.get("label") or matched_p["id"])}
     pillar_id = pillar["id"]
     pillar_label = pillar["label"]
 
@@ -878,10 +884,17 @@ def select_topic(
     used_topics = [str(item.get("topic") or "") for item in history if item.get("topic")]
     insights = _load_analytics_insights(history_file)
 
-    # Closed-Loop Sequel Engine: every 3rd run, automatically produce a Part 2 / sequel
-    # directly extending our #1 most-watched video (once real views exist)!
+    # Closed-Loop Sequel Engine: skip when user explicitly locked a pillar (--visual-style)
+    # or when running the verified Islamic nature_only channel (keep verified Dalil bank anchored!).
     sequels = insights.get("recommended_sequels") or []
-    if len(history) > 0 and (len(history) % 3 == 0) and int(insights.get("total_views_all_platforms", 0)) > 0:
+    is_islamic_live_cfg = str((config.get("video") or {}).get("ambient_bgm_mode") or "").lower() == "nature_only"
+    if (
+        not preferred_pillar
+        and not is_islamic_live_cfg
+        and len(history) > 0
+        and (len(history) % 3 == 0)
+        and int(insights.get("total_views_all_platforms", 0)) > 0
+    ):
         for seq in sequels:
             seq_topic = str(seq.get("topic") or "").strip()
             if seq_topic and not _is_near_duplicate_topic(seq_topic, used_topics, used_slugs):
