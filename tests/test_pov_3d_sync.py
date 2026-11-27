@@ -131,6 +131,29 @@ class TestPov3DSyncAndPillars(unittest.TestCase):
         self.assertEqual(len(set(short_styles)), 3, f"Expected 3 distinct short visual styles across pillars, got {short_styles}")
         self.assertEqual(short_styles, ["pov_3d_toon", "cinema_broll_html", "minimal_line_story"])
 
+    def test_different_titles_in_same_3d_style_get_distinct_worlds_and_actions(self) -> None:
+        cfg = {"branding": {"watermark_text": "@HabitSains"}}
+        cases = [
+            ("Why Leaving Your Phone Face Down Still Destroys Your Focus", "focus_habits"),
+            ("Why Drinking Coffee Right After Waking Up Makes You Crash at 2 PM", "everyday_science"),
+            ("72 Hours Without Your Phone: What Happens to Your Brain on Hour 1", "pov_survival"),
+            ("Why Checking Your Phone at 7 AM Ruins Your Focus All Day", "focus_habits"),
+            ("Why Checking Just One Text Costs You 23 Minutes of Focus", "focus_habits"),
+        ]
+        combos = set()
+        envs = set()
+        actions = set()
+        for topic, pil in cases:
+            ep = build_topic_matched_pov_3d_episode(topic=topic, config=cfg, pillar=pil)
+            p = ep["props"]
+            combos.add((p["scene_env"], p["action_pattern"], p["hero_prop"]))
+            envs.add(p["scene_env"])
+            actions.add(p["action_pattern"])
+        # All 5 different titles must produce 5 distinct (world, camera blocking, hero prop) combinations!
+        self.assertEqual(len(combos), 5, f"Expected 5 unique 3D setups, got {combos}")
+        self.assertGreaterEqual(len(envs), 4)
+        self.assertEqual(len(actions), 4)
+
 
 if __name__ == "__main__":
     unittest.main()

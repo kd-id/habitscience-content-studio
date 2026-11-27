@@ -89,6 +89,9 @@ Return ONLY valid JSON with this exact schema:
     ],
     "pov_3d_episode": {{
       "props": {{
+        "scene_env": "Pick BEST matching 3D world: sunrise_bedroom | midnight_study | sunny_cafe_desk | survival_bunker | focus_lab",
+        "action_pattern": "Pick BEST matching 3D camera blocking: nightstand_to_desk | desk_face_down | partner_first_confrontation | coffee_window_pan",
+        "hero_prop": "Pick BEST 3D hero prop: alarm_phone | face_down_phone | coffee_mug | hazard_beacon",
         "loc_main": "YOUR DESK • 2:14 PM (or YOUR BEDROOM • 7:01 AM / 11:42 PM matching topic)",
         "series_title": "SHORT 2-4 WORD ALL-CAPS TITLE (max 20 chars)",
         "phone_time": "2:14",
@@ -403,6 +406,58 @@ def _extract_spoken_topic(topic: str) -> str:
     if len(words) > 7:
         clean = " ".join(words[:7])
     return clean or "deep focus"
+
+
+_VALID_SCENE_ENVS: tuple[str, ...] = (
+    "sunrise_bedroom",
+    "midnight_study",
+    "sunny_cafe_desk",
+    "survival_bunker",
+    "focus_lab",
+)
+_VALID_ACTION_PATTERNS: tuple[str, ...] = (
+    "nightstand_to_desk",
+    "desk_face_down",
+    "partner_first_confrontation",
+    "coffee_window_pan",
+)
+_VALID_HERO_PROPS: tuple[str, ...] = (
+    "alarm_phone",
+    "face_down_phone",
+    "coffee_mug",
+    "hazard_beacon",
+)
+
+
+def _pick_3d_world_and_action(topic: str, low_blob: str, pillar: str = "") -> tuple[str, str, str]:
+    """Select distinct (scene_env, action_pattern, hero_prop) tailored to THIS episode's exact topic & action."""
+    if pillar == "pov_survival" or any(k in low_blob for k in ("72 hour", "24 hour", "survive", "challenge", "resets the clock", "locked in", "brain battery", "zero screen", "no phone")):
+        return "survival_bunker", "partner_first_confrontation", "hazard_beacon"
+    if any(k in low_blob for k in ("coffee", "caffeine")):
+        return "sunny_cafe_desk", "coffee_window_pan", "coffee_mug"
+    if any(k in low_blob for k in ("face down", "arm's reach", "arm reach", "nearby", "desk", "messy", "clutter", "to-do", "to do", "procrastin", "boring", "lazy")):
+        return "midnight_study", "desk_face_down", "face_down_phone"
+    if any(k in low_blob for k in ("multitask", "switch", "23-minute", "23 min", "text", "tab", "interrupt", "notification", "lyrics", "reading")):
+        return "focus_lab", "desk_face_down", "face_down_phone"
+    if any(k in low_blob for k in ("sleep", "insomnia", "bedtime", "midnight", "night", "exhausted", "8 hours", "1 hour later")):
+        return "midnight_study", "nightstand_to_desk", "alarm_phone"
+    if any(k in low_blob for k in ("morning", "7 am", "7:00", "wake", "sunlight", "alarm")):
+        return "sunrise_bedroom", "nightstand_to_desk", "alarm_phone"
+    if any(k in low_blob for k in ("shower", "nap", "break", "fried", "tired", "reset", "rest", "doorway")):
+        return "sunny_cafe_desk", "partner_first_confrontation", "coffee_mug"
+
+    # Deterministic per-title variety hash so even general topics vary world & camera blocking!
+    h = sum(ord(ch) * (i + 1) for i, ch in enumerate((topic or "focus").lower()))
+    env = _VALID_SCENE_ENVS[h % len(_VALID_SCENE_ENVS)]
+    act = _VALID_ACTION_PATTERNS[(h // 3) % len(_VALID_ACTION_PATTERNS)]
+    prop = {
+        "sunrise_bedroom": "alarm_phone",
+        "midnight_study": "face_down_phone" if act == "desk_face_down" else "alarm_phone",
+        "sunny_cafe_desk": "coffee_mug",
+        "survival_bunker": "hazard_beacon",
+        "focus_lab": "face_down_phone",
+    }[env]
+    return env, act, prop
 
 
 def build_topic_matched_pov_3d_episode(
@@ -923,6 +978,10 @@ def build_topic_matched_pov_3d_episode(
             {"beat": "ping", "speaker": "partner", "text": "Hear those three alerts hitting at once? Your hand is already reaching straight back for the phone!"},
         ]
 
+    scene_env, action_pattern, hero_prop = _pick_3d_world_and_action(topic, low, pillar)
+    props["scene_env"] = scene_env
+    props["action_pattern"] = action_pattern
+    props["hero_prop"] = hero_prop
     return {"props": props, "dialogue": dialogue}
 
 
@@ -974,6 +1033,13 @@ def normalize_pov_3d_episode(
     clean_props: dict[str, Any] = {}
     for k, lim in str_limits.items():
         clean_props[k] = _clamp_prop(raw_props.get(k), lim, str(base_props[k]))
+
+    raw_env = str(raw_props.get("scene_env") or "").strip().lower()
+    clean_props["scene_env"] = raw_env if raw_env in _VALID_SCENE_ENVS else str(base_props.get("scene_env", "sunrise_bedroom"))
+    raw_act = str(raw_props.get("action_pattern") or "").strip().lower()
+    clean_props["action_pattern"] = raw_act if raw_act in _VALID_ACTION_PATTERNS else str(base_props.get("action_pattern", "nightstand_to_desk"))
+    raw_hp = str(raw_props.get("hero_prop") or "").strip().lower()
+    clean_props["hero_prop"] = raw_hp if raw_hp in _VALID_HERO_PROPS else str(base_props.get("hero_prop", "alarm_phone"))
 
     # Sanitize 3-row phone notification card arrays
     for card_key in ("phone_norm_cards", "phone_urgent_cards"):

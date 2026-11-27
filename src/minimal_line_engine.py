@@ -1239,6 +1239,8 @@ def render_minimal_line_video_for_pipeline(
     seg_videos: list[Path] = []
     scene_starts: list[float] = []
     cursor = 0.0
+    used_types: set[str] = set()
+    topic_seed = sum(ord(c) for c in "".join(str(s.get("visual_headline", "")) for s in (scenes_meta or [])))
 
     for idx, scene_audio in enumerate(audio_bundle.scene_results, start=1):
         seg_dur = max(float(scene_audio.duration_sec) + pause_sec, 1.0)
@@ -1246,7 +1248,33 @@ def render_minimal_line_video_for_pipeline(
         cursor += seg_dur
 
         s_raw = scenes_meta[idx - 1] if scenes_meta and idx - 1 < len(scenes_meta) else {"visual_headline": f"Part {idx}", "narration": scene_audio.text}
-        stype = "closing_protocol_card" if (idx == total_scenes and total_scenes >= 3) else cycle[(idx - 1) % (len(cycle) - 1)]
+        raw_txt = f"{s_raw.get('visual_headline', '')} {s_raw.get('on_screen_callout', '')} {s_raw.get('narration', '')} {getattr(scene_audio, 'text', '')}".lower()
+        if idx == total_scenes and total_scenes >= 3:
+            stype = "closing_protocol_card"
+        else:
+            kw_rules = [
+                (("sleep", "night", "dark", "moon", "rest", "bed", "midnight", "tired"), "moon_calm_reset"),
+                (("time", "minute", "hour", "23", "wait", "clock", "90", "slow", "fast"), "hourglass_time"),
+                (("day", "week", "habit", "7-day", "daily", "streak", "routine"), "habit_tracker_days"),
+                (("study", "science", "percent", "40%", "brain", "research", "coffee", "scan"), "minimal_research_card"),
+                (("door", "start", "step", "room", "first", "5 min", "five min", "walk"), "focus_doorway_sparks"),
+                (("stack", "load", "tab", "messy", "clutter", "overwhelm", "noise", "list", "ping"), "cognitive_load_stack"),
+                (("phone", "scroll", "lazy", "stuck", "fog", "drain"), "sitting_overwhelmed"),
+            ]
+            picked = ""
+            for kws, cand in kw_rules:
+                if cand not in used_types and any(k in raw_txt for k in kws):
+                    picked = cand
+                    break
+            if not picked:
+                body_pool = cycle[:-1]
+                for step_off in range(len(body_pool)):
+                    cand = body_pool[(topic_seed + idx - 1 + step_off) % len(body_pool)]
+                    if cand not in used_types:
+                        picked = cand
+                        break
+            stype = picked or cycle[(topic_seed + idx - 1) % (len(cycle) - 1)]
+            used_types.add(stype)
         bullets = [re.sub(r"^\d+[\.\)]\s*", "", str(b)).strip() for b in (s_raw.get("bullet_points") or []) if str(b).strip()]
         headline = str(s_raw.get("visual_headline") or f"Part {idx}").strip()
         callout = str(s_raw.get("on_screen_callout") or "Consistency beats perfection").strip()

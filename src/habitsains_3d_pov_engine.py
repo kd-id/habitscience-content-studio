@@ -356,8 +356,46 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
   renderer.setSize(W, H, false);
   renderer.outputEncoding = THREE.sRGBEncoding;
 
+  // --- 5 DISTINCT 3D WORLD PALETTES & OUTFITS (so EVERY episode has its own environment & look!) ---
+  const ENV_THEMES = {{
+    sunrise_bedroom: {{
+      bg: 0x1b2338, wall: '#463A52', wallLine: '#2E2538', wainscot: '#352B40', panelStyle: 'panels',
+      wood: '#7A5438', woodLine: '#503421', ceil: 0x2b2438, winSky: '#F7B267', winMode: 'sunrise',
+      lampCol: 0xffd28a, shade: 0xf59e0b, poster: 0x14b8a6, bed: 0x13887b,
+      jacket: 0x1e3a5f, jRing: 0x132642, collar: 0xf59e0b, beanie: 0x14b8a6, bRib: 0x0d9488, hoodie: 0x2a3b4e,
+    }},
+    midnight_study: {{
+      bg: 0x0e1024, wall: '#1D1B3A', wallLine: '#121026', wainscot: '#161430', panelStyle: 'neon_strips',
+      wood: '#4A3942', woodLine: '#2E2228', ceil: 0x111026, winSky: '#0B132B', winMode: 'night_moon',
+      lampCol: 0x93c5fd, shade: 0x38bdf8, poster: 0xa855f7, bed: 0x312e81,
+      jacket: 0x3b1f4a, jRing: 0x24122e, collar: 0x38bdf8, beanie: 0xe11d48, bRib: 0x9f1239, hoodie: 0x312e81,
+    }},
+    sunny_cafe_desk: {{
+      bg: 0x26352e, wall: '#486054', wallLine: '#32453C', wainscot: '#3B4F45', panelStyle: 'panels',
+      wood: '#9A6B43', woodLine: '#6B472B', ceil: 0x394b42, winSky: '#7DD3FC', winMode: 'day_clouds',
+      lampCol: 0xfff0c2, shade: 0xf97316, poster: 0xfbbf24, bed: 0xd97706,
+      jacket: 0xb45309, jRing: 0x78350f, collar: 0xfef3c7, beanie: 0xfef3c7, bRib: 0xd6cfc2, hoodie: 0x475569,
+    }},
+    survival_bunker: {{
+      bg: 0x14171c, wall: '#373D47', wallLine: '#23272E', wainscot: '#2A2E36', panelStyle: 'hazard',
+      wood: '#474D57', woodLine: '#2C3038', ceil: 0x1e2229, winSky: '#7F1D1D', winMode: 'storm_red',
+      lampCol: 0xfde68a, shade: 0xef4444, poster: 0xf59e0b, bed: 0x3f4a3c,
+      jacket: 0x2c3531, jRing: 0x1b211f, collar: 0xfacc15, beanie: 0xfacc15, bRib: 0xca8a04, hoodie: 0x1f2937,
+    }},
+    focus_lab: {{
+      bg: 0x0a1c24, wall: '#13313D', wallLine: '#0B1F27', wainscot: '#0F2730', panelStyle: 'neon_strips',
+      wood: '#334155', woodLine: '#1E293B', ceil: 0x0c222b, winSky: '#0E7490', winMode: 'cyber_grid',
+      lampCol: 0x99f6e4, shade: 0x14b8a6, poster: 0x38bdf8, bed: 0x0f766e,
+      jacket: 0xe2e8f0, jRing: 0x94a3b8, collar: 0x14b8a6, beanie: 0x0f172a, bRib: 0x334155, hoodie: 0x0f766e,
+    }},
+  }};
+  const ENV_ID = (CFG.scene_env && ENV_THEMES[CFG.scene_env]) ? CFG.scene_env : 'sunrise_bedroom';
+  const TH = ENV_THEMES[ENV_ID];
+  const ACT_PAT = CFG.action_pattern || 'nightstand_to_desk';
+  const HERO_PROP = CFG.hero_prop || 'alarm_phone';
+
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x1b2338);
+  scene.background = new THREE.Color(TH.bg);
 
   const camera = new THREE.PerspectiveCamera(62, W / H, 0.08, 80);
   scene.add(camera);
@@ -403,24 +441,94 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
     const tc = document.createElement('canvas');
     tc.width = 512; tc.height = 512;
     const ctx = tc.getContext('2d');
-    ctx.fillStyle = '#36415E';
+    ctx.fillStyle = TH.wall;
     ctx.fillRect(0, 0, 512, 512);
-    // Subtle cozy vertical architectural paneling + soft plaster grain
-    ctx.fillStyle = 'rgba(255,255,255,0.035)';
-    for (let x = 0; x < 512; x += 64) ctx.fillRect(x, 0, 28, 512);
-    ctx.strokeStyle = '#252E45';
-    ctx.lineWidth = 3;
-    for (let x = 0; x <= 512; x += 64) {{
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 512); ctx.stroke();
+    if (TH.panelStyle === 'hazard') {{
+      // Concrete block seams + yellow/black caution stripe along lower wall!
+      ctx.strokeStyle = TH.wallLine; ctx.lineWidth = 4;
+      for (let y = 0; y < 400; y += 64) {{
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(512, y); ctx.stroke();
+        const off = (y % 128 === 0) ? 0 : 64;
+        for (let x = off; x < 512; x += 128) {{
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 64); ctx.stroke();
+        }}
+      }}
+      ctx.fillStyle = '#FACC15';
+      ctx.fillRect(0, 386, 512, 34);
+      ctx.fillStyle = '#111827';
+      for (let x = -40; x < 560; x += 48) {{
+        ctx.beginPath();
+        ctx.moveTo(x, 386); ctx.lineTo(x + 22, 386); ctx.lineTo(x + 6, 420); ctx.lineTo(x - 16, 420);
+        ctx.closePath(); ctx.fill();
+      }}
+    }} else if (TH.panelStyle === 'neon_strips') {{
+      ctx.fillStyle = 'rgba(255,255,255,0.03)';
+      for (let x = 0; x < 512; x += 64) ctx.fillRect(x, 0, 26, 512);
+      ctx.strokeStyle = TH.wallLine; ctx.lineWidth = 3;
+      for (let x = 0; x <= 512; x += 64) {{
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 512); ctx.stroke();
+      }}
+      // Glowing accent light bar across wall
+      ctx.fillStyle = (ENV_ID === 'focus_lab') ? '#2DD4BF' : '#A855F7';
+      ctx.fillRect(0, 128, 512, 8);
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
+      ctx.fillRect(0, 120, 512, 24);
+    }} else {{
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      for (let x = 0; x < 512; x += 64) ctx.fillRect(x, 0, 28, 512);
+      ctx.strokeStyle = TH.wallLine; ctx.lineWidth = 3;
+      for (let x = 0; x <= 512; x += 64) {{
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 512); ctx.stroke();
+      }}
     }}
-    // Wainscoting baseboard strip along bottom
-    ctx.fillStyle = '#2A334B';
-    ctx.fillRect(0, 410, 512, 102);
-    ctx.strokeStyle = '#1B2133'; ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.moveTo(0, 410); ctx.lineTo(512, 410); ctx.stroke();
+    ctx.fillStyle = TH.wainscot;
+    ctx.fillRect(0, 420, 512, 92);
+    ctx.strokeStyle = '#111622'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(0, 420); ctx.lineTo(512, 420); ctx.stroke();
     const tex = new THREE.CanvasTexture(tc);
     tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.ClampToEdgeWrapping;
     tex.repeat.set(2.4, 1);
+    tex.encoding = THREE.sRGBEncoding;
+    return tex;
+  }}
+
+  function makeWindowSkyTex() {{
+    const tc = document.createElement('canvas');
+    tc.width = 256; tc.height = 256;
+    const ctx = tc.getContext('2d');
+    ctx.fillStyle = TH.winSky;
+    ctx.fillRect(0, 0, 256, 256);
+    if (TH.winMode === 'night_moon') {{
+      // Starry midnight sky + glowing yellow crescent moon!
+      ctx.fillStyle = '#E2E8F0';
+      [[38, 42], [112, 28], [190, 54], [66, 120], [218, 118], [148, 84], [46, 194]].forEach(([sx, sy]) => {{
+        ctx.beginPath(); ctx.arc(sx, sy, 3.5, 0, Math.PI * 2); ctx.fill();
+      }});
+      ctx.fillStyle = '#FDE047';
+      ctx.beginPath(); ctx.arc(178, 78, 28, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = TH.winSky;
+      ctx.beginPath(); ctx.arc(190, 70, 24, 0, Math.PI * 2); ctx.fill();
+    }} else if (TH.winMode === 'day_clouds') {{
+      ctx.fillStyle = '#FFFFFF';
+      [[64, 72, 26], [90, 68, 32], [118, 76, 22], [174, 138, 24], [202, 134, 28]].forEach(([cx, cy, r]) => {{
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+      }});
+    }} else if (TH.winMode === 'storm_red') {{
+      ctx.fillStyle = '#450A0A'; ctx.fillRect(0, 0, 256, 120);
+      ctx.strokeStyle = '#FCA5A5'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(140, 20); ctx.lineTo(116, 98); ctx.lineTo(142, 102); ctx.lineTo(110, 190); ctx.stroke();
+    }} else if (TH.winMode === 'cyber_grid') {{
+      ctx.strokeStyle = 'rgba(45, 212, 191, 0.45)'; ctx.lineWidth = 2;
+      for (let i = 0; i <= 256; i += 32) {{
+        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 256); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(256, i); ctx.stroke();
+      }}
+    }} else {{
+      // Warm sunrise gradient band
+      ctx.fillStyle = '#FDE047';
+      ctx.beginPath(); ctx.arc(128, 196, 56, 0, Math.PI * 2); ctx.fill();
+    }}
+    const tex = new THREE.CanvasTexture(tc);
     tex.encoding = THREE.sRGBEncoding;
     return tex;
   }}
@@ -429,9 +537,9 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
     const tc = document.createElement('canvas');
     tc.width = 512; tc.height = 512;
     const ctx = tc.getContext('2d');
-    ctx.fillStyle = '#6E4F37';
+    ctx.fillStyle = TH.wood;
     ctx.fillRect(0, 0, 512, 512);
-    ctx.strokeStyle = '#4B3322'; ctx.lineWidth = 4;
+    ctx.strokeStyle = TH.woodLine; ctx.lineWidth = 4;
     for (let y = 0; y < 512; y += 64) {{
       ctx.fillStyle = (y % 128 === 0) ? 'rgba(255,220,175,0.07)' : 'rgba(25,14,8,0.08)';
       ctx.fillRect(0, y, 512, 64);
@@ -564,32 +672,33 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
   }}
 
   const wallTex = makeWallTexture();
+  const winSkyTex = makeWindowSkyTex();
   const woodTex = makeWoodTexture();
   const phoneNormTex = makePhoneTex(false);
   const phoneUrgentTex = makePhoneTex(true);
   const brainScanTex = makeBrainScanTex();
   const laptopTex = makeLaptopTex();
 
-  // --- LIGHTING (Warm Cozy Morning Bedroom + Crisp Teal Rim + Dynamic Red Alert Glow) ---
-  const ambLight = new THREE.AmbientLight(0xb8c4dc, 0.50);
+  // --- LIGHTING (Adapts dynamically to active 3D World Theme!) ---
+  const ambLight = new THREE.AmbientLight(0xb8c4dc, 0.52);
   scene.add(ambLight);
-  const roomLamp = new THREE.PointLight(0xffd28a, 1.05, 14, 1.4);
+  const roomLamp = new THREE.PointLight(TH.lampCol, 1.08, 14, 1.4);
   roomLamp.position.set(0.2, 3.0, 0.1);
   scene.add(roomLamp);
-  const alertLight = new THREE.PointLight(0xff2e4c, 0.0, 10, 1.5);
-  alertLight.position.set(1.55, 1.35, 1.45);
+  const alertLight = new THREE.PointLight(0xff2e4c, 0.0, 11, 1.4);
+  alertLight.position.set(ACT_PAT === 'desk_face_down' ? -1.4 : 1.55, 1.45, ACT_PAT === 'desk_face_down' ? -0.35 : 1.45);
   scene.add(alertLight);
-  const windowSun = new THREE.DirectionalLight(0xffe0a3, 0.45);
+  const windowSun = new THREE.DirectionalLight(TH.lampCol, 0.45);
   windowSun.position.set(4, 6, 4);
   scene.add(windowSun);
 
-  // --- 3D CEL-SHADED BEDROOM + STUDY ROOM (W=5.6, H=3.4, D=6.0) ---
+  // --- 3D CEL-SHADED ROOM (W=5.6, H=3.4, D=6.0) ---
   const room = new THREE.Group();
   scene.add(room);
 
   const wallMat = toonMat(0xffffff, wallTex);
   const floorMat = toonMat(0xffffff, woodTex);
-  const ceilMat = toonMat(0x283047);
+  const ceilMat = toonMat(TH.ceil);
 
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(5.8, 6.2), floorMat);
   floor.rotation.x = -Math.PI / 2;
@@ -611,24 +720,30 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
   rightW.rotation.y = -Math.PI / 2; rightW.position.set(2.8, 1.7, 0);
   room.add(backW, frontW, leftW, rightW);
 
-  // Cozy Pendant Ceiling Light
+  // Pendant Ceiling Light + Optional Bunker Hazard Strobe Beacon!
   const lampCord = outlinedMesh(new THREE.CylinderGeometry(0.02, 0.02, 0.45, 8), toonMat(0x1b1e28), 0.008);
   lampCord.position.set(0.2, 3.18, 0.0);
-  const lampShade = outlinedMesh(new THREE.ConeGeometry(0.36, 0.24, 16), toonMat(0xf59e0b), 0.015);
+  const lampShade = outlinedMesh(new THREE.ConeGeometry(0.36, 0.24, 16), toonMat(TH.shade), 0.015);
   lampShade.position.set(0.2, 2.94, 0.0);
   room.add(lampCord, lampShade);
 
-  // Framed HabitSains Minimal Poster on Back Wall
+  const beaconMat = new THREE.MeshBasicMaterial({{ color: 0xff2e4c }});
+  const hazardBeacon = outlinedMesh(new THREE.CylinderGeometry(0.14, 0.16, 0.20, 14), beaconMat, 0.012);
+  hazardBeacon.position.set(0.2, 2.78, 0.0);
+  hazardBeacon.visible = (HERO_PROP === 'hazard_beacon' || ENV_ID === 'survival_bunker');
+  room.add(hazardBeacon);
+
+  // Framed Minimal Poster on Back Wall
   const posterFrame = outlinedMesh(new THREE.BoxGeometry(1.15, 0.78, 0.06), toonMat(0x181c2b), 0.014);
   posterFrame.position.set(1.55, 2.18, -2.95);
-  const posterInner = new THREE.Mesh(new THREE.PlaneGeometry(1.02, 0.65), toonMat(0x14b8a6));
+  const posterInner = new THREE.Mesh(new THREE.PlaneGeometry(1.02, 0.65), toonMat(TH.poster));
   posterInner.position.set(1.55, 2.18, -2.91);
   room.add(posterFrame, posterInner);
 
-  // Morning Bedroom Window on Right Wall (+X = 2.74, z = -0.3)
+  // Dynamic Sky Window on Right Wall (+X = 2.74, z = -0.3)
   const winFrame = outlinedMesh(new THREE.BoxGeometry(0.10, 1.55, 1.85), toonMat(0x232a3d), 0.016);
   winFrame.position.set(2.74, 1.92, -0.35);
-  const winGlass = new THREE.Mesh(new THREE.PlaneGeometry(1.68, 1.38), new THREE.MeshBasicMaterial({{ color: 0xf7b267 }}));
+  const winGlass = new THREE.Mesh(new THREE.PlaneGeometry(1.68, 1.38), new THREE.MeshBasicMaterial({{ map: winSkyTex }}));
   winGlass.rotation.y = -Math.PI / 2;
   winGlass.position.set(2.68, 1.92, -0.35);
   const winBarV = outlinedMesh(new THREE.BoxGeometry(0.11, 1.45, 0.07), toonMat(0x232a3d), 0.008);
@@ -639,7 +754,7 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
 
   // --- BED + NIGHTSTAND + ALARM CLOCK + GLOWING 3D SMARTPHONE (Right Side +X, +Z) ---
   const woodDarkMat = toonMat(0x5b3f2b);
-  const bedBase = outlinedMesh(new THREE.BoxGeometry(1.75, 0.52, 2.15), toonMat(0x13887b), 0.018);
+  const bedBase = outlinedMesh(new THREE.BoxGeometry(1.75, 0.52, 2.15), toonMat(TH.bed), 0.018);
   bedBase.position.set(0.35, 0.26, 1.75);
   const pillow = outlinedMesh(new THREE.BoxGeometry(1.25, 0.22, 0.55), toonMat(0xeef2f7), 0.016);
   pillow.position.set(0.35, 0.62, 2.45);
@@ -684,6 +799,43 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
   spScr.position.z = 0.022;
   standPhoneGrp.add(spBody, spScr);
   room.add(standPhoneGrp);
+
+  // Oversized Steaming 3D Hero Coffee Mug on nightstand (visible for coffee/cafe everyday science episodes!)
+  const heroCoffeeGrp = new THREE.Group();
+  heroCoffeeGrp.position.set(1.86, 0.98, 1.02);
+  const hcCup = outlinedMesh(new THREE.CylinderGeometry(0.15, 0.13, 0.30, 16), toonMat(0xfef3c7), 0.014);
+  const hcBrew = new THREE.Mesh(new THREE.CircleGeometry(0.135, 16), new THREE.MeshBasicMaterial({{ color: 0x3b1f0e }}));
+  hcBrew.rotation.x = -Math.PI / 2; hcBrew.position.y = 0.154;
+  const hcHandle = outlinedMesh(new THREE.TorusGeometry(0.085, 0.024, 8, 16), toonMat(0xf97316), 0.009);
+  hcHandle.position.set(0.145, 0.01, 0);
+  const hcSteams = [];
+  for (let s_i = 0; s_i < 3; s_i++) {{
+    const stRing = new THREE.Mesh(
+      new THREE.TorusGeometry(0.055 + s_i * 0.018, 0.011, 8, 16),
+      new THREE.MeshBasicMaterial({{ color: 0xffffff, transparent: true, opacity: 0.65 }})
+    );
+    stRing.rotation.x = Math.PI / 2;
+    stRing.position.set(0, 0.24 + s_i * 0.13, 0);
+    heroCoffeeGrp.add(stRing);
+    hcSteams.push(stRing);
+  }}
+  heroCoffeeGrp.add(hcCup, hcBrew, hcHandle);
+  heroCoffeeGrp.visible = (HERO_PROP === 'coffee_mug' || ENV_ID === 'sunny_cafe_desk');
+  room.add(heroCoffeeGrp);
+
+  // Face-Down Desk Smartphone right beside the Laptop (for desk_face_down episodes!)
+  const deskPhoneGrp = new THREE.Group();
+  deskPhoneGrp.position.set(-1.92, 1.00, -0.02);
+  deskPhoneGrp.rotation.set(Math.PI / 2, 0.22, Math.PI); // starts literally FACE DOWN on desk!
+  const dpBody = outlinedMesh(new THREE.BoxGeometry(0.25, 0.44, 0.032), toonMat(0x141724), 0.011);
+  const dpCam = outlinedMesh(new THREE.BoxGeometry(0.08, 0.08, 0.012), toonMat(0x38bdf8), 0.005);
+  dpCam.position.set(-0.055, 0.14, -0.020);
+  const dpScrMat = new THREE.MeshBasicMaterial({{ map: phoneNormTex }});
+  const dpScr = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.39), dpScrMat);
+  dpScr.position.z = 0.020;
+  deskPhoneGrp.add(dpBody, dpCam, dpScr);
+  deskPhoneGrp.visible = (ACT_PAT === 'desk_face_down' || HERO_PROP === 'face_down_phone');
+  room.add(deskPhoneGrp);
 
   // Crisp Labeled 3D Floating Notification Cards (Topic-Matched Swarm orbiting cleanly around phone!)
   function makeNotifBadgeTex(bgHex, label) {{
@@ -774,10 +926,10 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
   partner.position.set(0.05, 0, -1.35);
   room.add(partner);
 
-  const jacketMat = toonMat(0x1e3a5f);
-  const jacketRingMat = toonMat(0x132642);
-  const beanieMat = toonMat(0x14b8a6);
-  const beanieRibMat = toonMat(0x0d9488);
+  const jacketMat = toonMat(TH.jacket);
+  const jacketRingMat = toonMat(TH.jRing);
+  const beanieMat = toonMat(TH.beanie);
+  const beanieRibMat = toonMat(TH.bRib);
   const skinMat = toonMat(0xe6dcc8);
   const pantsMat = toonMat(0x283244);
   const eyeMat = new THREE.MeshBasicMaterial({{ color: 0x10131a }});
@@ -805,12 +957,12 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
     baffle.rotation.x = Math.PI / 2; baffle.position.y = ry;
     torso.add(baffle);
   }}
-  // Vibrant Amber Collar & Zipper Accent (HabitSains Palette!)
-  const collar = outlinedMesh(new THREE.TorusGeometry(0.24, 0.075, 10, 20), toonMat(0xf59e0b), 0.016);
+  // Dynamic Accent Collar & Zipper matching World Outfit!
+  const collar = outlinedMesh(new THREE.TorusGeometry(0.24, 0.075, 10, 20), toonMat(TH.collar), 0.016);
   collar.rotation.x = Math.PI / 2; collar.position.y = 0.44;
-  const zip = outlinedMesh(new THREE.BoxGeometry(0.036, 0.86, 0.04), toonMat(0xf59e0b), 0.008);
+  const zip = outlinedMesh(new THREE.BoxGeometry(0.036, 0.86, 0.04), toonMat(TH.collar), 0.008);
   zip.position.set(0, 0, 0.34);
-  const zipTab = outlinedMesh(new THREE.BoxGeometry(0.07, 0.11, 0.05), toonMat(0x2dd4bf), 0.008);
+  const zipTab = outlinedMesh(new THREE.BoxGeometry(0.07, 0.11, 0.05), toonMat(TH.beanie), 0.008);
   zipTab.position.set(0, 0.33, 0.36);
   torso.add(collar, zip, zipTab);
 
@@ -883,7 +1035,7 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
   const povHands = new THREE.Group();
   camera.add(povHands);
   const povSkinMat = toonMat(0xdca87c);
-  const hoodieMat = toonMat(0x2a3b4e);
+  const hoodieMat = toonMat(TH.hoodie);
   function buildPovHand(side) {{
     const g = new THREE.Group();
     const fist = outlinedMesh(new THREE.SphereGeometry(0.112, 14, 12), povSkinMat, 0.012);
@@ -944,6 +1096,23 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
     const isUrgent = t >= T_PING;
     spScrMat.map = isUrgent ? phoneUrgentTex : phoneNormTex;
     spScrMat.needsUpdate = true;
+    dpScrMat.map = isUrgent ? phoneUrgentTex : phoneNormTex;
+    dpScrMat.needsUpdate = true;
+
+    // Animate steaming coffee mug rings & bunker red beacon strobe when active!
+    if (heroCoffeeGrp.visible) {{
+      hcSteams.forEach((st, i) => {{
+        const cyc = (t * 0.65 + i * 0.33) % 1.0;
+        st.position.y = 0.20 + cyc * 0.42;
+        st.position.x = Math.sin(t * 2.4 + i) * 0.03;
+        const sc = 0.7 + cyc * 0.9;
+        st.scale.set(sc, sc, 1);
+      }});
+    }}
+    if (hazardBeacon.visible) {{
+      const pulse = 0.45 + 0.55 * Math.sin(t * 7.5);
+      beaconMat.color.setRGB(1.0, 0.12 + 0.25 * pulse, 0.18);
+    }}
 
     let camShake = 0.0;
     let phoneVib = 0.0;
@@ -958,7 +1127,14 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
     standPhoneGrp.position.x = 1.74 + Math.sin(t * 68) * 0.025 * phoneVib;
     standPhoneGrp.rotation.z = Math.sin(t * 72) * 0.09 * phoneVib;
 
-    // 2. Red Notification Card Halo erupting cleanly around smartphone in Beat 2 (Dopamine Trap!)
+    // Desk Face-Down Phone Action: lies face down during Beat 1, flips upright on Beat 2 trap, vibrates on Beat 8!
+    if (deskPhoneGrp.visible) {{
+      const flipU = t < T_TRAP ? 0 : smooth((t - T_TRAP) / 0.55);
+      deskPhoneGrp.position.set(-1.92, lerp(1.00, 1.24, flipU), -0.02 + Math.sin(t * 68) * 0.022 * phoneVib);
+      deskPhoneGrp.rotation.set(lerp(Math.PI / 2, -0.08, flipU), lerp(0.22, Math.PI / 2, flipU), lerp(Math.PI, Math.sin(t * 70) * 0.08 * phoneVib, flipU));
+    }}
+
+    // 2. Red Notification Card Halo erupting cleanly around active focus prop in Beat 2!
     const trapActive = (t >= T_TRAP && t < T_EXPLAIN);
     notifSwarm.visible = trapActive;
     if (trapActive) {{
@@ -966,73 +1142,202 @@ def _build_habitsains_3d_html(three_js_src: str, timeline_cfg: dict[str, Any], w
       for (const nc of notifCubes) {{
         const sw = Math.sin(t * 2.6 + nc.ph) * 0.14;
         const a = nc.slotAng + sw;
-        // Fan out across YZ plane right around the glowing phone (x stays safely >= 1.50, zero camera clipping!)
-        const rx = 1.66 + Math.abs(Math.sin(a)) * 0.18;
-        const rz = 1.32 + Math.sin(a) * nc.rad * (0.45 + 0.75 * p);
-        const ry = nc.baseY + Math.cos(a) * 0.26 * p + Math.sin(t * 4.2 + nc.ph) * 0.05;
-        nc.mesh.position.set(rx, ry, rz);
-        nc.mesh.rotation.set(Math.sin(t * 3 + nc.ph) * 0.12, -Math.PI * 0.56 + sw * 0.4, Math.cos(t * 2.5 + nc.ph) * 0.12);
+        if (ACT_PAT === 'desk_face_down') {{
+          // Erupt in a dramatic halo right above the study desk & face-down phone!
+          const rx = -1.96 - Math.abs(Math.sin(a)) * 0.16;
+          const rz = -0.18 + Math.sin(a) * nc.rad * (0.48 + 0.80 * p);
+          const ry = nc.baseY + 0.12 + Math.cos(a) * 0.26 * p + Math.sin(t * 4.2 + nc.ph) * 0.05;
+          nc.mesh.position.set(rx, ry, rz);
+          nc.mesh.rotation.set(Math.sin(t * 3 + nc.ph) * 0.12, Math.PI * 0.50 + sw * 0.4, Math.cos(t * 2.5 + nc.ph) * 0.12);
+        }} else {{
+          const rx = 1.66 + Math.abs(Math.sin(a)) * 0.18;
+          const rz = 1.32 + Math.sin(a) * nc.rad * (0.45 + 0.75 * p);
+          const ry = nc.baseY + Math.cos(a) * 0.26 * p + Math.sin(t * 4.2 + nc.ph) * 0.05;
+          nc.mesh.position.set(rx, ry, rz);
+          nc.mesh.rotation.set(Math.sin(t * 3 + nc.ph) * 0.12, -Math.PI * 0.56 + sw * 0.4, Math.cos(t * 2.5 + nc.ph) * 0.12);
+        }}
       }}
       alertLight.intensity = 1.35 * p;
       camShake = Math.max(camShake, 0.038 * Math.max(0, 1 - (t - T_TRAP) / 0.7));
     }} else if (isUrgent) {{
       alertLight.intensity = 0.55 + 1.15 * phoneVib;
+    }} else if (ENV_ID === 'survival_bunker') {{
+      alertLight.intensity = 0.30 + 0.35 * Math.abs(Math.sin(t * 3.8));
     }} else {{
       alertLight.intensity = 0.0;
     }}
     roomLamp.intensity = 1.05 - alertLight.intensity * 0.22;
 
-    // 3. First-Person POV Camera Choreography across 6 HabitSains Beats!
+    // 3. 4 DISTINCT First-Person POV Camera Choreographies (so every episode moves & shoots differently!)
     let camPos = new THREE.Vector3(0.45, 1.45, 1.45);
     let lookAt = new THREE.Vector3(1.75, 1.12, 1.32);
     let reachR = 0.0;
     let handRaise = 0.0;
 
-    if (t < T_TRAP) {{
-      // Beat 1: Waking up in bed at 7:01 AM looking over at the nightstand alarm & glowing phone!
-      const u = smooth(t / T_TRAP);
-      camPos.set(lerp(0.35, 0.62, u), lerp(1.40, 1.38, u), lerp(1.65, 1.38, u));
-      lookAt.set(lerp(1.90, 1.74, u), lerp(1.06, 1.13, u), lerp(1.22, 1.32, u));
-      reachR = lerp(0.0, 0.62, smooth((t - 1.2) / 2.2));
-    }} else if (t < T_EXPLAIN) {{
-      // Beat 2: STOP! POV recoils back in shock as glowing notification badges erupt in a halo around the phone!
-      const u = smooth((t - T_TRAP) / 0.75);
-      camPos.set(lerp(0.62, 0.34, u), lerp(1.38, 1.44, u), lerp(1.38, 1.34, u));
-      lookAt.set(1.74, lerp(1.13, 1.24, u), 1.32);
-      handRaise = 0.32;
-    }} else if (t < T_SCAN) {{
-      // Beat 3 & 4: Facing Prefrontal Cortex Partner cleanly inside bedroom (+ FOCUS WINDOW HUD headroom!)
-      const u = smooth((t - T_EXPLAIN) / 0.85);
-      camPos.set(lerp(0.34, 0.05, u), lerp(1.44, 1.88, u), lerp(1.34, 0.65, u));
-      lookAt.set(lerp(1.74, 0.05, u), lerp(1.24, 1.84, u), lerp(1.32, -1.35, u));
-      handRaise = 0.06;
-    }} else if (t < T_DESK) {{
-      // Beat 5: Partner raises 3D Brain Scan Tablet (-40% FOCUS / CRASH LASTS 6 HOURS)!
-      const u = smooth((t - T_SCAN) / 0.65);
-      camPos.set(lerp(0.05, -0.04, u), 1.84, lerp(0.65, 0.38, u));
-      lookAt.set(-0.08, 1.82, -1.35);
-      handRaise = 0.02;
-    }} else if (t < T_PING) {{
-      // Beat 6: POV pans LEFT to inspect the 3D Deep-Work Study Desk & Laptop, then turns back to Partner on T_AGREE!
-      const local = t - T_DESK;
-      const splitAt = Math.max(1.2, T_AGREE - T_DESK);
-      if (local < splitAt) {{
-        const u = smooth(local / 0.90);
-        camPos.set(lerp(-0.04, -0.58, u), lerp(1.84, 1.54, u), lerp(0.38, -0.45, u));
-        lookAt.set(lerp(-0.08, -2.22, u), lerp(1.82, 1.24, u), lerp(-1.35, -0.55, u));
+    if (ACT_PAT === 'desk_face_down') {{
+      // CHOREOGRAPHY B: Opens AT THE STUDY DESK looking down at the FACE-DOWN phone next to the laptop!
+      if (t < T_TRAP) {{
+        const u = smooth(t / T_TRAP);
+        camPos.set(lerp(-0.65, -0.92, u), lerp(1.62, 1.46, u), lerp(-0.10, -0.18, u));
+        lookAt.set(-2.02, lerp(1.16, 1.06, u), lerp(-0.32, -0.06, u));
+        reachR = lerp(0.0, 0.45, smooth((t - 1.0) / 2.0));
+      }} else if (t < T_EXPLAIN) {{
+        const u = smooth((t - T_TRAP) / 0.70);
+        camPos.set(lerp(-0.92, -0.42, u), lerp(1.46, 1.54, u), lerp(-0.18, -0.05, u));
+        lookAt.set(-1.95, lerp(1.06, 1.30, u), -0.08);
+        handRaise = 0.36;
+      }} else if (t < T_SCAN) {{
+        const u = smooth((t - T_EXPLAIN) / 0.85);
+        camPos.set(lerp(-0.42, 0.12, u), lerp(1.54, 1.88, u), lerp(-0.05, 0.62, u));
+        lookAt.set(lerp(-1.95, 0.05, u), lerp(1.30, 1.84, u), lerp(-0.08, -1.35, u));
+        handRaise = 0.06;
+      }} else if (t < T_DESK) {{
+        const u = smooth((t - T_SCAN) / 0.65);
+        camPos.set(lerp(0.12, -0.06, u), 1.82, lerp(0.62, 0.34, u));
+        lookAt.set(-0.08, 1.82, -1.35);
+      }} else if (t < T_PING) {{
+        const local = t - T_DESK;
+        const splitAt = Math.max(1.2, T_AGREE - T_DESK);
+        if (local < splitAt) {{
+          const u = smooth(local / 0.85);
+          camPos.set(lerp(-0.06, -0.62, u), lerp(1.82, 1.52, u), lerp(0.34, -0.46, u));
+          lookAt.set(lerp(-0.08, -2.22, u), lerp(1.82, 1.22, u), lerp(-1.35, -0.55, u));
+        }} else {{
+          const u = smooth((local - splitAt) / 0.70);
+          camPos.set(lerp(-0.62, 0.05, u), lerp(1.52, 1.84, u), lerp(-0.46, 0.48, u));
+          lookAt.set(lerp(-2.22, 0.05, u), lerp(1.22, 1.84, u), lerp(-0.55, -1.35, u));
+          handRaise = lerp(0.05, 0.25, u);
+        }}
       }} else {{
-        const u = smooth((local - splitAt) / 0.75);
-        camPos.set(lerp(-0.58, 0.05, u), lerp(1.54, 1.84, u), lerp(-0.45, 0.48, u));
-        lookAt.set(lerp(-2.22, 0.05, u), lerp(1.24, 1.84, u), lerp(-0.55, -1.35, u));
-        handRaise = lerp(0.05, 0.25, u);
+        const u = smooth((t - T_PING) / 0.50);
+        camPos.set(lerp(0.05, -0.86, u), lerp(1.84, 1.38, u), lerp(0.48, -0.02, u));
+        lookAt.set(lerp(0.05, -1.94, u), lerp(1.84, 1.20, u), lerp(-1.35, -0.02, u));
+        reachR = lerp(0.0, 0.58, smooth((t - (T_PING + 1.0)) / 1.8));
+        handRaise = 0.18;
+      }}
+    }} else if (ACT_PAT === 'partner_first_confrontation') {{
+      // CHOREOGRAPHY C: Opens FACE-TO-FACE with Partner urgently blocking POV -> whips to exploding cards -> dynamic orbit!
+      if (t < T_TRAP) {{
+        const u = smooth(t / T_TRAP);
+        camPos.set(lerp(-0.25, 0.20, u), lerp(1.76, 1.86, u), lerp(0.85, 0.42, u));
+        lookAt.set(0.05, 1.84, -1.35);
+        handRaise = lerp(0.05, 0.22, u);
+      }} else if (t < T_EXPLAIN) {{
+        const u = smooth((t - T_TRAP) / 0.65);
+        camPos.set(lerp(0.20, 0.36, u), lerp(1.86, 1.44, u), lerp(0.42, 1.32, u));
+        lookAt.set(lerp(0.05, 1.74, u), lerp(1.84, 1.24, u), lerp(-1.35, 1.32, u));
+        handRaise = 0.34;
+      }} else if (t < T_SCAN) {{
+        const u = smooth((t - T_EXPLAIN) / 0.90);
+        const orbitX = Math.sin((t - T_EXPLAIN) * 0.7) * 0.28;
+        camPos.set(lerp(0.36, orbitX, u), lerp(1.44, 1.92, u), lerp(1.32, 0.58, u));
+        lookAt.set(lerp(1.74, 0.05, u), lerp(1.24, 1.84, u), lerp(1.32, -1.35, u));
+      }} else if (t < T_DESK) {{
+        const u = smooth((t - T_SCAN) / 0.60);
+        camPos.set(lerp(0.0, -0.06, u), lerp(1.92, 1.72, u), lerp(0.58, 0.32, u));
+        lookAt.set(-0.08, 1.82, -1.35);
+      }} else if (t < T_PING) {{
+        const local = t - T_DESK;
+        const splitAt = Math.max(1.2, T_AGREE - T_DESK);
+        if (local < splitAt) {{
+          const u = smooth(local / 0.85);
+          camPos.set(lerp(-0.06, -0.45, u), lerp(1.72, 1.96, u), lerp(0.32, -0.35, u));
+          lookAt.set(lerp(-0.08, -2.22, u), lerp(1.82, 1.18, u), lerp(-1.35, -0.55, u));
+        }} else {{
+          const u = smooth((local - splitAt) / 0.75);
+          camPos.set(lerp(-0.45, 0.05, u), lerp(1.96, 1.84, u), lerp(-0.35, 0.48, u));
+          lookAt.set(lerp(-2.22, 0.05, u), lerp(1.18, 1.84, u), lerp(-0.55, -1.35, u));
+          handRaise = lerp(0.05, 0.26, u);
+        }}
+      }} else {{
+        const u = smooth((t - T_PING) / 0.50);
+        camPos.set(lerp(0.05, 0.68, u), lerp(1.84, 1.32, u), lerp(0.48, 1.34, u));
+        lookAt.set(lerp(0.05, 1.74, u), lerp(1.84, 1.07, u), lerp(-1.35, 1.32, u));
+        reachR = lerp(0.0, 0.58, smooth((t - (T_PING + 1.0)) / 1.8));
+        handRaise = 0.16;
+      }}
+    }} else if (ACT_PAT === 'coffee_window_pan') {{
+      // CHOREOGRAPHY D: Opens framing bright window & steaming 3D Hero Coffee Mug -> sweeps to trap -> Partner -> Desk!
+      if (t < T_TRAP) {{
+        const u = smooth(t / T_TRAP);
+        camPos.set(lerp(0.32, 0.70, u), lerp(1.56, 1.38, u), lerp(0.92, 1.24, u));
+        lookAt.set(lerp(2.45, 1.84, u), lerp(1.58, 1.08, u), lerp(0.25, 1.08, u));
+        reachR = lerp(0.0, 0.52, smooth((t - 1.2) / 2.0));
+      }} else if (t < T_EXPLAIN) {{
+        const u = smooth((t - T_TRAP) / 0.75);
+        camPos.set(lerp(0.72, 0.34, u), lerp(1.36, 1.44, u), lerp(1.56, 1.38, u));
+        lookAt.set(1.78, lerp(1.06, 1.24, u), 1.38);
+        handRaise = 0.34;
+      }} else if (t < T_SCAN) {{
+        const u = smooth((t - T_EXPLAIN) / 0.85);
+        camPos.set(lerp(0.34, 0.05, u), lerp(1.44, 1.88, u), lerp(1.38, 0.65, u));
+        lookAt.set(lerp(1.78, 0.05, u), lerp(1.24, 1.84, u), lerp(1.38, -1.35, u));
+      }} else if (t < T_DESK) {{
+        const u = smooth((t - T_SCAN) / 0.65);
+        camPos.set(lerp(0.05, -0.04, u), 1.84, lerp(0.65, 0.38, u));
+        lookAt.set(-0.08, 1.82, -1.35);
+      }} else if (t < T_PING) {{
+        const local = t - T_DESK;
+        const splitAt = Math.max(1.2, T_AGREE - T_DESK);
+        if (local < splitAt) {{
+          const u = smooth(local / 0.90);
+          camPos.set(lerp(-0.04, -0.58, u), lerp(1.84, 1.54, u), lerp(0.38, -0.45, u));
+          lookAt.set(lerp(-0.08, -2.22, u), lerp(1.82, 1.24, u), lerp(-1.35, -0.55, u));
+        }} else {{
+          const u = smooth((local - splitAt) / 0.75);
+          camPos.set(lerp(-0.58, 0.05, u), lerp(1.54, 1.84, u), lerp(-0.45, 0.48, u));
+          lookAt.set(lerp(-2.22, 0.05, u), lerp(1.24, 1.84, u), lerp(-0.55, -1.35, u));
+          handRaise = lerp(0.05, 0.25, u);
+        }}
+      }} else {{
+        const u = smooth((t - T_PING) / 0.55);
+        camPos.set(lerp(0.05, 0.68, u), lerp(1.84, 1.32, u), lerp(0.48, 1.34, u));
+        lookAt.set(lerp(0.05, 1.74, u), lerp(1.84, 1.07, u), lerp(-1.35, 1.32, u));
+        reachR = lerp(0.0, 0.55, smooth((t - (T_PING + 1.1)) / 1.8));
+        handRaise = 0.16;
       }}
     }} else {{
-      // Beat 7: BUZZ! BUZZ! BUZZ! POV snaps RIGHT back to the nightstand phone glowing red (3 URGENT ALERTS)!
-      const u = smooth((t - T_PING) / 0.55);
-      camPos.set(lerp(0.05, 0.68, u), lerp(1.84, 1.32, u), lerp(0.48, 1.34, u));
-      lookAt.set(lerp(0.05, 1.74, u), lerp(1.84, 1.07, u), lerp(-1.35, 1.32, u));
-      reachR = lerp(0.0, 0.55, smooth((t - (T_PING + 1.1)) / 1.8));
-      handRaise = 0.16;
+      // CHOREOGRAPHY A (Classic Wake-Up): Nightstand alarm & phone -> Recoil -> Partner -> Scan -> Desk -> Urgent Phone
+      if (t < T_TRAP) {{
+        const u = smooth(t / T_TRAP);
+        camPos.set(lerp(0.35, 0.62, u), lerp(1.40, 1.38, u), lerp(1.65, 1.38, u));
+        lookAt.set(lerp(1.90, 1.74, u), lerp(1.06, 1.13, u), lerp(1.22, 1.32, u));
+        reachR = lerp(0.0, 0.62, smooth((t - 1.2) / 2.2));
+      }} else if (t < T_EXPLAIN) {{
+        const u = smooth((t - T_TRAP) / 0.75);
+        camPos.set(lerp(0.62, 0.34, u), lerp(1.38, 1.44, u), lerp(1.38, 1.34, u));
+        lookAt.set(1.74, lerp(1.13, 1.24, u), 1.32);
+        handRaise = 0.32;
+      }} else if (t < T_SCAN) {{
+        const u = smooth((t - T_EXPLAIN) / 0.85);
+        camPos.set(lerp(0.34, 0.05, u), lerp(1.44, 1.88, u), lerp(1.34, 0.65, u));
+        lookAt.set(lerp(1.74, 0.05, u), lerp(1.24, 1.84, u), lerp(1.32, -1.35, u));
+        handRaise = 0.06;
+      }} else if (t < T_DESK) {{
+        const u = smooth((t - T_SCAN) / 0.65);
+        camPos.set(lerp(0.05, -0.04, u), 1.84, lerp(0.65, 0.38, u));
+        lookAt.set(-0.08, 1.82, -1.35);
+        handRaise = 0.02;
+      }} else if (t < T_PING) {{
+        const local = t - T_DESK;
+        const splitAt = Math.max(1.2, T_AGREE - T_DESK);
+        if (local < splitAt) {{
+          const u = smooth(local / 0.90);
+          camPos.set(lerp(-0.04, -0.58, u), lerp(1.84, 1.54, u), lerp(0.38, -0.45, u));
+          lookAt.set(lerp(-0.08, -2.22, u), lerp(1.82, 1.24, u), lerp(-1.35, -0.55, u));
+        }} else {{
+          const u = smooth((local - splitAt) / 0.75);
+          camPos.set(lerp(-0.58, 0.05, u), lerp(1.54, 1.84, u), lerp(-0.45, 0.48, u));
+          lookAt.set(lerp(-2.22, 0.05, u), lerp(1.24, 1.84, u), lerp(-0.55, -1.35, u));
+          handRaise = lerp(0.05, 0.25, u);
+        }}
+      }} else {{
+        const u = smooth((t - T_PING) / 0.55);
+        camPos.set(lerp(0.05, 0.68, u), lerp(1.84, 1.32, u), lerp(0.48, 1.34, u));
+        lookAt.set(lerp(0.05, 1.74, u), lerp(1.84, 1.07, u), lerp(-1.35, 1.32, u));
+        reachR = lerp(0.0, 0.55, smooth((t - (T_PING + 1.1)) / 1.8));
+        handRaise = 0.16;
+      }}
     }}
 
     const sx = Math.sin(t * 47) * camShake;

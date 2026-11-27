@@ -1610,36 +1610,56 @@ def _words_from_scene_audio(scene_audio: Any) -> list[WordEvent]:
     return out
 
 
-def _map_blueprint_scene_to_cozy(scene: dict[str, Any], idx: int, total: int, seg_dur: float) -> dict[str, Any]:
-    """Automatically choose the most story-matched Studio v8.3 diorama, mood, cards, and icons."""
+def _map_blueprint_scene_to_cozy(
+    scene: dict[str, Any],
+    idx: int,
+    total: int,
+    seg_dur: float,
+    prev_type: str = "",
+    topic_seed: int = 0,
+) -> dict[str, Any]:
+    """Automatically choose the most story-matched Studio v8.3 diorama, mood, cards, and icons without repeating consecutive scenes."""
     raw = f"{scene.get('section', '')} {scene.get('badge', '')} {scene.get('visual_headline', '')} {scene.get('narration', '')}".lower()
     headline = str(scene.get("visual_headline") or f"Part {idx}").strip()
-    callout = str(scene.get("on_screen_callout") or "Science-backed focus & habit protocol").strip()
+    callout = str(scene.get("on_screen_callout") or "Simple science-backed habit shift").strip()
     bullets = [re.sub(r"^\d+[\.\)]\s*", "", str(b)).strip() for b in (scene.get("bullet_points") or []) if str(b).strip()]
 
-    # Choose diorama type intelligently by story beat & keywords
+    # Choose diorama type intelligently by story beat & keywords (seeded by topic so different titles get distinct openings & flow!)
     explicit = str(scene.get("cozy_scene_type") or "").strip().lower()
     valid = (
         "bedroom_morning_scroll", "bedroom_scroll_flood", "desk_cognitive_fog",
         "focus_shield_repel", "cozy_deep_work_desk", "neural_pathway_stars", "closing_dual_cards",
     )
+    cycle = ("cozy_deep_work_desk", "desk_cognitive_fog", "focus_shield_repel", "bedroom_morning_scroll", "neural_pathway_stars", "bedroom_scroll_flood")
     if explicit in valid:
         stype = explicit
     elif idx == total and total >= 3:
         stype = "closing_dual_cards"
     elif idx == 1:
-        stype = "bedroom_morning_scroll" if any(k in raw for k in ("scroll", "phone", "morning", "wake", "bed", "clip")) else "cozy_deep_work_desk"
-    elif any(k in raw for k in ("residue", "mechanism", "study", "research", "science", "23", "dopamine", "trap", "fog")):
+        if any(k in raw for k in ("bed", "morning", "wake", "7 am", "sleep", "night")):
+            stype = "bedroom_morning_scroll"
+        elif any(k in raw for k in ("scroll", "feed", "clip", "video", "ping", "alert")):
+            stype = "bedroom_scroll_flood"
+        elif any(k in raw for k in ("coffee", "desk", "work", "laptop", "task", "start")):
+            stype = "cozy_deep_work_desk"
+        else:
+            stype = cycle[topic_seed % len(cycle)]
+    elif any(k in raw for k in ("residue", "mechanism", "study", "research", "science", "23", "dopamine", "trap", "fog", "crash", "tired")):
         stype = "desk_cognitive_fog"
-    elif any(k in raw for k in ("shield", "block", "distract", "noise", "protect")):
+    elif any(k in raw for k in ("shield", "block", "distract", "noise", "protect", "drawer", "room", "away")):
         stype = "focus_shield_repel"
-    elif any(k in raw for k in ("protocol", "step", "reset", "neuron", "myelin", "pathway", "habit", "66")):
+    elif any(k in raw for k in ("protocol", "step", "reset", "idea", "shower", "brain", "habit", "7-day", "five min", "5 min")):
         stype = "neural_pathway_stars"
-    elif any(k in raw for k in ("scroll", "autopilot", "feed", "swipe")):
+    elif any(k in raw for k in ("scroll", "autopilot", "feed", "swipe", "phone")):
         stype = "bedroom_scroll_flood"
+    elif any(k in raw for k in ("coffee", "desk", "focus", "calm", "quiet")):
+        stype = "cozy_deep_work_desk"
     else:
-        cycle = ("bedroom_morning_scroll", "desk_cognitive_fog", "focus_shield_repel", "cozy_deep_work_desk", "neural_pathway_stars")
-        stype = cycle[(idx - 1) % len(cycle)]
+        stype = cycle[(topic_seed + idx - 1) % len(cycle)]
+
+    # Never repeat the exact same diorama room back-to-back!
+    if stype == prev_type and stype != "closing_dual_cards":
+        stype = cycle[(cycle.index(stype) + 1 + (topic_seed % 2)) % len(cycle)] if stype in cycle else "cozy_deep_work_desk"
 
     # Build clean card rows from bullets / callout
     rows: list[dict[str, str]] = []
@@ -1741,6 +1761,8 @@ def render_cozy_diorama_video_for_pipeline(
     seg_videos: list[Path] = []
     scene_starts: list[float] = []
     cursor = 0.0
+    prev_cozy_type = ""
+    cozy_seed = sum(ord(c) for c in "".join(str(s.get("visual_headline", "")) for s in (scenes_meta or [])))
 
     for idx, scene_audio in enumerate(audio_bundle.scene_results, start=1):
         seg_dur = max(float(scene_audio.duration_sec) + pause_sec, 1.0)
@@ -1748,8 +1770,9 @@ def render_cozy_diorama_video_for_pipeline(
         cursor += seg_dur
 
         s_raw = scenes_meta[idx - 1] if scenes_meta and idx - 1 < len(scenes_meta) else {"visual_headline": f"Part {idx}", "narration": scene_audio.text}
-        sc = _map_blueprint_scene_to_cozy(s_raw, idx, total_scenes, seg_dur)
+        sc = _map_blueprint_scene_to_cozy(s_raw, idx, total_scenes, seg_dur, prev_type=prev_cozy_type, topic_seed=cozy_seed)
         stype = sc["scene_type"]
+        prev_cozy_type = stype
         words = _words_from_scene_audio(scene_audio)
         phrases = _chunk_phrases(words, max_words=9 if is_land else 7)
         gold_words = {re.sub(r"[^A-Z0-9]", "", str(w).upper()) for w in sc["gold_words"]}
