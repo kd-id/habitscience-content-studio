@@ -239,12 +239,12 @@ def _build_luminous_sky_html(payload: dict[str, Any], width: int, height: int) -
     font_css = _load_amiri_font_css()
     cfg_json = json.dumps(payload, ensure_ascii=False)
     is_short = height >= width
-    top_pad = 96 if is_short else 44
-    ar_size = 56 if is_short else 52
-    tr_size = 24 if is_short else 22
-    en_size = 21 if is_short else 20
-    sub_size = 33 if is_short else 32
-    card_max_w = 640 if is_short else 980
+    top_pad = 96 if is_short else 22
+    ar_size = 56 if is_short else 42
+    tr_size = 24 if is_short else 19
+    en_size = 21 if is_short else 17
+    sub_size = 33 if is_short else 30
+    card_max_w = 640 if is_short else 920
 
     return f"""<!doctype html>
 <html>
@@ -284,13 +284,12 @@ def _build_luminous_sky_html(payload: dict[str, Any], width: int, height: int) -
 
   .dalil-box {{
     width: 100%; max-width: {card_max_w}px;
-    background: rgba(8, 16, 34, 0.34);
-    border: 1px solid rgba(245, 208, 118, 0.28);
+    background: rgba(7, 15, 32, 0.54);
+    border: 1px solid rgba(245, 208, 118, 0.34);
     border-radius: 22px;
-    padding: {22 if is_short else 16}px {26 if is_short else 30}px;
+    padding: {22 if is_short else 12}px {26 if is_short else 28}px;
     text-align: center;
-    backdrop-filter: blur(8px);
-    box-shadow: 0 14px 36px rgba(0,0,0,0.28);
+    box-shadow: 0 14px 36px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.08);
   }}
 
   .arabic-text {{
@@ -345,16 +344,15 @@ def _build_luminous_sky_html(payload: dict[str, Any], width: int, height: int) -
   /* Synchronized conversational subtitle above the horizon/water */
   .sub-area {{
     position: absolute; left: 32px; right: 32px;
-    bottom: {195 if is_short else 72}px;
+    bottom: {195 if is_short else 50}px;
     z-index: 8; text-align: center;
   }}
   .sub-card {{
     display: inline-block; max-width: {640 if is_short else 960}px;
     padding: 12px 24px; border-radius: 16px;
-    background: rgba(5, 11, 24, 0.62);
-    border: 1px solid rgba(255,255,255,0.16);
-    backdrop-filter: blur(6px);
-    box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+    background: rgba(5, 11, 24, 0.76);
+    border: 1px solid rgba(255,255,255,0.18);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.48);
   }}
   .sub-text {{
     font-size: {sub_size}px; font-weight: 700; line-height: 1.28;
@@ -675,7 +673,7 @@ function drawNatureTransformScene(progress, t) {{
 }}
 
 function drawPrayerSkyScene(progress, t) {{
-  const horizonY = H * (IS_SHORT ? 0.74 : 0.72);
+  const horizonY = H * (IS_SHORT ? 0.74 : 0.78);
   const fIdx = progress * (SKY_STAGES.length - 1);
   const i0 = Math.min(Math.floor(fIdx), SKY_STAGES.length - 2);
   const frac = fIdx - i0;
@@ -759,7 +757,7 @@ function drawPrayerSkyScene(progress, t) {{
     ctx.fillRect(sunX - spread * 0.5 + wob, wy, spread, 2.2);
   }}
 
-  const scale = IS_SHORT ? 1.02 : 1.15;
+  const scale = IS_SHORT ? 1.02 : 0.70;
   drawMosqueSilhouette(horizonY, scale, t, true);
   drawMosqueSilhouette(horizonY, scale, t, false);
 }}
@@ -1624,46 +1622,56 @@ def render_islamic_visual_video_for_pipeline(
         f"{final_dur:.1f}s, nature={nature_preset})...",
         flush=True,
     )
+    ffmpeg_err_log = work_dir / f"ffmpeg_{mode}_err.log"
     cmd = [
-        "ffmpeg", "-y",
+        "ffmpeg", "-y", "-nostats", "-loglevel", "warning",
         "-f", "image2pipe", "-vcodec", "mjpeg", "-r", str(fps), "-i", "pipe:0",
         "-vf", f"scale={target_w}:{target_h}:flags=lanczos:in_range=full:out_range=tv,format=yuv420p",
         "-c:v", "libx264", "-profile:v", "main", "-level:v", "4.0", "-preset", "veryfast", "-crf", "20",
         "-pix_fmt", "yuv420p", "-color_range", "tv", "-an",
         str(silent_mp4),
     ]
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-    assert proc.stdin is not None
+    import time as _time
+    t_render0 = _time.perf_counter()
+    with ffmpeg_err_log.open("wb") as err_fh:
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=err_fh)
+        assert proc.stdin is not None
 
-    with sync_playwright() as pw:
-        chrome = find_chrome_executable()
-        launch_kw: dict[str, Any] = {
-            "headless": True,
-            "args": ["--no-sandbox", "--disable-gpu-sandbox"],
-        }
-        if chrome:
-            launch_kw["executable_path"] = chrome
-        br = pw.chromium.launch(**launch_kw)
-        page = br.new_page(viewport={"width": gl_w, "height": gl_h}, device_scale_factor=1)
-        page.set_content(html_doc, wait_until="load")
-        # Ensure embedded Amiri Arabic calligraphy fonts finish loading before frame 0!
-        page.evaluate("() => document.fonts.ready")
+        with sync_playwright() as pw:
+            chrome = find_chrome_executable()
+            launch_kw: dict[str, Any] = {
+                "headless": True,
+                "args": ["--no-sandbox", "--disable-gpu-sandbox"],
+            }
+            if chrome:
+                launch_kw["executable_path"] = chrome
+            br = pw.chromium.launch(**launch_kw)
+            page = br.new_page(viewport={"width": gl_w, "height": gl_h}, device_scale_factor=1)
+            page.set_content(html_doc, wait_until="load")
+            # Ensure embedded Amiri Arabic calligraphy fonts finish loading before frame 0!
+            page.evaluate("() => document.fonts.ready")
 
-        try:
-            for f_i in range(total_frames):
-                t = f_i / float(fps)
-                page.evaluate(f"window.renderAt({t:.4f})")
-                jpg_bytes = page.screenshot(type="jpeg", quality=93)
-                proc.stdin.write(jpg_bytes)
-                if f_i > 0 and f_i % 240 == 0:
-                    print(f"[v10-{mode}] Rendered {f_i}/{total_frames} frames ({100 * f_i / total_frames:.0f}%)...", flush=True)
-        finally:
-            br.close()
-            if proc.stdin and not proc.stdin.closed:
-                proc.stdin.close()
+            try:
+                for f_i in range(total_frames):
+                    t = f_i / float(fps)
+                    page.evaluate(f"window.renderAt({t:.4f})")
+                    jpg_bytes = page.screenshot(type="jpeg", quality=92)
+                    proc.stdin.write(jpg_bytes)
+                    if f_i > 0 and f_i % 120 == 0:
+                        el = max(_time.perf_counter() - t_render0, 0.01)
+                        print(
+                            f"[v10-{mode}] Rendered {f_i}/{total_frames} frames "
+                            f"({100 * f_i / total_frames:.0f}%, {f_i / el:.1f} fps)...",
+                            flush=True,
+                        )
+            finally:
+                br.close()
+                if proc.stdin and not proc.stdin.closed:
+                    proc.stdin.close()
 
-    err = proc.stderr.read().decode("utf-8", errors="ignore") if proc.stderr else ""
-    ret = proc.wait()
+        ret = proc.wait()
+
+    err = ffmpeg_err_log.read_text(encoding="utf-8", errors="ignore") if ffmpeg_err_log.exists() else ""
     if ret != 0:
         raise RuntimeError(f"FFmpeg v10 '{mode}' render failed ({ret}): {err[-300:]}")
 
