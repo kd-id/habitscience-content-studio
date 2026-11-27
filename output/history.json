@@ -240,5 +240,34 @@
       "failed": 0
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-27_212201_why-your-mind-stays-restless-until-i/PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-28_003028_why-reading-surah-al-kahf-every-frid",
+    "slug": "why-reading-surah-al-kahf-every-friday-guards-yo",
+    "topic": "Why Reading Surah Al-Kahf Every Friday Guards Your Mind From 4 Modern Traps",
+    "pillar": "sunnah_particle_map",
+    "pillar_label": "Sunnah & Brain Science Map",
+    "generated_at_wib": "2026-11-28 00:40:51 WIB",
+    "publish_mode": "scheduled",
+    "visual_style_long": "islamic_particle_map",
+    "visual_style_short": "islamic_particle_map",
+    "external_ids": {
+      "YouTube Long (16:9)": "03WUYvEn8UU",
+      "YouTube Shorts (9:16)": "kfNF21fCd0M",
+      "Instagram Reels": "17910422220600166",
+      "Instagram Carousel": "18149445118596353",
+      "X & Threads": "threads:18024089387952095",
+      "Facebook Page Reels": "1673817127530424"
+    },
+    "counts": {
+      "total": 8,
+      "published": 3,
+      "scheduled": 3,
+      "drafted": 0,
+      "dry_run_ready": 0,
+      "pending_setup": 2,
+      "failed": 0
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-28_003028_why-reading-surah-al-kahf-every-frid/PUBLISH_REPORT.md"
   }
 ]
