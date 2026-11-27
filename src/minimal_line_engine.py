@@ -1295,8 +1295,9 @@ def render_minimal_line_video_for_pipeline(
     mixed_a = work_dir / "mixed_min.m4a"
     final_a = _mix_meditative_soundscape(Path(audio_bundle.master_audio_path), scene_starts, float(audio_bundle.total_duration_sec), mixed_a, work_dir)
     out_video_path.parent.mkdir(parents=True, exist_ok=True)
+    short_cap = ["-t", "58.5"] if is_short else []
     subprocess.run(
-        ["ffmpeg", "-y", "-i", str(merged_v), "-i", str(final_a), "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-shortest", str(out_video_path)],
+        ["ffmpeg", "-y", "-i", str(merged_v), "-i", str(final_a), *short_cap, "-c:v", "copy", "-ar", "48000", "-ac", "2", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-shortest", str(out_video_path)],
         capture_output=True, check=True,
     )
     for p in work_dir.glob("*"):

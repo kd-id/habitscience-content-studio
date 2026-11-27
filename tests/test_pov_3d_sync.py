@@ -121,6 +121,16 @@ class TestPov3DSyncAndPillars(unittest.TestCase):
         self.assertEqual(vals, sorted(vals))
         self.assertLess(timings["total_dur"], 58.2)
 
+    def test_each_pillar_maps_to_a_distinct_short_visual_style(self) -> None:
+        from src.config_loader import load_config
+
+        cfg = load_config()
+        rot = (cfg.get("content_pillars") or {}).get("rotation") or []
+        self.assertEqual(len(rot), 3)
+        short_styles = [p.get("visual_style_short") for p in rot]
+        self.assertEqual(len(set(short_styles)), 3, f"Expected 3 distinct short visual styles across pillars, got {short_styles}")
+        self.assertEqual(short_styles, ["pov_3d_toon", "cinema_broll_html", "minimal_line_story"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -84,8 +84,10 @@ video:
   #   "motion_hybrid"      (v4):   Programmatic Motion Graphics + B-Roll
   #   "ken_burns_images"   (v3):   Illustrated AI art + Ken Burns
   engine_mode: "hybrid_cozy_3dpov"
-  # Closed-Loop Visual Style Optimizer: 80% pakai gaya visual pemenang views tertinggi,
-  # 20% (setiap 5 run) uji gaya visual penantang (minimal_line_story / cinema_broll_html / cozy_diorama)
+  # Beda gaya visual otomatis per Pillar (Pillar 1=3D POV, Pillar 2=Cinema B-Roll HD, Pillar 3=Minimal Stick-Figure)
+  # agar tidak pernah ada 2 video berurutan yang tampilannya terlihat sama!
+  pillar_visual_styles: true
+  # Closed-Loop Visual Style Optimizer (aktif sebagai fallback bila pillar_visual_styles: false)
   auto_optimize_style: true
   style_explore_every_n_runs: 5
   broll_cut_interval_sec: 4.5
@@ -166,12 +168,18 @@ content_pillars:
     - id: "focus_habits"
       label: "Everyday Focus & Habits"
       description: "Simple everyday phone habits, focus tricks, and beating procrastination without academic jargon."
+      visual_style_long: "cozy_diorama"
+      visual_style_short: "pov_3d_toon"
     - id: "everyday_science"
       label: "Fun Everyday Science"
       description: "Light, surprising everyday brain & body facts (coffee crash, tired after 8h sleep, shower ideas, fake scroll breaks, naps, stress)."
+      visual_style_long: "cinema_broll_html"
+      visual_style_short: "cinema_broll_html"
     - id: "pov_survival"
       label: "3D POV Brain Challenge"
-      description: "Thrilling First-Person 3D POV countdown/survival challenges (@you.have.72hours vibe) with urgent [A]/[B] decisions."
+      description: "Thrilling First-Person countdown/survival brain challenges (@you.have.72hours vibe) with urgent [A]/[B] decisions."
+      visual_style_long: "cozy_diorama"
+      visual_style_short: "minimal_line_story"
 
 trends:
   locale_hl: "en-US"

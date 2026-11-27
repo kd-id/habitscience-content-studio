@@ -352,12 +352,15 @@ def build_video_from_scenes(
         and ass_file.stat().st_size > 0
     )
 
+    short_cap = ["-t", "58.5"] if is_short else []
     if burn_subs and use_ass and ass_file is not None:
         cmd_final = [
             "ffmpeg", "-y", "-i", str(merged_silent), "-i", str(final_audio),
-            "-vf", f"ass={ass_file.name}",
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
-            "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-shortest",
+            *short_cap,
+            "-vf", f"ass={ass_file.name},format=yuv420p",
+            "-c:v", "libx264", "-profile:v", "main", "-level:v", "4.0", "-preset", "veryfast", "-crf", "20",
+            "-pix_fmt", "yuv420p", "-color_range", "tv",
+            "-ar", "48000", "-ac", "2", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-shortest",
             str(out_video_path.name),
         ]
         subprocess.run(cmd_final, cwd=str(out_dir), capture_output=True, text=True, check=True)
@@ -369,16 +372,19 @@ def build_video_from_scenes(
         )
         cmd_final = [
             "ffmpeg", "-y", "-i", str(merged_silent), "-i", str(final_audio),
-            "-vf", f"subtitles={srt_file.name}:force_style='{style}'",
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
-            "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-shortest",
+            *short_cap,
+            "-vf", f"subtitles={srt_file.name}:force_style='{style}',format=yuv420p",
+            "-c:v", "libx264", "-profile:v", "main", "-level:v", "4.0", "-preset", "veryfast", "-crf", "20",
+            "-pix_fmt", "yuv420p", "-color_range", "tv",
+            "-ar", "48000", "-ac", "2", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-shortest",
             str(out_video_path.name),
         ]
         subprocess.run(cmd_final, cwd=str(out_dir), capture_output=True, text=True, check=True)
     else:
         cmd_final = [
             "ffmpeg", "-y", "-i", str(merged_silent), "-i", str(final_audio),
-            "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-shortest",
+            *short_cap,
+            "-c:v", "copy", "-ar", "48000", "-ac", "2", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-shortest",
             str(out_video_path),
         ]
         subprocess.run(cmd_final, capture_output=True, text=True, check=True)

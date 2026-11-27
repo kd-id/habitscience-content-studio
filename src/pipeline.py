@@ -77,10 +77,30 @@ def run_pipeline(
         config.setdefault("video", {})["engine_mode"] = visual_style
     effective_mode = publish_mode or config.get("publishing", {}).get("default_mode", "draft")
 
-    # Resolve active visual styles (supports Closed-Loop Auto-Optimization when engine_mode == hybrid_cozy_3dpov)
+    # Select topic & active Pillar FIRST so visual style can rotate distinctly per Pillar!
+    print("[1/7] Riset & pemilihan topik...", flush=True)
+    idea = select_topic(config=config, history_file=paths.history_file, manual_topic=topic, manual_angle=angle)
+
     vid_cfg = config.setdefault("video", {})
     base_mode = str(vid_cfg.get("engine_mode", "hybrid_cozy_3dpov")).lower().strip()
-    if base_mode == "hybrid_cozy_3dpov" and bool(vid_cfg.get("auto_optimize_style", False)):
+    pillar_map = {
+        str(p.get("id")): p
+        for p in ((config.get("content_pillars") or {}).get("rotation") or [])
+        if isinstance(p, dict) and p.get("id")
+    }
+    active_pillar_cfg = pillar_map.get(getattr(idea, "pillar", ""), {})
+
+    if base_mode == "hybrid_cozy_3dpov" and bool(vid_cfg.get("pillar_visual_styles", True)) and active_pillar_cfg:
+        opt_long = str(active_pillar_cfg.get("visual_style_long") or "cozy_diorama").strip()
+        opt_short = str(active_pillar_cfg.get("visual_style_short") or "pov_3d_toon").strip()
+        opt_reason = f"pillar_style:{idea.pillar}"
+        vid_cfg.setdefault("youtube_long", {})["engine_mode"] = opt_long
+        vid_cfg.setdefault("shorts", {})["engine_mode"] = opt_short
+        print(
+            f"[0/7] Gaya Visual Per-Pillar aktif ({idea.pillar_label}) -> Long={opt_long}, Shorts={opt_short}",
+            flush=True,
+        )
+    elif base_mode == "hybrid_cozy_3dpov" and bool(vid_cfg.get("auto_optimize_style", False)):
         hist_len = len(load_history(paths.history_file))
         opt_long, opt_short, opt_reason = choose_next_visual_styles(
             paths.output_dir / "analytics_insights.json", hist_len, config
@@ -92,9 +112,6 @@ def run_pipeline(
         opt_long, opt_short, opt_reason = "cozy_diorama", "pov_3d_toon", "hybrid_default"
     else:
         opt_long, opt_short, opt_reason = base_mode, base_mode, "manual_override"
-
-    print("[1/7] Riset & pemilihan topik...", flush=True)
-    idea = select_topic(config=config, history_file=paths.history_file, manual_topic=topic, manual_angle=angle)
 
     print(f"[2/7] Menyusun Master Script & Repurpose multi-format untuk: {idea.topic}", flush=True)
     blueprint = generate_content_blueprint(idea=idea, config=config, brief_override_path=brief_path)
