@@ -1733,7 +1733,7 @@ def render_islamic_visual_video_for_pipeline(
     gl_w, gl_h = (720, 1280) if target_h >= target_w else (1280, 720)
     is_cloud = os.getenv("HEADLESS_CLOUD", "").strip() == "1"
     render_fps = (16 if is_short else 12) if is_cloud else 24
-    out_fps = 24
+    out_fps = 30
     dsf = 0.75 if is_cloud else 1.0
     fps = render_fps
     safe_cap = min(max_short_sec - 0.8, 58.2) if is_short else 9999.0
@@ -1795,10 +1795,16 @@ def render_islamic_visual_video_for_pipeline(
     cmd = [
         "ffmpeg", "-y", "-nostats", "-loglevel", "warning",
         "-f", "image2pipe", "-vcodec", "mjpeg", "-r", str(render_fps), "-i", "pipe:0",
-        "-vf", f"scale={target_w}:{target_h}:flags=lanczos:in_range=full:out_range=tv,format=yuv420p",
+        "-vf", (
+            f"scale={target_w}:{target_h}:flags=lanczos:in_range=full:out_range=tv,"
+            "setsar=1,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv,format=yuv420p"
+        ),
         "-r", str(out_fps),
         "-c:v", "libx264", "-profile:v", "main", "-level:v", "4.0", "-preset", "veryfast", "-crf", "20",
-        "-pix_fmt", "yuv420p", "-color_range", "tv", "-an",
+        "-g", "60", "-keyint_min", "30", "-sc_threshold", "0",
+        "-pix_fmt", "yuv420p", "-color_range", "tv",
+        "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
+        "-map_metadata", "-1", "-an",
         str(silent_mp4),
     ]
     import time as _time
@@ -1850,8 +1856,9 @@ def render_islamic_visual_video_for_pipeline(
     subprocess.run(
         [
             "ffmpeg", "-y", "-i", str(silent_mp4), "-i", str(mixed_m4a),
+            "-map", "0:v:0", "-map", "1:a:0",
             "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
-            "-movflags", "+faststart", "-shortest",
+            "-map_metadata", "-1", "-movflags", "+faststart", "-shortest",
             str(out_video_path),
         ],
         capture_output=True, check=True,
