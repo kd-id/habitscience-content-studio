@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from src.arabic_audio import parse_quran_citation, resolve_dalil_arabic_audio
 from src.config_loader import load_config
 from src.ideation import PILLAR_TOPIC_BANKS, select_topic
 from src.islamic_visual_engine import (
@@ -134,6 +135,50 @@ class TestIslamicVisualsV10(unittest.TestCase):
             for other_id, other_prof in ISLAMIC_FORMAT_PROFILES.items():
                 if other_id != pillar_id:
                     self.assertNotIn(other_prof["visual_style"], prompt)
+
+    def test_quran_citation_parser_and_uncut_qari_adab_routing(self) -> None:
+        self.assertEqual(parse_quran_citation("QUR'AN 13:28"), (13, 28, 28))
+        self.assertEqual(parse_quran_citation("QUR'AN 94:5-6"), (94, 5, 6))
+        self.assertEqual(parse_quran_citation("QUR'AN 78:9-10"), (78, 9, 10))
+        self.assertIsNone(parse_quran_citation("SAHIH AL-BUKHARI 6464"))
+        self.assertIsNone(parse_quran_citation("SUNAN ABI DAWUD 2606"))
+
+        cfg = load_config()
+        with tempfile.TemporaryDirectory() as tmp:
+            wdir = Path(tmp)
+            fake_qari = wdir / "q.wav"
+            fake_qari.write_bytes(b"RIFF" + b"\x00" * 64)
+            fake_tts = wdir / "t.wav"
+            fake_tts.write_bytes(b"RIFF" + b"\x00" * 64)
+
+            # 1) Short Qur'an Ayah (<=20s) uses real uncut Mishary Alafasy Qari!
+            with patch("src.arabic_audio.fetch_everyayah_quran_wav", return_value=(fake_qari, 15.5)):
+                res = resolve_dalil_arabic_audio(
+                    PILLAR_TOPIC_BANKS["quran_mental_peace"][2]["dalil"], wdir, cfg, is_short=True
+                )
+                assert res is not None
+                self.assertTrue(res.is_real_qari)
+                self.assertIn("everyayah:", res.source)
+
+            # 2) Ultra-long Qur'an Ayah (>20s) on Short NEVER chops Qari mid-verse -> routes to Saudi Arabic TTS!
+            fake_qari.write_bytes(b"RIFF" + b"\x00" * 64)
+            with patch("src.arabic_audio.fetch_everyayah_quran_wav", return_value=(fake_qari, 53.0)), \
+                 patch("src.arabic_audio.synthesize_arabic_tts_wav", return_value=(fake_tts, 4.2)):
+                res = resolve_dalil_arabic_audio(
+                    PILLAR_TOPIC_BANKS["quran_mental_peace"][3]["dalil"], wdir, cfg, is_short=True
+                )
+                assert res is not None
+                self.assertFalse(res.is_real_qari)
+                self.assertIn("ar-SA-HamedNeural", res.source)
+
+            # 3) Hadith / Prophetic Dua routes cleanly to Saudi Arabic TTS (ar-SA-HamedNeural)
+            with patch("src.arabic_audio.synthesize_arabic_tts_wav", return_value=(fake_tts, 3.8)):
+                res = resolve_dalil_arabic_audio(
+                    PILLAR_TOPIC_BANKS["prophetic_habits"][1]["dalil"], wdir, cfg, is_short=True
+                )
+                assert res is not None
+                self.assertFalse(res.is_real_qari)
+                self.assertIn("ar-SA-HamedNeural", res.source)
 
 
 if __name__ == "__main__":

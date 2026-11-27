@@ -33,6 +33,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from src.arabic_audio import ArabicRecitationResult, resolve_dalil_arabic_audio
 from src.html_motion_overlay import find_chrome_executable
 from src.sfx_engine import mix_nature_voice_soundscape
 from src.voiceover import TrackAudioBundle, probe_duration_sec
@@ -772,29 +773,49 @@ window.renderAt = function(t) {{
     drawPrayerSkyScene(progress, t);
   }}
 
-  // Active scene lookup
-  let cur = CFG.scenes[CFG.scenes.length - 1];
-  for (const s of CFG.scenes) {{
-    if (t >= s.start && t <= s.end) {{ cur = s; break; }}
+  // Check if Arabic recitation (Real Qari / Saudi Arabic VO) is actively playing
+  const arWin = CFG.arabic_window;
+  const inArabic = !!(arWin && t >= arWin.start - 0.05 && t <= arWin.end + 0.12);
+  const dalilBox = document.getElementById('dalilBox');
+  if (dalilBox) {{
+    dalilBox.style.borderColor = inArabic ? 'rgba(245, 208, 118, 0.85)' : 'rgba(245, 208, 118, 0.34)';
+    dalilBox.style.boxShadow = inArabic
+      ? '0 0 34px rgba(245, 208, 118, 0.32), 0 14px 36px rgba(0,0,0,0.38)'
+      : '0 14px 36px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.08)';
+  }}
+
+  // Active scene lookup (during Arabic recitation after Scene 1, hold cleanly on Scene 1 index instead of flashing final scene!)
+  let cur = inArabic ? CFG.scenes[0] : CFG.scenes[CFG.scenes.length - 1];
+  if (!inArabic) {{
+    for (const s of CFG.scenes) {{
+      if (t >= s.start && t <= s.end) {{ cur = s; break; }}
+    }}
   }}
   const idx = cur ? cur.idx : 0;
   document.getElementById('eyebrow').textContent = `${{CFG.dalil.pillar_label}}  •  ${{idx + 1}} OF ${{numScenes}}`;
-  document.getElementById('headline').textContent = cur ? cur.headline : CFG.dalil.topic;
-  document.getElementById('stepLabel').textContent = (cur && cur.badge) ? cur.badge.replace(/^\\d+\\s*[•\\-]?\\s*/, '').slice(0, 18) : `STEP ${{idx + 1}}`;
+  document.getElementById('headline').textContent = inArabic
+    ? (arWin.is_qari ? `Tilawah • ${{arWin.reciter}}` : CFG.dalil.citation)
+    : (cur ? cur.headline : CFG.dalil.topic);
+  document.getElementById('stepLabel').textContent = inArabic
+    ? (arWin.is_qari ? 'TILAWAH' : 'RECITATION')
+    : ((cur && cur.badge) ? cur.badge.replace(/^\\d+\\s*[•\\-]?\\s*/, '').slice(0, 18) : `STEP ${{idx + 1}}`);
 
   const dots = dotsWrap.children;
   for (let i = 0; i < dots.length; i++) {{
     dots[i].className = 'dot' + (i < idx ? ' done' : (i === idx ? ' active' : ''));
   }}
 
-  // Active synchronized caption with warm gold highlight on current spoken word
+  // Active synchronized caption (or warm gold translation while Arabic is recited aloud!)
   let cap = null;
   for (const c of CFG.captions) {{
     if (t >= c.start - 0.06 && t <= c.end + 0.14) {{ cap = c; break; }}
   }}
   const subCard = document.getElementById('subCard');
   const subText = document.getElementById('subText');
-  if (cap && cap.words && cap.words.length) {{
+  if (inArabic) {{
+    subCard.style.opacity = '1';
+    subText.innerHTML = `<span class="hi" style="font-style:italic">"${{CFG.dalil.translation}}"</span>`;
+  }} else if (cap && cap.words && cap.words.length) {{
     subCard.style.opacity = '1';
     subText.innerHTML = cap.words.map(w => {{
       const isSpoken = t >= w.s && t <= w.e + 0.12;
@@ -1080,21 +1101,51 @@ window.renderAt = function(t) {{
   ctx.fillText(CFG.dalil.badge_label, 0, 32);
   ctx.restore();
 
-  // Progressive RTL gold illumination across Arabic verse words
-  const activeArIdx = Math.min(Math.floor(progress * AR_WORDS.length), AR_WORDS.length - 1);
+  // Progressive RTL gold illumination synced strictly to the Arabic Qari/Recitation window when active!
+  const arWin = CFG.arabic_window;
+  const inArabic = !!(arWin && t >= arWin.start - 0.05 && t <= arWin.end + 0.12);
+  let activeArIdx = -1;
+  let allArPast = false;
+  if (arWin && arWin.end > arWin.start) {{
+    if (t < arWin.start) {{
+      activeArIdx = -1;
+    }} else if (t > arWin.end) {{
+      allArPast = true;
+    }} else {{
+      const arProg = Math.min(Math.max((t - arWin.start) / (arWin.end - arWin.start), 0), 0.999);
+      activeArIdx = Math.floor(arProg * AR_WORDS.length);
+    }}
+  }} else {{
+    activeArIdx = Math.min(Math.floor(progress * AR_WORDS.length), AR_WORDS.length - 1);
+  }}
   for (let i = 0; i < AR_WORDS.length; i++) {{
     const el = document.getElementById(`arw_${{i}}`);
     if (!el) continue;
-    el.className = 'ar-w' + (i === activeArIdx ? ' lit' : (i < activeArIdx ? ' past' : ''));
+    if (allArPast) {{
+      el.className = 'ar-w past';
+    }} else if (activeArIdx < 0) {{
+      el.className = 'ar-w';
+    }} else {{
+      el.className = 'ar-w' + (i === activeArIdx ? ' lit' : (i < activeArIdx ? ' past' : ''));
+    }}
   }}
 
-  // Synchronized English spoken karaoke
+  // Synchronized English spoken karaoke (displays illuminated translation during real Qari tilawah!)
   let cap = null;
   for (const c of CFG.captions) {{
     if (t >= c.start - 0.06 && t <= c.end + 0.14) {{ cap = c; break; }}
   }}
   const enEl = document.getElementById('enKaraoke');
-  if (cap && cap.words && cap.words.length) {{
+  if (inArabic) {{
+    const trWords = ('"' + CFG.dalil.translation + '"').split(/\\s+/).filter(Boolean);
+    const arProg = Math.min(Math.max((t - arWin.start) / Math.max(arWin.end - arWin.start, 0.5), 0), 0.999);
+    const litIdx = Math.floor(arProg * trWords.length);
+    enEl.innerHTML = trWords.map((w, i) => {{
+      if (i === litIdx) return `<span class="en-w lit">${{w}}</span>`;
+      if (i < litIdx) return `<span class="en-w past">${{w}}</span>`;
+      return `<span class="en-w">${{w}}</span>`;
+    }}).join(' ');
+  }} else if (cap && cap.words && cap.words.length) {{
     enEl.innerHTML = cap.words.map(w => {{
       if (t >= w.s && t <= w.e + 0.10) return `<span class="en-w lit">${{w.w}}</span>`;
       if (t > w.e + 0.10) return `<span class="en-w past">${{w.w}}</span>`;
@@ -1104,12 +1155,14 @@ window.renderAt = function(t) {{
     enEl.innerHTML = `<span class="en-w past">"${{CFG.dalil.translation}}"</span>`;
   }}
 
-  // Scene-synced Brain & Peace Insight pill
+  // Scene-synced Brain & Peace Insight pill (or real Qari attribution during tilawah!)
   let cur = CFG.scenes[CFG.scenes.length - 1];
   for (const s of CFG.scenes) {{
     if (t >= s.start && t <= s.end) {{ cur = s; break; }}
   }}
-  document.getElementById('insightPill').textContent = (cur && cur.headline) ? `✦  ${{cur.headline}}` : CFG.dalil.pillar_label;
+  document.getElementById('insightPill').textContent = inArabic
+    ? (arWin.is_qari ? `✦  Tilawah • ${{arWin.reciter}}` : `✦  ${{arWin.reciter}}`)
+    : ((cur && cur.headline) ? `✦  ${{cur.headline}}` : CFG.dalil.pillar_label);
 }};
 </script>
 </body>
@@ -1495,12 +1548,20 @@ window.renderAt = function(t) {{
     ctx.fill();
   }}
 
-  // Active scene headline
+  // Active scene headline + Arabic recitation glow
+  const arWin = CFG.arabic_window;
+  const inArabic = !!(arWin && t >= arWin.start - 0.05 && t <= arWin.end + 0.12);
   let cur = CFG.scenes[CFG.scenes.length - 1];
   for (const s of CFG.scenes) {{
     if (t >= s.start && t <= s.end) {{ cur = s; break; }}
   }}
-  document.getElementById('sceneTitle').textContent = cur ? cur.headline : CFG.dalil.topic;
+  document.getElementById('sceneTitle').textContent = inArabic ? CFG.dalil.citation : (cur ? cur.headline : CFG.dalil.topic);
+  const arQ = document.getElementById('arQuote');
+  if (arQ) {{
+    arQ.style.textShadow = inArabic
+      ? '0 0 26px rgba(244, 201, 93, 0.85), 0 2px 14px rgba(0,0,0,0.6)'
+      : '0 2px 14px rgba(244, 201, 93, 0.35)';
+  }}
 
   // Highlight active milestone bucket
   const activeBkt = Math.min(Math.floor(progress * 4), 3);
@@ -1509,13 +1570,15 @@ window.renderAt = function(t) {{
     if (b) b.className = 'bkt' + (i <= activeBkt ? ' on' : '');
   }}
 
-  // Crisp centered white-outlined subtitles
+  // Crisp centered white-outlined subtitles (shows gold translation during Arabic VO!)
   let cap = null;
   for (const c of CFG.captions) {{
     if (t >= c.start - 0.06 && t <= c.end + 0.14) {{ cap = c; break; }}
   }}
   const subEl = document.getElementById('subText');
-  if (cap && cap.words && cap.words.length) {{
+  if (inArabic) {{
+    subEl.innerHTML = `<span class="gold">"${{CFG.dalil.translation}}"</span>`;
+  }} else if (cap && cap.words && cap.words.length) {{
     subEl.innerHTML = cap.words.map(w => {{
       const isHi = t >= w.s && t <= w.e + 0.12;
       return isHi ? `<span class="gold">${{w.w}}</span>` : w.w;
@@ -1547,6 +1610,164 @@ def _nature_preset_for_mode(mode: str) -> str:
     return "dawn_breeze"
 
 
+def _make_silence_wav(out_wav: Path, dur_sec: float) -> Path:
+    subprocess.run(
+        [
+            "ffmpeg", "-y", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
+            "-t", f"{max(dur_sec, 0.05):.3f}", "-c:a", "pcm_s16le", str(out_wav),
+        ],
+        capture_output=True, check=True,
+    )
+    return out_wav
+
+
+def _assemble_bilingual_voice_and_timeline(
+    scenes_meta: list[dict[str, Any]],
+    audio_bundle: TrackAudioBundle,
+    arabic_res: ArabicRecitationResult | None,
+    pause_sec: float,
+    work_dir: Path,
+    is_short: bool,
+    safe_cap: float,
+) -> tuple[Path, list[dict[str, Any]], list[dict[str, Any]], dict[str, Any] | None, float]:
+    """Assemble bilingual English + Authentic Arabic (1.00x untouched!) voiceover WAV + exact synced timeline."""
+    scene_results = audio_bundle.scene_results or []
+    all_parts_exist = bool(scene_results) and all(Path(sr.audio_path).exists() for sr in scene_results)
+
+    if arabic_res is None or not all_parts_exist:
+        master_audio = Path(audio_bundle.master_audio_path)
+        raw_dur = probe_duration_sec(master_audio)
+        tempo = min(max(raw_dur / safe_cap, 1.02), 1.28) if (is_short and raw_dur > safe_cap) else 1.0
+        out_wav = work_dir / "master_en_voice.wav"
+        af = [f"atempo={tempo:.4f}"] if tempo > 1.01 else []
+        af.append("aformat=sample_rates=48000:channel_layouts=stereo")
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", str(master_audio), "-af", ",".join(af), "-c:a", "pcm_s16le", str(out_wav)],
+            capture_output=True, check=True,
+        )
+        scene_items, captions, _ = _build_scene_and_caption_timeline(scenes_meta, audio_bundle, pause_sec, tempo=tempo)
+        return out_wav, scene_items, captions, None, probe_duration_sec(out_wav)
+
+    # Bilingual choreography: Scene 1 (Hook) -> 0.35s breath -> Arabic Recitation (1.00x untouched!) -> 0.45s breath -> Scenes 2..N
+    pre_ar_pause = 0.35
+    post_ar_pause = 0.45
+    ar_dur = probe_duration_sec(arabic_res.audio_path)
+    en_speech_sum = sum(probe_duration_sec(Path(sr.audio_path)) for sr in scene_results)
+    en_pauses_sum = max(len(scene_results) - 1, 0) * pause_sec + pause_sec
+    projected = en_speech_sum + en_pauses_sum + pre_ar_pause + ar_dur + post_ar_pause
+
+    # If Short exceeds safe_cap, ONLY gently pace English narration (NEVER speed up Qur'an/Arabic recitation!)
+    en_tempo = 1.0
+    if is_short and projected > safe_cap:
+        budget_en = max(safe_cap - (pre_ar_pause + ar_dur + post_ar_pause + en_pauses_sum) - 0.35, en_speech_sum * 0.70)
+        en_tempo = min(max(en_speech_sum / max(budget_en, 1.0), 1.02), 1.32)
+        print(
+            f"[v10-bilingual] Keeping Arabic VO pure 1.00x ({ar_dur:.1f}s) & pacing English {en_tempo:.2f}x "
+            f"to fit cleanly inside {safe_cap:.1f}s Shorts cap...",
+            flush=True,
+        )
+
+    sil_scene = _make_silence_wav(work_dir / "_sil_scene.wav", max(pause_sec, 0.15))
+    sil_pre_ar = _make_silence_wav(work_dir / "_sil_pre_ar.wav", pre_ar_pause)
+    sil_post_ar = _make_silence_wav(work_dir / "_sil_post_ar.wav", post_ar_pause)
+
+    concat_files: list[Path] = []
+    scene_items: list[dict[str, Any]] = []
+    captions: list[dict[str, Any]] = []
+    cursor = 0.0
+    scale = 1.0 / en_tempo
+    arabic_window: dict[str, Any] | None = None
+    insert_after_idx = 0  # Play authentic Arabic recitation right after Scene 1 hook!
+
+    for idx, sr in enumerate(scene_results):
+        en_wav = work_dir / f"_en_sc_{idx:02d}.wav"
+        af_parts = [f"atempo={en_tempo:.4f}"] if en_tempo > 1.01 else []
+        af_parts.append("loudnorm=I=-16:TP=-1.5:LRA=11,aformat=sample_rates=48000:channel_layouts=stereo")
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", str(sr.audio_path), "-af", ",".join(af_parts), "-c:a", "pcm_s16le", str(en_wav)],
+            capture_output=True, check=True,
+        )
+        s_dur = probe_duration_sec(en_wav)
+        meta = scenes_meta[idx] if idx < len(scenes_meta) else {}
+        headline = str(meta.get("visual_headline") or meta.get("section") or f"Step {idx + 1}").strip()
+        badge = str(meta.get("badge") or meta.get("section") or f"STEP {idx + 1}").strip()
+        callout = str(meta.get("on_screen_callout") or "").strip()
+        bullets = [str(b).strip() for b in (meta.get("bullet_points") or []) if str(b).strip()][:3]
+
+        scene_start = cursor
+        concat_files.append(en_wav)
+
+        # Word-timed captions for this English scene
+        word_events = [t for t in (sr.word_timings or []) if t.get("type") == "WordBoundary" and t.get("text")]
+        if word_events:
+            words_timed = [
+                {"w": str(we["text"]).strip(), "s": round(cursor + float(we["start"]) * scale, 3), "e": round(cursor + float(we["end"]) * scale, 3)}
+                for we in word_events
+            ]
+        else:
+            raw_words = sr.text.split()
+            weights = [max(len(w), 3) + (4 if w.endswith((".", "!", "?")) else 2 if w.endswith((",", ";", "—")) else 0) for w in raw_words]
+            tot_w = float(max(sum(weights), 1))
+            wc = cursor
+            words_timed = []
+            for w, wt in zip(raw_words, weights):
+                wd = s_dur * (wt / tot_w)
+                words_timed.append({"w": w, "s": round(wc, 3), "e": round(wc + wd, 3)})
+                wc += wd
+
+        chunk_buf: list[dict[str, Any]] = []
+        for wt in words_timed:
+            chunk_buf.append(wt)
+            ends_clause = wt["w"].endswith((".", "!", "?", "—", ";")) or (len(chunk_buf) >= 4 and wt["w"].endswith(","))
+            if len(chunk_buf) >= 6 or ends_clause:
+                captions.append({"start": chunk_buf[0]["s"], "end": max(chunk_buf[-1]["e"], chunk_buf[0]["s"] + 0.35), "words": chunk_buf})
+                chunk_buf = []
+        if chunk_buf:
+            captions.append({"start": chunk_buf[0]["s"], "end": max(chunk_buf[-1]["e"], chunk_buf[0]["s"] + 0.35), "words": chunk_buf})
+
+        cursor += s_dur
+
+        if idx == insert_after_idx:
+            # Close Scene 1 right as Arabic recitation begins
+            scene_items.append({
+                "idx": idx, "start": round(scene_start, 3), "end": round(cursor + pre_ar_pause, 3),
+                "badge": badge, "headline": headline, "callout": callout, "bullets": bullets, "narration": sr.text.strip(),
+            })
+            concat_files.append(sil_pre_ar)
+            cursor += pre_ar_pause
+
+            ar_start = round(cursor, 3)
+            concat_files.append(arabic_res.audio_path)
+            cursor += ar_dur
+            ar_end = round(cursor, 3)
+            arabic_window = {
+                "start": ar_start,
+                "end": ar_end,
+                "reciter": arabic_res.reciter_label,
+                "is_qari": arabic_res.is_real_qari,
+                "source": arabic_res.source,
+            }
+
+            concat_files.append(sil_post_ar)
+            cursor += post_ar_pause
+        else:
+            concat_files.append(sil_scene)
+            cursor += max(pause_sec, 0.15)
+            scene_items.append({
+                "idx": idx, "start": round(scene_start, 3), "end": round(cursor, 3),
+                "badge": badge, "headline": headline, "callout": callout, "bullets": bullets, "narration": sr.text.strip(),
+            })
+
+    concat_txt = work_dir / "_bilingual_concat.txt"
+    concat_txt.write_text("\n".join(f"file '{p.resolve().as_posix()}'" for p in concat_files), encoding="utf-8")
+    master_wav = work_dir / "master_bilingual_voice.wav"
+    subprocess.run(
+        ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_txt), "-c:a", "pcm_s16le", str(master_wav)],
+        capture_output=True, text=True, check=True,
+    )
+    return master_wav, scene_items, captions, arabic_window, probe_duration_sec(master_wav)
+
+
 def render_islamic_visual_video_for_pipeline(
     mode: str,
     scenes_meta: list[dict[str, Any]],
@@ -1569,46 +1790,46 @@ def render_islamic_visual_video_for_pipeline(
     # Render HTML5 Canvas at crisp 720p @ 24fps (super fast headless Chromium) -> Lanczos upscale to 1080p!
     gl_w, gl_h = (720, 1280) if target_h >= target_w else (1280, 720)
     fps = 24
-
-    master_audio = Path(audio_bundle.master_audio_path)
-    raw_dur = probe_duration_sec(master_audio)
     safe_cap = min(max_short_sec - 0.8, 58.2) if is_short else 9999.0
-    tempo = 1.0
-    if is_short and raw_dur > safe_cap:
-        tempo = min(max(raw_dur / safe_cap, 1.02), 1.28)
-        print(f"[v10-islamic] Gently pacing narration ({tempo:.2f}x) to fit safely inside {safe_cap:.1f}s Shorts cap...", flush=True)
 
     work_dir = out_video_path.parent / f"_v10_{mode}_work"
     work_dir.mkdir(parents=True, exist_ok=True)
 
+    dalil_payload = _resolve_dalil_payload(topic_meta=topic_meta, scenes_meta=scenes_meta)
+    arabic_res = resolve_dalil_arabic_audio(dalil=dalil_payload, work_dir=work_dir, config=config, is_short=is_short)
+
+    master_voice_wav, scene_items, captions, arabic_window, voice_dur = _assemble_bilingual_voice_and_timeline(
+        scenes_meta=scenes_meta,
+        audio_bundle=audio_bundle,
+        arabic_res=arabic_res,
+        pause_sec=pause_sec,
+        work_dir=work_dir,
+        is_short=is_short,
+        safe_cap=safe_cap,
+    )
+
     mixed_m4a = work_dir / f"mixed_{mode}.m4a"
     nature_preset = _nature_preset_for_mode(mode)
     mix_nature_voice_soundscape(
-        master_voice=master_audio,
-        duration_sec=raw_dur / tempo,
+        master_voice=master_voice_wav,
+        duration_sec=voice_dur,
         out_audio=mixed_m4a,
         config=config,
         preset=nature_preset,
-        tempo=tempo,
+        tempo=1.0,
     )
     final_dur = probe_duration_sec(mixed_m4a)
     if is_short and final_dur > 58.5:
         final_dur = 58.5
 
-    scene_items, captions, _ = _build_scene_and_caption_timeline(
-        scenes_meta=scenes_meta,
-        audio_bundle=audio_bundle,
-        pause_sec=pause_sec,
-        tempo=tempo,
-    )
     rms_env = _extract_audio_rms_envelope(mixed_m4a, fps=fps, duration_sec=final_dur)
-    dalil_payload = _resolve_dalil_payload(topic_meta=topic_meta, scenes_meta=scenes_meta)
 
     render_payload: dict[str, Any] = {
         "mode": mode,
         "fps": fps,
         "total_dur": round(final_dur, 3),
         "dalil": dalil_payload,
+        "arabic_window": arabic_window,
         "scenes": scene_items,
         "captions": captions,
         "rms": rms_env,

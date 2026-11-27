@@ -18,5 +18,6 @@ output/*
 !output/analytics_insights.json
 !output/.gitkeep
 
-# Cached downloaded B-roll video clips (Studio v6)
+# Cached downloaded B-roll video clips (Studio v6) & Qur'an Qari audio cache (Studio v10)
 assets/broll_cache/
+assets/cache/

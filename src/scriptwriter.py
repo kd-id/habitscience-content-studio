@@ -32,9 +32,9 @@ ISLAMIC_FORMAT_PROFILES: dict[str, dict[str, Any]] = {
         "nature_audio": "gentle_rain",
         "rhythm_rules": (
             "- Tone: Deeply serene, intimate, unhurried late-night reflection—every sentence feels like a calm breath of peace.\n"
-            "- Visual context: Pitch-black obsidian canvas with a glowing 24k gold voice-reactive radial sunburst visualizer and word-by-word gold Arabic & English karaoke.\n"
+            "- Visual context: Pitch-black obsidian canvas with a glowing 24k gold voice-reactive radial sunburst visualizer and word-by-word gold Arabic & English karaoke. Real Qari Qur'an tilawah plays automatically between Scene 1 and Scene 2!\n"
             "- Headline rule: Keep every `visual_headline` <= 5 words because it displays inside a sleek bottom gold insight pill.\n"
-            "- Shorts 6-beat arc (85-110 words total, strictly < 55s): 01 QUIET PAIN (hidden inner restlessness) -> 02 THE AYAH (verified Surah & meaning) -> 03 DEEP MEANING (one subtle heart-touching nuance) -> 04 CALM SCIENCE (how it settles stress/overthinking) -> 05 ANCHOR (10-second daily recall) -> 06 PEACE (warm save reminder)."
+            "- Shorts 5-6 beat arc (65-85 English words total so real Qari tilawah + calm English lands cleanly around 45-54s): 01 QUIET PAIN (short 1-sentence hook before Qari recites) -> 02 THE AYAH (gentle meaning reflection right after tilawah) -> 03 DEEP MEANING (one subtle heart-touching nuance) -> 04 CALM SCIENCE (how it settles stress/overthinking) -> 05 PEACE (warm save reminder)."
         ),
         "long_sections": "QUIET PAIN / THE AYAH / SUBTLE MEANING / CALM MIND SCIENCE / HIDDEN NOISE / DAILY ANCHOR / LIVING THE VERSE / CLOSING PEACE",
         "short_badge_example": "01 • QUIET PAIN",

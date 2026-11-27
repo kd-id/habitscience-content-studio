@@ -70,6 +70,13 @@ voiceover:
   rate_long: "-2%"
   rate_shorts: "+0%"
   pitch: "+0Hz"
+  # Authentic Arabic Voiceover & Real Qur'an Qari Tilawah (100% Free!)
+  arabic_recitation: true
+  quran_reciter: "Alafasy_128kbps"
+  quran_reciter_label: "Mishary Rashid Alafasy"
+  max_qari_short_sec: 20.0
+  arabic_tts_voice: "ar-SA-HamedNeural"
+  arabic_tts_rate: "-8%"
 
 video:
   # Saved Visual Style Presets (ubah engine_mode atau kirim --visual-style <nama>):
