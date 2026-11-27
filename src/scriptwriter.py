@@ -182,7 +182,7 @@ Return ONLY valid JSON with this exact schema:
       }}
     ]
   }},
-  "carousel_social": {{
+    "carousel_social": {{
     "title": "Carousel title",
     "slides": [
       {{
@@ -200,6 +200,13 @@ Return ONLY valid JSON with this exact schema:
     "post_threads": "Short warm reflective Threads post with verified wisdom",
     "post_facebook": "Engaging warm Facebook Page post with verified citation & question",
     "hashtags": ["#IslamicReminders", "#Sunnah", "#QuranWisdom", "#HabitSains", "#PeaceOfMind"]
+  }},
+  "story_acts": {{
+    "hook_kicker": "2-4 word urgent hook label (e.g. WHY YOU FEEL STUCK)",
+    "before_label": "4-6 word everyday pain contrast (e.g. SCROLLING -> RACING MIND)",
+    "after_label": "4-6 word Sunnah shift contrast (e.g. 20 QUIET MIN AFTER FAJR)",
+    "stat_badge": "3-5 word brain/habit benefit badge (e.g. CALM FOCUS RESTORED)",
+    "core_lesson": "One crystal-clear, memorable 8-12 word takeaway sentence for the finale card"
   }}
 }}
 
@@ -1888,6 +1895,7 @@ def generate_content_blueprint(
         "pillar": getattr(idea, "pillar", "prophetic_habits"),
         "pillar_label": getattr(idea, "pillar_label", "Prophetic Habits & Daily Sunnah"),
         "dalil": dict(idea.dalil) if isinstance(getattr(idea, "dalil", None), dict) else None,
+        "story_acts": dict(blueprint.get("story_acts")) if isinstance(blueprint.get("story_acts"), dict) else None,
         "angle": idea.angle,
         "hook": idea.hook,
         "source": idea.source,

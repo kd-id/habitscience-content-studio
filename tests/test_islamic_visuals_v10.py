@@ -11,6 +11,7 @@ from unittest.mock import patch
 from src.arabic_audio import parse_quran_citation, resolve_dalil_arabic_audio
 from src.config_loader import load_config
 from src.ideation import PILLAR_TOPIC_BANKS, select_topic
+from src.islamic_story_acts import resolve_story_acts
 from src.islamic_visual_engine import (
     ISLAMIC_VISUAL_MODES,
     _load_amiri_font_css,
@@ -206,6 +207,43 @@ class TestIslamicVisualsV10(unittest.TestCase):
                 assert res is not None
                 self.assertFalse(res.is_real_qari)
                 self.assertIn("ar-SA-HamedNeural", res.source)
+
+    def test_four_act_storytelling_staging_across_all_30_topics_and_6_modes(self) -> None:
+        # Every single curated topic must resolve a valid 4-Act visual plan
+        valid_hooks = {"phone_chaos", "anger_heat", "heavy_wall", "rushing_calendar", "comparison_scroll", "needle_ocean", "racing_mind"}
+        valid_explainers = {"brain_wave_calm", "focus_battery_charge", "one_third_pie", "posture_cool_down", "four_pillar_map", "before_after_cards"}
+        for pillar_id, bank in PILLAR_TOPIC_BANKS.items():
+            for item in bank:
+                acts = resolve_story_acts(
+                    {"topic": item["topic"], "angle": item["angle"], "dalil": item["dalil"]},
+                    scenes_meta=[],
+                )
+                self.assertIn(acts["hook_visual"], valid_hooks, f"Bad hook_visual for {item['topic']}")
+                self.assertIn(acts["explainer_visual"], valid_explainers, f"Bad explainer_visual for {item['topic']}")
+                self.assertTrue(len(acts["core_lesson"]) >= 16, f"Core lesson too short for {item['topic']}")
+                self.assertTrue(len(acts["stat_badge"]) >= 8)
+
+        # Every one of the 6 visual templates must wire the 4-Act visual engine & stage toggles
+        sample = PILLAR_TOPIC_BANKS["quran_mental_peace"][0]
+        dalil_payload = _resolve_dalil_payload(
+            topic_meta={"topic": sample["topic"], "pillar_label": "Qur'an Peace", "channel_handle": "@HabitSains", "dalil": sample["dalil"]},
+            scenes_meta=[],
+        )
+        payload = {
+            "fps": 24,
+            "total_dur": 30.0,
+            "dalil": dalil_payload,
+            "scenes": [{"idx": 0, "start": 0.0, "end": 30.0, "badge": "01 • HOOK", "headline": "Quiet Mind"}],
+            "captions": [],
+            "rms": [0.3] * 24,
+        }
+        for mode in ISLAMIC_VISUAL_MODES:
+            html = build_islamic_visual_html(mode, payload, 720, 1280)
+            self.assertIn("computeFourActTiming", html, f"{mode} missing computeFourActTiming")
+            self.assertIn("getCurrentAct", html, f"{mode} missing getCurrentAct")
+            self.assertIn("drawAct1HookVisual", html, f"{mode} missing drawAct1HookVisual")
+            self.assertIn("drawAct3ExplainerVisual", html, f"{mode} missing drawAct3ExplainerVisual")
+            self.assertIn("THE LESSON", html.upper(), f"{mode} missing Act 4 Core Lesson card")
 
 
 if __name__ == "__main__":
