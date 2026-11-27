@@ -44,18 +44,24 @@ from src.social_publishers import META_GRAPH_BASE, THREADS_API_BASE, _resolve_fb
 WIB = timezone(timedelta(hours=7))
 
 CANDIDATE_SHORT_STYLES = [
+    "islamic_nature_transform",
     "islamic_luminous_sky",
+    "islamic_paper_craft",
     "islamic_gold_visualizer",
     "islamic_particle_map",
+    "islamic_cinematic_metaphor",
     "pov_3d_toon",
     "cozy_diorama",
     "minimal_line_story",
     "cinema_broll_html",
 ]
 CANDIDATE_LONG_STYLES = [
+    "islamic_nature_transform",
     "islamic_luminous_sky",
+    "islamic_paper_craft",
     "islamic_gold_visualizer",
     "islamic_particle_map",
+    "islamic_cinematic_metaphor",
     "cozy_diorama",
     "minimal_line_story",
     "cinema_broll_html",

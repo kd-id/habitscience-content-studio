@@ -11,45 +11,84 @@ from src.config_loader import slugify
 from src.ideation import TopicIdea
 
 
-# Strictly isolated Format Packages (Anti-Rancu): 1 Pillar = 1 Script Rhythm = 1 Visual Engine = 1 Nature Audio
+# Strictly isolated 6 Format Packages (Anti-Rancu): 1 Pillar = 1 Script Rhythm = 1 Visual Engine = 1 Nature Audio
 ISLAMIC_FORMAT_PROFILES: dict[str, dict[str, Any]] = {
+    "minute_wisdom_dua": {
+        "format_name": "Format 1: Minute Wisdom Transform (Ref #1 — Fire -> Rain -> Blooming Meadow)",
+        "visual_style": "islamic_nature_transform",
+        "nature_audio": "gentle_rain",
+        "rhythm_rules": (
+            "- Tone: Gentle, deeply comforting emotional reset—starts with heaviness, worry, or anger, then washes it clean into serene hope.\n"
+            "- Visual context: Hexagonal dark ember earth & flames extinguishing with steam -> falling blue teardrop into meadow pool -> sunlit wildflowers & fruit/blossom trees + 1/7..7/7 dots + Amiri Arabic calligraphy.\n"
+            "- Headline rule: Keep every `visual_headline` <= 5 words.\n"
+            "- Shorts 5-beat arc (75-100 English words so Saudi Arabic Dua VO + calm English lands ~38-48s): 01 THE HEAT (name the worry/anger) -> 02 THE DUA (reflect on the verified Prophetic Dua recited right after Scene 1) -> 03 COOLING SCIENCE (how calming the body/mind extinguishes stress) -> 04 DAILY RESET (1 gentle habit) -> 05 BLOOM (save & share peace)."
+        ),
+        "long_sections": "THE HEAT / VERIFIED PROPHETIC DUA / CALMING THE STORM / EVERYDAY MIND SCIENCE / DAILY SHIFT 1 / DAILY SHIFT 2 / STEADY PEACE / CLOSING",
+        "short_badge_example": "01 • CALM THE STORM",
+    },
     "prophetic_habits": {
-        "format_name": "Format 1: Luminous Sky (Minute Wisdom + 5 Duas vibe)",
+        "format_name": "Format 2: Luminous Prayer Sky (Ref #2 — 5-Prayer Sky + Mosque Water Reflection)",
         "visual_style": "islamic_luminous_sky",
         "nature_audio": "dawn_breeze",
         "rhythm_rules": (
             "- Tone: Warm, reassuring, practical step-by-step Prophetic habit coaching.\n"
-            "- Visual context: Shifting 5-prayer sky with mosque & water reflection (or embers -> rain -> blooming meadow), showing the verified Amiri Arabic calligraphy card + glowing step dots.\n"
+            "- Visual context: Shifting 5-prayer sky (Fajr -> Dhuhr -> Asr -> Maghrib -> Isha) with mosque & palm silhouette reflected in calm water, showing the verified Amiri Arabic calligraphy card + glowing step dots.\n"
             "- Headline rule: Keep every `visual_headline` <= 5 words so it fits cleanly above the Arabic calligraphy card.\n"
-            "- Shorts 6-beat arc (90-115 words total, strictly < 55s): 01 REFLECT (everyday struggle) -> 02 THE SUNNAH (exact verified Hadith/Dua) -> 03 MIND SCIENCE (why it helps your brain) -> 04 STEP 1 (tiny easy start) -> 05 STEP 2 (gentle consistency) -> 06 SHARE PEACE (soft save/share CTA)."
+            "- Shorts 5-6 beat arc (80-105 English words so Arabic VO + calm English lands ~40-50s): 01 REFLECT (everyday struggle) -> 02 THE SUNNAH (exact verified Hadith/Dua) -> 03 MIND SCIENCE (why it helps your brain) -> 04 STEP 1 (tiny easy start) -> 05 SHARE PEACE (soft save/share CTA)."
         ),
         "long_sections": "REFLECT / THE MODERN STRUGGLE / THE VERIFIED SUNNAH / EVERYDAY BRAIN SCIENCE / STEP 1 / STEP 2 / GENTLE CONSISTENCY / CLOSING",
         "short_badge_example": "01 • REFLECT",
     },
+    "sunnah_paper_story": {
+        "format_name": "Format 3: Paper-Cutout 3D Craft (Ref #3 — Pastel Sky Diorama & Faceless Narrator)",
+        "visual_style": "islamic_paper_craft",
+        "nature_audio": "dawn_breeze",
+        "rhythm_rules": (
+            "- Tone: Friendly, bright, crisp visual explainer—feels like a warm storybook lesson anyone from teen to adult enjoys sharing.\n"
+            "- Visual context: Pastel sky-blue 3D layered paper-cutout diorama with curling wall calendar, open 3D paper book, layered emerald paper hills, Islamic arch medallion, and a respectful faceless minimalist presenter in navy kurta.\n"
+            "- Headline rule: Keep every `visual_headline` bold and <= 4 words (renders as crisp cutout display text at top).\n"
+            "- Shorts 5-beat arc (80-105 English words so Arabic VO + bright calm English lands ~40-50s): 01 HOOK (relatable everyday question) -> 02 SUNNAH LESSON (verified Hadith meaning) -> 03 BRAIN BENEFIT (why science confirms this daily habit) -> 04 TRY TODAY (simple memorable action) -> 05 SHARE BARAKAH (warm closing)."
+        ),
+        "long_sections": "OPENING STORY / VERIFIED HADITH / WHY IT MATTERS / BRAIN & HABIT SCIENCE / PRACTICAL STEP 1 / PRACTICAL STEP 2 / WEEKLY RHYTHM / CLOSING",
+        "short_badge_example": "01 • STORY",
+    },
     "quran_mental_peace": {
-        "format_name": "Format 2: Gold Visualizer (Surah Ar-Ra'd Luxury Contemplative vibe)",
+        "format_name": "Format 4: Obsidian & Gold Visualizer (Ref #4 — Luxury 24k Gold Sunburst + Real Qari)",
         "visual_style": "islamic_gold_visualizer",
         "nature_audio": "gentle_rain",
         "rhythm_rules": (
             "- Tone: Deeply serene, intimate, unhurried late-night reflection—every sentence feels like a calm breath of peace.\n"
-            "- Visual context: Pitch-black obsidian canvas with a glowing 24k gold voice-reactive radial sunburst visualizer and word-by-word gold Arabic & English karaoke. Real Qari Qur'an tilawah plays automatically between Scene 1 and Scene 2!\n"
+            "- Visual context: Pitch-black obsidian canvas with a glowing 24k gold voice-reactive radial sunburst visualizer and word-by-word gold Arabic & English karaoke. Real uncut Syaikh Mishary Alafasy Qur'an tilawah plays automatically right after Scene 1!\n"
             "- Headline rule: Keep every `visual_headline` <= 5 words because it displays inside a sleek bottom gold insight pill.\n"
-            "- Shorts 5-6 beat arc (65-85 English words total so real Qari tilawah + calm English lands cleanly around 45-54s): 01 QUIET PAIN (short 1-sentence hook before Qari recites) -> 02 THE AYAH (gentle meaning reflection right after tilawah) -> 03 DEEP MEANING (one subtle heart-touching nuance) -> 04 CALM SCIENCE (how it settles stress/overthinking) -> 05 PEACE (warm save reminder)."
+            "- Shorts 4-5 beat arc (65-85 English words total so uncut real Qari tilawah + calm English lands cleanly ~42-53s): 01 QUIET PAIN (short 1-sentence hook before Qari recites) -> 02 DEEP MEANING (gentle nuance right after tilawah) -> 03 CALM SCIENCE (how it settles stress/overthinking) -> 04 PEACE (warm save reminder)."
         ),
         "long_sections": "QUIET PAIN / THE AYAH / SUBTLE MEANING / CALM MIND SCIENCE / HIDDEN NOISE / DAILY ANCHOR / LIVING THE VERSE / CLOSING PEACE",
         "short_badge_example": "01 • QUIET PAIN",
     },
-    "sunnah_brain_science": {
-        "format_name": "Format 3: Particle Map (Al-Kahfi Particle Constellations + Ocean Metaphor vibe)",
+    "sunnah_particle_map": {
+        "format_name": "Format 5: Cosmic Particle Map (Ref #5 — Al-Kahfi Morphing Particle Constellations)",
         "visual_style": "islamic_particle_map",
         "nature_audio": "calm_water",
         "rhythm_rules": (
-            "- Tone: Vivid, reflective storytelling using concrete everyday metaphors (needle in an ocean, 1/3 balance, cooling anger by sitting down, Friday light).\n"
-            "- Visual context: Mood-shifting cosmic canvas where 380+ luminous particles morph across symbolic shapes above centered white-outlined conversational subtitles and 4 milestone pills (REFLECT / SUNNAH / SCIENCE / HABIT).\n"
+            "- Tone: Structured, illuminating wisdom mapping—breaks timeless Prophetic frameworks into crystal-clear mental landmarks.\n"
+            "- Visual context: Mood-shifting cosmic canvas where 380+ luminous particles morph across symbolic shapes (crescent, cave arch, 1/3 balance rings, brain waves, circular 4-node summary map) above centered white-outlined subtitles and 4 milestone pills (REFLECT / SUNNAH / SCIENCE / HABIT).\n"
             "- Headline rule: Keep every `visual_headline` punchy and <= 5 words (renders in bold uppercase at the top).\n"
-            "- Shorts 6-beat arc (95-118 words total, strictly < 55s): 01 METAPHOR (vivid scroll-stopping image) -> 02 THE HADITH (verified Sahih Hadith & citation) -> 03 THE SCIENCE (everyday brain/body reason) -> 04 MODERN TRAP (contrast with noisy modern habit) -> 05 DAILY SHIFT (one memorable rule) -> 06 CLOSING (warm reflection CTA)."
+            "- Shorts 5-beat arc (85-110 English words so Arabic VO + calm English lands ~42-52s): 01 FRAMEWORK HOOK (curiosity question) -> 02 VERIFIED HADITH (clear meaning) -> 03 THE SCIENCE (everyday brain/body reason) -> 04 MODERN TRAP (contrast with noisy modern habit) -> 05 DAILY SHIFT (memorable rule + save CTA)."
         ),
-        "long_sections": "THE METAPHOR / THE VERIFIED HADITH / BRAIN & BODY SCIENCE / THE MODERN TRAP / KEY INSIGHT 1 / KEY INSIGHT 2 / DAILY SHIFT / CLOSING",
+        "long_sections": "THE FRAMEWORK / THE VERIFIED SOURCE / BRAIN & BODY SCIENCE / THE MODERN TRAP / KEY INSIGHT 1 / KEY INSIGHT 2 / DAILY SHIFT / CLOSING",
+        "short_badge_example": "01 • FRAMEWORK",
+    },
+    "hadith_cinematic_story": {
+        "format_name": "Format 6: Cinematic Visual Metaphor (Ref #6 — Ocean Needle, Twilight Plains & Sunset)",
+        "visual_style": "islamic_cinematic_metaphor",
+        "nature_audio": "calm_water",
+        "rhythm_rules": (
+            "- Tone: Deeply reflective, cinematic storytelling—short poetic spoken lines that paint vivid visual metaphors (needle in the ocean, endless plain, quiet surrender at sunset).\n"
+            "- Visual context: Full-bleed atmospheric scenes shifting beat-by-beat (luminous needle + glowing drop over sunlit ocean -> midnight ocean vista -> infinite twilight plain -> mirror water ripple -> warm rose-gold sunset clouds) with crisp centered white-outlined conversational subtitles.\n"
+            "- Headline rule: Keep every `visual_headline` <= 5 words.\n"
+            "- Shorts 5-beat arc (80-105 English words so Arabic VO + reflective English lands ~40-50s): 01 THE IMAGE (vivid opening metaphor) -> 02 THE MEANING (what the authentic Hadith/Ayah teaches) -> 03 MIND SHIFT (moving from scarcity/fear to calm trust) -> 04 QUIET COURAGE (practical heart shift today) -> 05 SURRENDER (warm closing reminder)."
+        ),
+        "long_sections": "THE METAPHOR / AUTHENTIC SOURCE / SEEING CLEARLY / MINDSET SCIENCE / LETTING GO / QUIET COURAGE / DAILY REFLECTION / CLOSING",
         "short_badge_example": "01 • METAPHOR",
     },
 }

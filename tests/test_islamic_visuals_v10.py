@@ -25,12 +25,19 @@ class TestIslamicVisualsV10(unittest.TestCase):
     def test_all_30_topics_have_verified_arabic_translit_translation_citation(self) -> None:
         self.assertEqual(
             set(PILLAR_TOPIC_BANKS.keys()),
-            {"prophetic_habits", "quran_mental_peace", "sunnah_brain_science"},
+            {
+                "minute_wisdom_dua",
+                "prophetic_habits",
+                "sunnah_paper_story",
+                "quran_mental_peace",
+                "sunnah_particle_map",
+                "hadith_cinematic_story",
+            },
         )
         total = 0
         seen_citations: set[str] = set()
         for pillar_id, bank in PILLAR_TOPIC_BANKS.items():
-            self.assertEqual(len(bank), 10, f"Pillar {pillar_id} should have 10 curated verified topics")
+            self.assertEqual(len(bank), 5, f"Pillar {pillar_id} should have 5 curated verified topics")
             for item in bank:
                 total += 1
                 dalil = item.get("dalil")
@@ -88,11 +95,21 @@ class TestIslamicVisualsV10(unittest.TestCase):
             self.assertNotIn("aevalsrc", joined)
             self.assertNotIn("sin(", joined)
 
-    def test_config_routes_three_distinct_v10_modes_and_nature_only_audio(self) -> None:
+    def test_config_routes_six_distinct_v10_modes_and_nature_only_audio(self) -> None:
         cfg = load_config()
         self.assertEqual(cfg["video"].get("ambient_bgm_mode"), "nature_only")
         rot = cfg["content_pillars"]["rotation"]
-        self.assertEqual([p["id"] for p in rot], ["prophetic_habits", "quran_mental_peace", "sunnah_brain_science"])
+        self.assertEqual(
+            [p["id"] for p in rot],
+            [
+                "minute_wisdom_dua",
+                "prophetic_habits",
+                "sunnah_paper_story",
+                "quran_mental_peace",
+                "sunnah_particle_map",
+                "hadith_cinematic_story",
+            ],
+        )
         self.assertEqual([p["visual_style_short"] for p in rot], list(ISLAMIC_VISUAL_MODES))
         self.assertEqual([p["visual_style_long"] for p in rot], list(ISLAMIC_VISUAL_MODES))
 
@@ -114,7 +131,17 @@ class TestIslamicVisualsV10(unittest.TestCase):
         from src.ideation import TopicIdea
 
         cfg = load_config()
-        self.assertEqual(set(ISLAMIC_FORMAT_PROFILES.keys()), {"prophetic_habits", "quran_mental_peace", "sunnah_brain_science"})
+        self.assertEqual(
+            set(ISLAMIC_FORMAT_PROFILES.keys()),
+            {
+                "minute_wisdom_dua",
+                "prophetic_habits",
+                "sunnah_paper_story",
+                "quran_mental_peace",
+                "sunnah_particle_map",
+                "hadith_cinematic_story",
+            },
+        )
         for pillar_id, prof in ISLAMIC_FORMAT_PROFILES.items():
             sample = PILLAR_TOPIC_BANKS[pillar_id][0]
             idea = TopicIdea(
@@ -165,7 +192,7 @@ class TestIslamicVisualsV10(unittest.TestCase):
             with patch("src.arabic_audio.fetch_everyayah_quran_wav", return_value=(fake_qari, 53.0)), \
                  patch("src.arabic_audio.synthesize_arabic_tts_wav", return_value=(fake_tts, 4.2)):
                 res = resolve_dalil_arabic_audio(
-                    PILLAR_TOPIC_BANKS["quran_mental_peace"][3]["dalil"], wdir, cfg, is_short=True
+                    PILLAR_TOPIC_BANKS["hadith_cinematic_story"][3]["dalil"], wdir, cfg, is_short=True
                 )
                 assert res is not None
                 self.assertFalse(res.is_real_qari)

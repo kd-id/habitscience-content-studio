@@ -28,6 +28,7 @@ from __future__ import annotations
 import base64
 import json
 import math
+import os
 import struct
 import subprocess
 from pathlib import Path
@@ -35,13 +36,21 @@ from typing import Any
 
 from src.arabic_audio import ArabicRecitationResult, resolve_dalil_arabic_audio
 from src.html_motion_overlay import find_chrome_executable
+from src.islamic_visual_templates_extra import (
+    build_cinematic_metaphor_html,
+    build_nature_transform_html,
+    build_paper_craft_html,
+)
 from src.sfx_engine import mix_nature_voice_soundscape
 from src.voiceover import TrackAudioBundle, probe_duration_sec
 
 ISLAMIC_VISUAL_MODES: tuple[str, ...] = (
+    "islamic_nature_transform",
     "islamic_luminous_sky",
+    "islamic_paper_craft",
     "islamic_gold_visualizer",
     "islamic_particle_map",
+    "islamic_cinematic_metaphor",
 )
 
 _FONT_B64_CACHE: dict[str, str] = {}
@@ -1594,6 +1603,12 @@ window.renderAt = function(t) {{
 
 def build_islamic_visual_html(mode: str, payload: dict[str, Any], width: int, height: int) -> str:
     m = (mode or "islamic_luminous_sky").lower().strip()
+    if m == "islamic_nature_transform":
+        return build_nature_transform_html(payload, _load_amiri_font_css(), width, height)
+    if m == "islamic_paper_craft":
+        return build_paper_craft_html(payload, _load_amiri_font_css(), width, height)
+    if m == "islamic_cinematic_metaphor":
+        return build_cinematic_metaphor_html(payload, _load_amiri_font_css(), width, height)
     if m == "islamic_gold_visualizer":
         return _build_gold_visualizer_html(payload, width, height)
     if m == "islamic_particle_map":
@@ -1603,9 +1618,9 @@ def build_islamic_visual_html(mode: str, payload: dict[str, Any], width: int, he
 
 def _nature_preset_for_mode(mode: str) -> str:
     m = (mode or "").lower().strip()
-    if m == "islamic_gold_visualizer":
+    if m in ("islamic_gold_visualizer", "islamic_nature_transform"):
         return "gentle_rain"
-    if m == "islamic_particle_map":
+    if m in ("islamic_particle_map", "islamic_cinematic_metaphor"):
         return "calm_water"
     return "dawn_breeze"
 
@@ -1787,9 +1802,15 @@ def render_islamic_visual_video_for_pipeline(
     pause_sec = float(vid_cfg.get("padding_after_audio_sec", 0.30 if is_short else 0.45))
     max_short_sec = float(vid_cfg.get("max_duration_sec", 59.0))
 
-    # Render HTML5 Canvas at crisp 720p @ 24fps (super fast headless Chromium) -> Lanczos upscale to 1080p!
+    # Render HTML5 Canvas at crisp 720p logical layout -> Lanczos upscale to 1080p!
+    # In 2-vCPU GitHub Actions Cloud (HEADLESS_CLOUD=1), use adaptive render FPS (12fps Long / 16fps Short)
+    # + device_scale_factor=0.75 (identical layout, 44% fewer pixels to rasterize -> ~4-5x faster so Cloud finishes in ~6m!).
     gl_w, gl_h = (720, 1280) if target_h >= target_w else (1280, 720)
-    fps = 24
+    is_cloud = os.getenv("HEADLESS_CLOUD", "").strip() == "1"
+    render_fps = (16 if is_short else 12) if is_cloud else 24
+    out_fps = 24
+    dsf = 0.75 if is_cloud else 1.0
+    fps = render_fps
     safe_cap = min(max_short_sec - 0.8, 58.2) if is_short else 9999.0
 
     work_dir = out_video_path.parent / f"_v10_{mode}_work"
@@ -1839,15 +1860,16 @@ def render_islamic_visual_video_for_pipeline(
     silent_mp4 = work_dir / f"video_{mode}_silent.mp4"
 
     print(
-        f"[video] Rendering Studio v10 '{mode}' ({gl_w}x{gl_h} -> {target_w}x{target_h} @ {fps}fps, "
-        f"{final_dur:.1f}s, nature={nature_preset})...",
+        f"[video] Rendering Studio v10 '{mode}' ({gl_w}x{gl_h} dsf={dsf} -> {target_w}x{target_h} "
+        f"@ {render_fps}->{out_fps}fps, {final_dur:.1f}s, nature={nature_preset})...",
         flush=True,
     )
     ffmpeg_err_log = work_dir / f"ffmpeg_{mode}_err.log"
     cmd = [
         "ffmpeg", "-y", "-nostats", "-loglevel", "warning",
-        "-f", "image2pipe", "-vcodec", "mjpeg", "-r", str(fps), "-i", "pipe:0",
+        "-f", "image2pipe", "-vcodec", "mjpeg", "-r", str(render_fps), "-i", "pipe:0",
         "-vf", f"scale={target_w}:{target_h}:flags=lanczos:in_range=full:out_range=tv,format=yuv420p",
+        "-r", str(out_fps),
         "-c:v", "libx264", "-profile:v", "main", "-level:v", "4.0", "-preset", "veryfast", "-crf", "20",
         "-pix_fmt", "yuv420p", "-color_range", "tv", "-an",
         str(silent_mp4),
@@ -1862,21 +1884,22 @@ def render_islamic_visual_video_for_pipeline(
             chrome = find_chrome_executable()
             launch_kw: dict[str, Any] = {
                 "headless": True,
-                "args": ["--no-sandbox", "--disable-gpu-sandbox"],
+                "args": ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu-sandbox"],
             }
             if chrome:
                 launch_kw["executable_path"] = chrome
             br = pw.chromium.launch(**launch_kw)
-            page = br.new_page(viewport={"width": gl_w, "height": gl_h}, device_scale_factor=1)
+            page = br.new_page(viewport={"width": gl_w, "height": gl_h}, device_scale_factor=dsf)
             page.set_content(html_doc, wait_until="load")
             # Ensure embedded Amiri Arabic calligraphy fonts finish loading before frame 0!
             page.evaluate("() => document.fonts.ready")
 
+            jpg_q = 86 if is_cloud else 92
             try:
                 for f_i in range(total_frames):
                     t = f_i / float(fps)
                     page.evaluate(f"window.renderAt({t:.4f})")
-                    jpg_bytes = page.screenshot(type="jpeg", quality=92)
+                    jpg_bytes = page.screenshot(type="jpeg", quality=jpg_q)
                     proc.stdin.write(jpg_bytes)
                     if f_i > 0 and f_i % 120 == 0:
                         el = max(_time.perf_counter() - t_render0, 0.01)

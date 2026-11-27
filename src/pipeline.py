@@ -264,9 +264,12 @@ def main(argv: list[str] | None = None) -> int:
         type=str,
         choices=[
             "hybrid_cozy_3dpov",
+            "islamic_nature_transform",
             "islamic_luminous_sky",
+            "islamic_paper_craft",
             "islamic_gold_visualizer",
             "islamic_particle_map",
+            "islamic_cinematic_metaphor",
             "pov_3d_toon",
             "cozy_diorama",
             "minimal_line_story",

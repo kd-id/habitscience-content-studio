@@ -56,16 +56,16 @@ class TestPov3DSyncAndPillars(unittest.TestCase):
                     self.assertFalse(_looks_academic_jargon(idea.topic))
                     history.append({"slug": slugify(idea.topic), "pillar": idea.pillar})
 
-            # Exact non-colliding rotation across 2 full daily cycles (6 runs)
+            # Exact non-colliding rotation across all 6 locked Islamic Format Packages
             self.assertEqual(
                 seen_pillars,
                 [
+                    "minute_wisdom_dua",
                     "prophetic_habits",
+                    "sunnah_paper_story",
                     "quran_mental_peace",
-                    "sunnah_brain_science",
-                    "prophetic_habits",
-                    "quran_mental_peace",
-                    "sunnah_brain_science",
+                    "sunnah_particle_map",
+                    "hadith_cinematic_story",
                 ],
             )
 
@@ -133,10 +133,20 @@ class TestPov3DSyncAndPillars(unittest.TestCase):
 
         cfg = load_config()
         rot = (cfg.get("content_pillars") or {}).get("rotation") or []
-        self.assertEqual(len(rot), 3)
+        self.assertEqual(len(rot), 6)
         short_styles = [p.get("visual_style_short") for p in rot]
-        self.assertEqual(len(set(short_styles)), 3, f"Expected 3 distinct short visual styles across pillars, got {short_styles}")
-        self.assertEqual(short_styles, ["islamic_luminous_sky", "islamic_gold_visualizer", "islamic_particle_map"])
+        self.assertEqual(len(set(short_styles)), 6, f"Expected 6 distinct short visual styles across pillars, got {short_styles}")
+        self.assertEqual(
+            short_styles,
+            [
+                "islamic_nature_transform",
+                "islamic_luminous_sky",
+                "islamic_paper_craft",
+                "islamic_gold_visualizer",
+                "islamic_particle_map",
+                "islamic_cinematic_metaphor",
+            ],
+        )
 
     def test_different_titles_in_same_3d_style_get_distinct_worlds_and_actions(self) -> None:
         cfg = {"branding": {"watermark_text": "@HabitSains"}}
