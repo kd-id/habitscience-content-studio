@@ -1,0 +1,441 @@
+{
+  "updated_at_wib": "2026-11-27 07:02:39 WIB",
+  "platform_status": {
+    "youtube": "OK",
+    "instagram": "OK",
+    "facebook": "OK",
+    "threads": "OK"
+  },
+  "account_stats": {
+    "yt_subscribers": 0,
+    "yt_channel_views": 0,
+    "ig_followers": 193,
+    "fb_followers": 1407
+  },
+  "growth_deltas": {
+    "has_previous_snapshot": true,
+    "delta_total_views": 155,
+    "delta_yt_subs": 0,
+    "delta_ig_followers": 0,
+    "delta_fb_followers": 0
+  },
+  "rising_videos": [
+    {
+      "id": "1679406323549773",
+      "title": "Ever feel exhausted after working all day yet struggle to finish your most important ",
+      "platform": "Facebook Page Reels",
+      "url": "https://www.facebook.com/reel/1679406323549773/",
+      "views": 123,
+      "delta_views": 123,
+      "likes": 1,
+      "comments": 0
+    },
+    {
+      "id": "O8itVKXQfLc",
+      "title": "Dopamine Supports Coupling of Attention-Related Networks #Shorts",
+      "platform": "YouTube Shorts",
+      "url": "https://youtu.be/O8itVKXQfLc",
+      "views": 17,
+      "delta_views": 17,
+      "likes": 0,
+      "comments": 0
+    },
+    {
+      "id": "18140640016644833",
+      "title": "Science-backed reminder on Dopamine Supports Coupling of Attention-Related Networks: ",
+      "platform": "Threads",
+      "url": "https://www.threads.com/@kha_zaki94/post/DgNWmd0FI0e",
+      "views": 12,
+      "delta_views": 12,
+      "likes": 0,
+      "comments": 0
+    },
+    {
+      "id": "18141534982724268",
+      "title": "Flipping your phone face down doesn't save your focus—your brain is still wasting fue",
+      "platform": "Threads",
+      "url": "https://www.threads.com/@kha_zaki94/post/DgORbeRARWw",
+      "views": 3,
+      "delta_views": 3,
+      "likes": 0,
+      "comments": 0
+    }
+  ],
+  "video_views_snapshot": {
+    "O8itVKXQfLc": 17,
+    "msjbalDs-QY": 0,
+    "18080714777450244": 0,
+    "18167039356494393": 0,
+    "17918364459471028": 0,
+    "17875363980643025": 0,
+    "1679406323549773": 123,
+    "18141534982724268": 3,
+    "18140640016644833": 12
+  },
+  "public_video_count": 9,
+  "scheduled_or_draft_count": 8,
+  "total_views_all_platforms": 155,
+  "top_videos": [
+    {
+      "platform": "Facebook Page Reels",
+      "format": "short",
+      "id": "1679406323549773",
+      "title": "Ever feel exhausted after working all day yet struggle to finish your most important ",
+      "url": "https://www.facebook.com/reel/1679406323549773/",
+      "privacy": "public",
+      "publish_at": "",
+      "published_at": "2026-11-26T14:47:00+0000",
+      "views": 123,
+      "likes": 1,
+      "comments": 0,
+      "saves": 0,
+      "score": 129.0,
+      "is_studio_video": true,
+      "visual_style": "pov_3d_toon"
+    },
+    {
+      "platform": "YouTube Shorts",
+      "format": "short",
+      "id": "O8itVKXQfLc",
+      "title": "Dopamine Supports Coupling of Attention-Related Networks #Shorts",
+      "url": "https://youtu.be/O8itVKXQfLc",
+      "privacy": "public",
+      "publish_at": "",
+      "published_at": "2026-11-26T19:00:05Z",
+      "views": 17,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 17.0,
+      "is_studio_video": true,
+      "visual_style": "pov_3d_toon"
+    },
+    {
+      "platform": "Threads",
+      "format": "text",
+      "id": "18140640016644833",
+      "title": "Science-backed reminder on Dopamine Supports Coupling of Attention-Related Networks: ",
+      "url": "https://www.threads.com/@kha_zaki94/post/DgNWmd0FI0e",
+      "privacy": "public",
+      "publish_at": "",
+      "published_at": "2026-11-26T14:46:58+0000",
+      "views": 12,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 12.0,
+      "is_studio_video": true
+    },
+    {
+      "platform": "Instagram Carousel",
+      "format": "carousel",
+      "id": "18167039356494393",
+      "title": "Flipping your phone face down feels productive, but your brain is still spending ener",
+      "url": "https://www.instagram.com/p/DgONqjTl39O/",
+      "privacy": "public",
+      "publish_at": "",
+      "published_at": "2026-11-26T22:48:19+0000",
+      "views": 0,
+      "likes": 1,
+      "comments": 0,
+      "saves": 0,
+      "score": 6.0,
+      "is_studio_video": true,
+      "pillar": "Everyday Focus & Habits"
+    },
+    {
+      "platform": "Threads",
+      "format": "text",
+      "id": "18141534982724268",
+      "title": "Flipping your phone face down doesn't save your focus—your brain is still wasting fue",
+      "url": "https://www.threads.com/@kha_zaki94/post/DgORbeRARWw",
+      "privacy": "public",
+      "publish_at": "",
+      "published_at": "2026-11-26T23:21:04+0000",
+      "views": 3,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 3.0,
+      "is_studio_video": true,
+      "pillar": "Everyday Focus & Habits"
+    },
+    {
+      "platform": "YouTube Long",
+      "format": "long",
+      "id": "msjbalDs-QY",
+      "title": "Dopamine Supports Coupling of Attention-Related Networks (Science Explained)",
+      "url": "https://youtu.be/msjbalDs-QY",
+      "privacy": "public",
+      "publish_at": "",
+      "published_at": "2026-11-26T16:00:21Z",
+      "views": 0,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 0.0,
+      "is_studio_video": true,
+      "visual_style": "cozy_diorama"
+    },
+    {
+      "platform": "Instagram Reels",
+      "format": "short",
+      "id": "18080714777450244",
+      "title": "Even face down, your phone steals your attention battery! Save this post for your nex",
+      "url": "https://www.instagram.com/reel/DgORXogMJYS/",
+      "privacy": "public",
+      "publish_at": "",
+      "published_at": "2026-11-26T23:20:51+0000",
+      "views": 0,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 0.0,
+      "is_studio_video": true,
+      "visual_style": "pov_3d_toon",
+      "pillar": "Everyday Focus & Habits"
+    },
+    {
+      "platform": "Instagram Carousel",
+      "format": "carousel",
+      "id": "17918364459471028",
+      "title": "Working longer hours rarely produces better thinking.",
+      "url": "https://www.instagram.com/p/DgNWldNlUvV/",
+      "privacy": "public",
+      "publish_at": "",
+      "published_at": "2026-11-26T14:46:51+0000",
+      "views": 0,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 0.0,
+      "is_studio_video": true
+    },
+    {
+      "platform": "Instagram Reels",
+      "format": "short",
+      "id": "17875363980643025",
+      "title": "Save this for your next deep-work block! New research just sparked debate on Dopamine",
+      "url": "https://www.instagram.com/reel/DgNWeqYBxF1/",
+      "privacy": "public",
+      "publish_at": "",
+      "published_at": "2026-11-26T14:46:15+0000",
+      "views": 0,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 0.0,
+      "is_studio_video": true,
+      "visual_style": "pov_3d_toon"
+    }
+  ],
+  "scheduled_queue": [
+    {
+      "platform": "YouTube Shorts",
+      "format": "short",
+      "id": "8Mhpatu-7mA",
+      "title": "Why Face-Down Phones Ruin Focus #Shorts",
+      "url": "https://studio.youtube.com/video/8Mhpatu-7mA/edit",
+      "privacy": "scheduled",
+      "publish_at": "2026-11-27T19:00:00Z",
+      "published_at": "2026-11-26T22:46:58Z",
+      "views": 0,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 0.0,
+      "is_studio_video": true
+    },
+    {
+      "platform": "YouTube Long",
+      "format": "long",
+      "id": "Ft-zCxDQUvo",
+      "title": "Why Flipping Your Phone Face Down Still Ruins Focus",
+      "url": "https://studio.youtube.com/video/Ft-zCxDQUvo/edit",
+      "privacy": "scheduled",
+      "publish_at": "2026-11-27T16:00:00Z",
+      "published_at": "2026-11-26T22:46:50Z",
+      "views": 0,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 0.0,
+      "is_studio_video": true
+    },
+    {
+      "platform": "YouTube Shorts",
+      "format": "short",
+      "id": "3skAxg79Z0M",
+      "title": "How do video games affect brain development in... #Shorts",
+      "url": "https://studio.youtube.com/video/3skAxg79Z0M/edit",
+      "privacy": "private",
+      "publish_at": "",
+      "published_at": "2026-11-26T08:10:15Z",
+      "views": 0,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 0.0,
+      "is_studio_video": true
+    },
+    {
+      "platform": "YouTube Long",
+      "format": "long",
+      "id": "CjFMLYvyd7o",
+      "title": "How do video games affect brain development in children... (Science Explained)",
+      "url": "https://studio.youtube.com/video/CjFMLYvyd7o/edit",
+      "privacy": "private",
+      "publish_at": "",
+      "published_at": "2026-11-26T08:10:09Z",
+      "views": 0,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 0.0,
+      "is_studio_video": true
+    },
+    {
+      "platform": "YouTube Shorts",
+      "format": "short",
+      "id": "xAvxLwcTPuw",
+      "title": "Why Your Morning Routine Destroys Your Focus #Shorts",
+      "url": "https://studio.youtube.com/video/xAvxLwcTPuw/edit",
+      "privacy": "private",
+      "publish_at": "",
+      "published_at": "2026-11-25T11:48:11Z",
+      "views": 2,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 2.0,
+      "is_studio_video": true
+    },
+    {
+      "platform": "YouTube Long",
+      "format": "long",
+      "id": "h1eWXcsrpsA",
+      "title": "Why Your Morning Routine Drains Your Dopamine Before 9 AM",
+      "url": "https://studio.youtube.com/video/h1eWXcsrpsA/edit",
+      "privacy": "private",
+      "publish_at": "",
+      "published_at": "2026-11-25T11:48:05Z",
+      "views": 0,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 0.0,
+      "is_studio_video": true
+    },
+    {
+      "platform": "YouTube Shorts",
+      "format": "short",
+      "id": "8cL8WmiUJ74",
+      "title": "Blueprint: The 90-Minute Ultradian Cycle: How Top... #Shorts",
+      "url": "https://studio.youtube.com/video/8cL8WmiUJ74/edit",
+      "privacy": "private",
+      "publish_at": "",
+      "published_at": "2026-11-25T11:02:45Z",
+      "views": 1,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 1.0,
+      "is_studio_video": true
+    },
+    {
+      "platform": "YouTube Long",
+      "format": "long",
+      "id": "YMSzV-ELUbU",
+      "title": "The 90-Minute Ultradian Cycle: How Top Performers Work... (Panduan Lengkap)",
+      "url": "https://studio.youtube.com/video/YMSzV-ELUbU/edit",
+      "privacy": "private",
+      "publish_at": "",
+      "published_at": "2026-11-25T11:02:43Z",
+      "views": 0,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 0.0,
+      "is_studio_video": true
+    }
+  ],
+  "style_leaderboard": {
+    "short": {
+      "pov_3d_toon": {
+        "videos": 4,
+        "total_views": 140,
+        "avg_views": 35.0,
+        "avg_score": 36.5
+      }
+    },
+    "long": {
+      "cozy_diorama": {
+        "videos": 1,
+        "total_views": 0,
+        "avg_views": 0.0,
+        "avg_score": 0.0
+      }
+    }
+  },
+  "pillar_leaderboard": {
+    "Everyday Focus & Habits": {
+      "videos": 3,
+      "total_views": 3,
+      "avg_views": 1.0,
+      "avg_score": 3.0
+    }
+  },
+  "interaction_summary": {
+    "total_comments_replied": 0,
+    "top_votes": []
+  },
+  "system_health": {
+    "total_episodes": 10,
+    "next_youtube_date": ""
+  },
+  "winning_patterns": [
+    "Specific time-based morning/afternoon dopamine traps (e.g. 7 AM, 2 PM crash)",
+    "Concrete brain metrics (-40% focus, 23-minute attention residue)",
+    "Interactive A/B survival choice cliffhangers driving Part 2 anticipation"
+  ],
+  "recommended_sequels": [
+    {
+      "topic": "Part 2: Ever feel exhausted after working all day yet struggle to  — What Happens Next in Your Brain",
+      "angle": "Direct sequel expanding on our top-performing video (123 views on Facebook Page Reels) with deeper neuroscience + 3-step fix",
+      "hook": "Everyone loved our breakdown on Ever feel exhausted after working all day yet—here is Part 2 showing what happens inside your brain next.",
+      "source_video_id": "1679406323549773",
+      "source_views": 123,
+      "keywords": [
+        "ever",
+        "feel",
+        "exhausted",
+        "after",
+        "working",
+        "part 2",
+        "neuroscience"
+      ]
+    },
+    {
+      "topic": "Part 2: Dopamine Supports Coupling of Attention-Related Networks — What Happens Next in Your Brain",
+      "angle": "Direct sequel expanding on our top-performing video (17 views on YouTube Shorts) with deeper neuroscience + 3-step fix",
+      "hook": "Everyone loved our breakdown on Dopamine Supports Coupling of Attention-Relat—here is Part 2 showing what happens inside your brain next.",
+      "source_video_id": "O8itVKXQfLc",
+      "source_views": 17,
+      "keywords": [
+        "dopamine",
+        "supports",
+        "coupling",
+        "attention",
+        "related",
+        "part 2",
+        "neuroscience"
+      ]
+    }
+  ],
+  "vote_tally": {},
+  "next_style_plan": {
+    "long_style": "cozy_diorama",
+    "short_style": "cinema_broll_html",
+    "reason": "explore_challenger_short:cinema_broll_html"
+  }
+}

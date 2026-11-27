@@ -7,7 +7,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.analytics_engine import choose_next_visual_styles, compute_style_leaderboard
+from src.analytics_engine import (
+    choose_next_visual_styles,
+    compute_growth_deltas,
+    compute_pillar_leaderboard,
+    compute_style_leaderboard,
+)
 from src.ideation import select_topic
 
 
@@ -72,6 +77,33 @@ class AnalyticsOptimizerTest(unittest.TestCase):
         )
         self.assertEqual(idea.source, "analytics_sequel")
         self.assertIn("Part 2", idea.topic)
+
+    def test_growth_deltas_rising_videos_and_pillar_leaderboard(self) -> None:
+        prev = {
+            "updated_at_wib": "2026-11-26 19:13:00 WIB",
+            "total_views_all_platforms": 300,
+            "account_stats": {"yt_subscribers": 10, "ig_followers": 100, "fb_followers": 50},
+            "video_views_snapshot": {"v1": 200, "v2": 100},
+        }
+        current_videos = [
+            {"id": "v1", "title": "Phone Face Down", "platform": "Instagram Reels", "privacy": "public", "views": 650, "likes": 30, "comments": 8, "score": 974.0},
+            {"id": "v2", "title": "Coffee 2 PM Crash", "platform": "YouTube Shorts", "privacy": "public", "views": 180, "likes": 10, "comments": 2, "score": 276.0},
+        ]
+        cur_acct = {"yt_subscribers": 15, "ig_followers": 112, "fb_followers": 53}
+        g = compute_growth_deltas(prev, current_videos, cur_acct)
+        self.assertEqual(g["delta_total_views"], 530)
+        self.assertEqual(g["delta_yt_subs"], 5)
+        self.assertEqual(g["delta_ig_followers"], 12)
+        self.assertEqual(g["rising_videos"][0]["id"], "v1")
+        self.assertEqual(g["rising_videos"][0]["delta_views"], 450)
+
+        hist = [
+            {"pillar_label": "Everyday Focus & Habits", "external_ids": {"Instagram Reels": "v1"}},
+            {"pillar_label": "Fun Everyday Science", "external_ids": {"YouTube Shorts": "v2"}},
+        ]
+        pboard = compute_pillar_leaderboard(current_videos, hist)
+        self.assertEqual(pboard["Everyday Focus & Habits"]["avg_views"], 650.0)
+        self.assertEqual(pboard["Fun Everyday Science"]["avg_views"], 180.0)
 
 
 if __name__ == "__main__":
