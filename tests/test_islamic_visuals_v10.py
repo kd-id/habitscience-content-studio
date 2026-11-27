@@ -16,7 +16,7 @@ from src.islamic_visual_engine import (
     _resolve_dalil_payload,
     build_islamic_visual_html,
 )
-from src.scriptwriter import generate_content_blueprint
+from src.scriptwriter import ISLAMIC_FORMAT_PROFILES, _build_gemini_prompt, generate_content_blueprint
 from src.sfx_engine import _nature_bed_spec
 
 
@@ -108,6 +108,32 @@ class TestIslamicVisualsV10(unittest.TestCase):
             self.assertEqual(bp["meta"]["dalil"]["citation"], idea.dalil["citation"])
             self.assertIn(idea.dalil["citation"], bp["youtube_long"]["description"])
             self.assertEqual(len(bp["carousel_social"]["slides"]), 5)
+
+    def test_anti_rancu_isolated_format_prompts_never_mix_styles_or_legacy_pov(self) -> None:
+        from src.ideation import TopicIdea
+
+        cfg = load_config()
+        self.assertEqual(set(ISLAMIC_FORMAT_PROFILES.keys()), {"prophetic_habits", "quran_mental_peace", "sunnah_brain_science"})
+        for pillar_id, prof in ISLAMIC_FORMAT_PROFILES.items():
+            sample = PILLAR_TOPIC_BANKS[pillar_id][0]
+            idea = TopicIdea(
+                topic=sample["topic"],
+                angle=sample["angle"],
+                hook=sample["hook"],
+                source="test",
+                pillar=pillar_id,
+                pillar_label=prof["format_name"],
+                dalil=sample["dalil"],
+            )
+            prompt = _build_gemini_prompt(idea, cfg)
+            self.assertIn(prof["visual_style"], prompt)
+            self.assertIn(prof["nature_audio"], prompt)
+            self.assertIn(sample["dalil"]["citation"], prompt)
+            # Strictly isolated: zero legacy POV clutter AND zero competing format visual modes!
+            self.assertNotIn("pov_3d_episode", prompt)
+            for other_id, other_prof in ISLAMIC_FORMAT_PROFILES.items():
+                if other_id != pillar_id:
+                    self.assertNotIn(other_prof["visual_style"], prompt)
 
 
 if __name__ == "__main__":

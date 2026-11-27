@@ -11,6 +11,50 @@ from src.config_loader import slugify
 from src.ideation import TopicIdea
 
 
+# Strictly isolated Format Packages (Anti-Rancu): 1 Pillar = 1 Script Rhythm = 1 Visual Engine = 1 Nature Audio
+ISLAMIC_FORMAT_PROFILES: dict[str, dict[str, Any]] = {
+    "prophetic_habits": {
+        "format_name": "Format 1: Luminous Sky (Minute Wisdom + 5 Duas vibe)",
+        "visual_style": "islamic_luminous_sky",
+        "nature_audio": "dawn_breeze",
+        "rhythm_rules": (
+            "- Tone: Warm, reassuring, practical step-by-step Prophetic habit coaching.\n"
+            "- Visual context: Shifting 5-prayer sky with mosque & water reflection (or embers -> rain -> blooming meadow), showing the verified Amiri Arabic calligraphy card + glowing step dots.\n"
+            "- Headline rule: Keep every `visual_headline` <= 5 words so it fits cleanly above the Arabic calligraphy card.\n"
+            "- Shorts 6-beat arc (90-115 words total, strictly < 55s): 01 REFLECT (everyday struggle) -> 02 THE SUNNAH (exact verified Hadith/Dua) -> 03 MIND SCIENCE (why it helps your brain) -> 04 STEP 1 (tiny easy start) -> 05 STEP 2 (gentle consistency) -> 06 SHARE PEACE (soft save/share CTA)."
+        ),
+        "long_sections": "REFLECT / THE MODERN STRUGGLE / THE VERIFIED SUNNAH / EVERYDAY BRAIN SCIENCE / STEP 1 / STEP 2 / GENTLE CONSISTENCY / CLOSING",
+        "short_badge_example": "01 • REFLECT",
+    },
+    "quran_mental_peace": {
+        "format_name": "Format 2: Gold Visualizer (Surah Ar-Ra'd Luxury Contemplative vibe)",
+        "visual_style": "islamic_gold_visualizer",
+        "nature_audio": "gentle_rain",
+        "rhythm_rules": (
+            "- Tone: Deeply serene, intimate, unhurried late-night reflection—every sentence feels like a calm breath of peace.\n"
+            "- Visual context: Pitch-black obsidian canvas with a glowing 24k gold voice-reactive radial sunburst visualizer and word-by-word gold Arabic & English karaoke.\n"
+            "- Headline rule: Keep every `visual_headline` <= 5 words because it displays inside a sleek bottom gold insight pill.\n"
+            "- Shorts 6-beat arc (85-110 words total, strictly < 55s): 01 QUIET PAIN (hidden inner restlessness) -> 02 THE AYAH (verified Surah & meaning) -> 03 DEEP MEANING (one subtle heart-touching nuance) -> 04 CALM SCIENCE (how it settles stress/overthinking) -> 05 ANCHOR (10-second daily recall) -> 06 PEACE (warm save reminder)."
+        ),
+        "long_sections": "QUIET PAIN / THE AYAH / SUBTLE MEANING / CALM MIND SCIENCE / HIDDEN NOISE / DAILY ANCHOR / LIVING THE VERSE / CLOSING PEACE",
+        "short_badge_example": "01 • QUIET PAIN",
+    },
+    "sunnah_brain_science": {
+        "format_name": "Format 3: Particle Map (Al-Kahfi Particle Constellations + Ocean Metaphor vibe)",
+        "visual_style": "islamic_particle_map",
+        "nature_audio": "calm_water",
+        "rhythm_rules": (
+            "- Tone: Vivid, reflective storytelling using concrete everyday metaphors (needle in an ocean, 1/3 balance, cooling anger by sitting down, Friday light).\n"
+            "- Visual context: Mood-shifting cosmic canvas where 380+ luminous particles morph across symbolic shapes above centered white-outlined conversational subtitles and 4 milestone pills (REFLECT / SUNNAH / SCIENCE / HABIT).\n"
+            "- Headline rule: Keep every `visual_headline` punchy and <= 5 words (renders in bold uppercase at the top).\n"
+            "- Shorts 6-beat arc (95-118 words total, strictly < 55s): 01 METAPHOR (vivid scroll-stopping image) -> 02 THE HADITH (verified Sahih Hadith & citation) -> 03 THE SCIENCE (everyday brain/body reason) -> 04 MODERN TRAP (contrast with noisy modern habit) -> 05 DAILY SHIFT (one memorable rule) -> 06 CLOSING (warm reflection CTA)."
+        ),
+        "long_sections": "THE METAPHOR / THE VERIFIED HADITH / BRAIN & BODY SCIENCE / THE MODERN TRAP / KEY INSIGHT 1 / KEY INSIGHT 2 / DAILY SHIFT / CLOSING",
+        "short_badge_example": "01 • METAPHOR",
+    },
+}
+
+
 def _build_gemini_prompt(idea: TopicIdea, config: dict[str, Any]) -> str:
     channel = config.get("channel", {})
     lang = channel.get("language", "en")
@@ -27,60 +71,58 @@ def _build_gemini_prompt(idea: TopicIdea, config: dict[str, Any]) -> str:
                 f"- Translation: {dalil.get('translation', '')}\n"
                 f"- Verified Citation: {dalil.get('citation', '')}\n"
             )
-        pillar_hint = {
-            "prophetic_habits": "Style focus (Minute Wisdom + 5 Duas vibe): Calm, luminous, practical breakdown of a Prophetic daily habit or authentic Dua—step by step—and why everyday brain & habit science confirms its calm power.",
-            "quran_mental_peace": "Style focus (Surah Ar-Ra'd contemplative vibe): Deeply serene, heart-touching reflection on a verified Qur'anic verse for mental peace, gratitude, or resilience, bridged naturally to how it calms stress & racing thoughts.",
-            "sunnah_brain_science": "Style focus (Al-Kahfi visual-map + Hadith Qudsi ocean-metaphor vibe): Moving storytelling using vivid everyday metaphors, unpacking a verified Sahih Hadith alongside modern brain & health science.",
-            "pov_survival": "Style focus: Thrilling First-Person 3D POV countdown/survival brain challenge.",
-            "everyday_science": "Style focus: Fun, surprising everyday brain/body science.",
-            "focus_habits": "Style focus: Relatable everyday phone/focus/procrastination struggle + 1 super-simple habit trick.",
-        }.get(pillar_id, "Style focus: Warm, reflective Prophetic wisdom & everyday brain science storytelling.")
-        return f"""You are a Master Reflective Islamic Wisdom & Brain Science Storyteller (combining the serenity of Minute Wisdom, Omar Suleiman's clarity, and modern everyday habit science).
-Create an original, deeply moving, crystal-clear Master Content Blueprint in warm, simple everyday spoken English so ANY viewer worldwide feels calm, inspired, and immediately understands both the authentic Islamic wisdom AND the everyday science behind it.
 
-Channel Profile:
-- Name: {channel.get('name')} ({channel.get('handle')})
-- Scheduled Pillar: {pillar_label} ({pillar_id}) — {pillar_hint}
+        # ANTI-RANCU ISOLATION: Studio v10 Islamic formats get a pure, dedicated prompt with ZERO legacy POV bloat!
+        if pillar_id in ISLAMIC_FORMAT_PROFILES:
+            prof = ISLAMIC_FORMAT_PROFILES[pillar_id]
+            return f"""You are a Master Reflective Islamic Wisdom & Everyday Brain Science Storyteller for '{channel.get('name')}' ({channel.get('handle')}).
+You are authoring EXCLUSIVELY for ONE locked Format Package—do NOT mix styles from any other format.
+
+LOCKED FORMAT PACKAGE:
+- Format: {prof['format_name']}
+- Pillar: {pillar_label} ({pillar_id})
+- Locked Visual Engine: {prof['visual_style']}
+- Locked Audio Ambiance: {prof['nature_audio']} (100% instrument-free nature soundscape + calm narrator voice)
 - Audience: {channel.get('target_audience')}
-- Tone: {channel.get('tone')}
 - YouTube CTA: {channel.get('cta_youtube')}
 - Social CTA: {channel.get('cta_social')}
 
-Core Idea:
+CORE IDEA:
 - Topic: {idea.topic}
 - Unique Angle: {idea.angle}
 - Opening Hook: {idea.hook}
 - Keywords: {", ".join(idea.keywords or [])}
 {dalil_block}
-ISLAMIC ACCURACY, ADAB & PLAIN-ENGLISH RULES (STRICT — NON-NEGOTIABLE):
-1. ZERO FABRICATION: NEVER invent, guess, or fabricate Qur'an verse numbers or Hadith collection numbers. Anchor the script around the EXACT Verified Citation provided above.
-2. ADAB & RESPECT: Speak of Allah and Prophet Muhammad (peace be upon him) with sincere reverence and calm dignity. In EVERY `visual_prompt`, strictly forbid depicting Prophets, sacred figures, or human faces—use luminous mosque silhouettes, twilight skies, calm water reflections, starlight, geometric gold patterns, open landscapes, rain, or glowing symbolic light instead.
-3. PLAIN EVERYDAY ENGLISH (GRADE 6-7 CLARITY): Warm, soulful, short spoken sentences—ZERO dry college textbook jargon! STRICTLY FORBIDDEN words anywhere in titles, props, or narration: "prefrontal cortex", "amygdala", "coupling", "neural correlates", "cognitive load", "memory consolidation", "executive function", "ultradian", "melatonin", "cortical", "bandwidth".
-4. STORY FLOW: Every video MUST flow smoothly through: (1) a quiet relatable modern struggle, (2) the authentic Qur'an/Sunnah wisdom & citation, (3) the simple everyday brain/habit science showing WHY it heals or sharpens the mind, (4) one gentle step to practice today + soft save/share reminder.
-5. Shorts narration MUST total ~95–120 spoken words across 6 calm beats (~40–50 seconds at natural calm pace, strictly under 55 seconds!).
+LOCKED FORMAT RHYTHM & STRUCTURE:
+{prof['rhythm_rules']}
+
+ISLAMIC ACCURACY, ADAB & PLAIN-ENGLISH RULES (NON-NEGOTIABLE):
+1. ZERO FABRICATION: NEVER guess or invent Qur'an verse numbers or Hadith numbers. Anchor strictly to the Verified Citation above.
+2. ADAB & RESPECT: Speak of Allah and Prophet Muhammad (peace be upon him) with sincere reverence and calm warmth. In EVERY `visual_prompt`, strictly forbid depicting Prophets, sacred figures, or human faces—use luminous mosque silhouettes, twilight skies, water reflections, starlight, Islamic geometry, rain, meadows, or glowing symbolic light instead.
+3. PLAIN EVERYDAY ENGLISH (GRADE 6-7 CLARITY): Warm, soulful, short spoken sentences—ZERO textbook jargon! STRICTLY FORBIDDEN words anywhere in titles or narration: "prefrontal cortex", "amygdala", "coupling", "neural correlates", "cognitive load", "memory consolidation", "executive function", "ultradian", "melatonin", "cortical", "bandwidth".
 
 Return ONLY valid JSON with this exact schema:
 {{
   "youtube_long": {{
     "title": "Soulful high-CTR curiosity + wisdom title (max 68 chars)",
     "alt_titles": ["A/B Alt 1", "A/B Alt 2", "A/B Alt 3"],
-    "description": "Warm YouTube description with reflective hook, verified Qur'an/Hadith citation, everyday science takeaways, chapter timestamps, CTA, and hashtags",
+    "description": "Warm YouTube description with reflective hook, verified citation, everyday science takeaways, chapter timestamps, CTA, and hashtags",
     "tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8"],
     "thumbnail": {{
-      "badge": "SHORT BADGE (2-3 words, e.g. PROPHETIC HABIT)",
+      "badge": "SHORT BADGE (2-3 words)",
       "headline": "PUNCHY THUMBNAIL TEXT (2-4 words)",
       "subheadline": "Short reflective subtitle (4-7 words)",
-      "visual_prompt": "Luminous serene Islamic architectural/nature editorial illustration (mosque dome silhouette, twilight gold light, calm water reflection — strictly NO prophets, NO faces, NO text)"
+      "visual_prompt": "Serene luminous Islamic architectural/nature editorial illustration (strictly NO prophets, NO faces, NO text)"
     }},
     "scenes": [
       {{
         "scene_no": 1,
-        "section": "HOOK / THE STRUGGLE / THE SUNNAH OR AYAH / THE SCIENCE / SHIFT 1 / SHIFT 2 / DAILY PRACTICE / CLOSING",
-        "visual_headline": "Crisp short editorial title (max 6 words)",
+        "section": "{prof['long_sections']}",
+        "visual_headline": "Crisp short title (max 5 words)",
         "bullet_points": ["Point 1", "Point 2", "Point 3"],
         "on_screen_callout": "1-line calm insight",
         "narration": "Calm, warm, thoughtful storytelling narration, 2-3 clear spoken sentences (~12-16 seconds when spoken).",
-        "visual_prompt": "Serene luminous Islamic landscape or symbolic light illustration for this exact beat (strictly NO prophets, NO human faces, NO text)"
+        "visual_prompt": "Serene luminous Islamic landscape or symbolic light illustration (strictly NO prophets, NO faces, NO text)"
       }}
     ]
   }},
@@ -94,61 +136,12 @@ Return ONLY valid JSON with this exact schema:
     "scenes": [
       {{
         "scene_no": 1,
-        "badge": "01 • REFLECT",
-        "visual_headline": "Short crisp vertical headline (max 5 words)",
+        "badge": "{prof['short_badge_example']}",
+        "visual_headline": "Crisp short vertical headline (max 5 words)",
         "narration": "Warm, calm, clear 1-2 sentence spoken beat (~6-8 seconds).",
-        "visual_prompt": "Serene vertical 9:16 luminous Islamic sky/nature/geometry visual (strictly NO prophets, NO faces, NO text)"
+        "visual_prompt": "Serene vertical 9:16 luminous Islamic sky/geometry/nature visual (strictly NO prophets, NO faces, NO text)"
       }}
-    ],
-    "pov_3d_episode": {{
-      "props": {{
-        "scene_env": "Pick BEST matching 3D world: sunrise_bedroom | midnight_study | sunny_cafe_desk | survival_bunker | focus_lab",
-        "action_pattern": "Pick BEST matching 3D camera blocking: nightstand_to_desk | desk_face_down | partner_first_confrontation | coffee_window_pan",
-        "hero_prop": "Pick BEST 3D hero prop: alarm_phone | face_down_phone | coffee_mug | hazard_beacon",
-        "loc_main": "YOUR ROOM • 5:15 AM",
-        "series_title": "SHORT 2-4 WORD ALL-CAPS TITLE (max 20 chars)",
-        "phone_time": "5:15",
-        "phone_norm_hdr": "SHORT HEADER (max 19 chars)",
-        "phone_norm_cards": [
-          ["#E11D48", "CARD 1 TITLE (max 15 chars)", "Short topic bait (max 24 chars)"],
-          ["#3B82F6", "CARD 2 TITLE (max 15 chars)", "Short topic bait (max 24 chars)"],
-          ["#F59E0B", "CARD 3 TITLE (max 15 chars)", "Short topic bait (max 24 chars)"]
-        ],
-        "phone_cta_norm": "SWIPE NOW (max 15 chars)",
-        "phone_urgent_hdr": "3 DISTRACTIONS! (max 19 chars)",
-        "phone_urgent_cards": [
-          ["#E11D48", "ALERT 1 (max 15 chars)", "Subtext (max 24 chars)"],
-          ["#F59E0B", "ALERT 2 (max 15 chars)", "Subtext (max 24 chars)"],
-          ["#E11D48", "ALERT 3 (max 15 chars)", "Subtext (max 24 chars)"]
-        ],
-        "phone_cta_urgent": "TAP NOW (max 15 chars)",
-        "swarm_badges": ["NOISE", "RUSH", "PING!", "WORRY", "SCROLL", "FOG"],
-        "scan_title": "CALM MIND READOUT (max 22 chars)",
-        "scan_stat": "+45% CALM (max 14 chars)",
-        "scan_sub": "SHORT MECHANISM SUB (max 24 chars)",
-        "scan_left_lbl": "SUNNAH (max 15 chars)",
-        "scan_right_lbl": "RESULT (max 15 chars)",
-        "scan_footer": "SHORT STATUS FOOTER (max 25 chars)",
-        "laptop_hdr": "DAILY HABIT (max 22 chars)",
-        "laptop_due": "START TODAY",
-        "laptop_title": "Topic-matched habit title (max 26 chars)",
-        "laptop_status": "|  (Short status max 26 chars)",
-        "laptop_callout": "SHORT ACTIONABLE RULE (max 30 chars)",
-        "option_a": "CALM SUNNAH HABIT CHOICE (max 44 chars)",
-        "option_b": "NOISY AUTOPILOT CHOICE (max 44 chars)",
-        "end_sub": "Save this reminder for tomorrow"
-      }},
-      "dialogue": [
-        {{"beat": "intro", "speaker": "pov", "text": "10-16 words: Relatable modern habit struggle tied directly to THIS topic."}},
-        {{"beat": "trap", "speaker": "partner", "text": "10-16 words: Names the hidden distraction trap tied to THIS topic."}},
-        {{"beat": "explain", "speaker": "partner", "text": "16-24 words: Explains the authentic Sunnah/Qur'an wisdom and everyday brain science clearly."}},
-        {{"beat": "timer_react", "speaker": "pov", "text": "7-12 words: Thoughtful reaction."}},
-        {{"beat": "scan", "speaker": "partner", "text": "12-18 words: Cites the exact calm mental benefit."}},
-        {{"beat": "desk", "speaker": "partner", "text": "12-18 words: Gives one gentle step to practice today."}},
-        {{"beat": "agree", "speaker": "pov", "text": "5-10 words: Commits calmly to trying the habit."}},
-        {{"beat": "ping", "speaker": "partner", "text": "11-17 words: Reminds viewer to protect their calm when noise returns."}}
-      ]
-    }}
+    ]
   }},
   "carousel_social": {{
     "title": "Carousel title",
@@ -173,8 +166,33 @@ Return ONLY valid JSON with this exact schema:
 
 Strict beat counts:
 - youtube_long.scenes MUST have 8 distinct calm visual beats (~12-16s each, total ~2 minutes).
-- shorts_reels_tiktok.scenes MUST have 6 crisp vertical beats (~6-8s each, total ~38-48 seconds, strictly under 55 seconds).
-- carousel_social.slides MUST have exactly 5 slides (Cover, Verified Wisdom/Citation, Everyday Brain Science, Practical Daily Step, Gentle Closing CTA).
+- shorts_reels_tiktok.scenes MUST have 6 crisp vertical beats (~6-8s each, strictly under 55 seconds total).
+- carousel_social.slides MUST have exactly 5 slides (Cover, Verified Source/Citation, Everyday Mind Science, Gentle Daily Step, Save/Share CTA).
+"""
+
+        # Legacy secular POV/Science prompt path (ONLY used when explicitly invoking legacy pillars!)
+        pillar_hint = {
+            "pov_survival": "Style focus: Thrilling First-Person 3D POV countdown/survival brain challenge.",
+            "everyday_science": "Style focus: Fun, surprising everyday brain/body science.",
+            "focus_habits": "Style focus: Relatable everyday phone/focus/procrastination struggle + 1 super-simple habit trick.",
+        }.get(pillar_id, "Style focus: Super-simple everyday brain & habit storytelling.")
+        return f"""You are a Viral YouTube & Reels Storyteller for '{channel.get('name')}' ({channel.get('handle')}).
+Create an original Master Content Blueprint in super-simple everyday spoken English (Grade 6-7 clarity, zero academic jargon).
+
+Channel Profile:
+- Scheduled Pillar: {pillar_label} ({pillar_id}) — {pillar_hint}
+- Audience: {channel.get('target_audience')}
+- Tone: {channel.get('tone')}
+- YouTube CTA: {channel.get('cta_youtube')}
+- Social CTA: {channel.get('cta_social')}
+
+Core Idea:
+- Topic: {idea.topic}
+- Unique Angle: {idea.angle}
+- Opening Hook: {idea.hook}
+- Keywords: {", ".join(idea.keywords or [])}
+
+Return ONLY valid JSON with keys: youtube_long (8 scenes), shorts_reels_tiktok (6 scenes + pov_3d_episode), carousel_social (5 slides).
 """
 
     lang_label = "Bahasa Indonesia"
@@ -1809,7 +1827,12 @@ def generate_content_blueprint(
         blueprint = _build_structured_fallback(idea, config)
         mode = "structured_local_template"
 
-    if config.get("channel", {}).get("language", "en") == "en" and isinstance(blueprint.get("shorts_reels_tiktok"), dict):
+    active_pillar = getattr(idea, "pillar", "")
+    if (
+        config.get("channel", {}).get("language", "en") == "en"
+        and active_pillar not in ISLAMIC_FORMAT_PROFILES
+        and isinstance(blueprint.get("shorts_reels_tiktok"), dict)
+    ):
         shorts_block = blueprint["shorts_reels_tiktok"]
         shorts_block["pov_3d_episode"] = normalize_pov_3d_episode(
             shorts_block.get("pov_3d_episode"),
@@ -1818,7 +1841,7 @@ def generate_content_blueprint(
             hook=idea.hook,
             scenes_meta=shorts_block.get("scenes"),
             config=config,
-            pillar=getattr(idea, "pillar", ""),
+            pillar=active_pillar,
         )
 
     blueprint["meta"] = {
