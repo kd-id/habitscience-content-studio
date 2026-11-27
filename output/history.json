@@ -211,5 +211,34 @@
       "failed": 1
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-27_184910_why-friday-jumuah-is-designed-as-you/PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-27_212201_why-your-mind-stays-restless-until-i",
+    "slug": "why-your-mind-stays-restless-until-it-remembers",
+    "topic": "Why Your Mind Stays Restless Until It Remembers Allah (Surah Ar-Ra'd 13:28)",
+    "pillar": "quran_mental_peace",
+    "pillar_label": "Qur'an Wisdom & Mental Peace",
+    "generated_at_wib": "2026-11-27 21:31:19 WIB",
+    "publish_mode": "scheduled",
+    "visual_style_long": "islamic_gold_visualizer",
+    "visual_style_short": "islamic_gold_visualizer",
+    "external_ids": {
+      "YouTube Long (16:9)": "Kq85KJpngiE",
+      "YouTube Shorts (9:16)": "NNySn6HJEug",
+      "Instagram Reels": "18103171478424635",
+      "Instagram Carousel": "18137270945481354",
+      "X & Threads": "threads:18107034554355851",
+      "Facebook Page Reels": "2216336289276832"
+    },
+    "counts": {
+      "total": 8,
+      "published": 3,
+      "scheduled": 3,
+      "drafted": 0,
+      "dry_run_ready": 0,
+      "pending_setup": 2,
+      "failed": 0
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-27_212201_why-your-mind-stays-restless-until-i/PUBLISH_REPORT.md"
   }
 ]
