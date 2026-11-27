@@ -222,6 +222,85 @@ def resolve_story_acts(topic_meta: dict[str, Any] | None, scenes_meta: list[dict
 # ---------------------------------------------------------------------------
 
 STORY_ACTS_JS = r"""
+function clamp01(x) { return Math.min(Math.max(x, 0), 1); }
+function easeOutCubic(x) { const c = clamp01(x); return 1 - Math.pow(1 - c, 3); }
+function easeInOutQuad(x) { const c = clamp01(x); return c < 0.5 ? 2*c*c : 1 - Math.pow(-2*c + 2, 2)/2; }
+function springOut(x) {
+  const c = clamp01(x);
+  if (c === 0 || c === 1) return c;
+  return 1 + Math.pow(2, -9 * c) * Math.sin((c * 10 - 0.75) * (2 * Math.PI / 3)) * -0.78;
+}
+
+function isArabicWordToken(tok) {
+  return /[\u0621-\u064A\u0671-\u06D3]/.test(tok || '');
+}
+
+function buildArabicKaraokeHTML(arabicText, prefix, cls) {
+  const raw = String(arabicText || '').split(/\s+/).filter(Boolean);
+  let idx = 0;
+  const parts = raw.map((tok) => {
+    if (isArabicWordToken(tok)) {
+      const html = `<span class="${cls}" id="${prefix}_${idx}">${tok}</span>`;
+      idx++;
+      return html;
+    }
+    return `<span class="${cls}-punct">${tok}</span>`;
+  });
+  return { html: parts.join(' '), count: idx };
+}
+
+function updateArabicKaraokeAt(t, arWin, wordCount, prefix, cls, fallbackLocalT) {
+  if (!wordCount || wordCount <= 0) return -1;
+  let activeIdx = -1;
+  const wts = (arWin && Array.isArray(arWin.word_timings) && arWin.word_timings.length > 0)
+    ? arWin.word_timings
+    : null;
+
+  if (wts) {
+    let rawIdx = -1;
+    for (let k = 0; k < wts.length; k++) {
+      if (t >= (wts[k].s - 0.04)) rawIdx = k;
+    }
+    if (rawIdx >= 0) {
+      if (wts.length === wordCount) {
+        activeIdx = rawIdx;
+      } else {
+        activeIdx = Math.min(Math.floor((rawIdx / wts.length) * wordCount), wordCount - 1);
+      }
+    }
+  } else {
+    activeIdx = Math.min(Math.floor(clamp01(fallbackLocalT) * wordCount), wordCount - 1);
+  }
+
+  for (let i = 0; i < wordCount; i++) {
+    const el = document.getElementById(prefix + '_' + i);
+    if (!el) continue;
+    el.className = cls + (i === activeIdx ? ' lit' : (i < activeIdx ? ' past' : ''));
+  }
+  return activeIdx;
+}
+
+function animateActCard(el, show, localT, actDurSec, centeredX = true) {
+  if (!el) return;
+  if (!show) {
+    el.style.display = 'none';
+    el.style.opacity = '0';
+    return;
+  }
+  const dur = Math.max(actDurSec || 4.0, 0.8);
+  const elap = Math.max(localT * dur, 0);
+  const rem = Math.max((1 - localT) * dur, 0);
+  const inU = clamp01(elap / 0.55);
+  const outU = clamp01(rem / 0.32);
+  const sc = 0.88 + 0.12 * springOut(inU);
+  const dy = (1 - easeOutCubic(inU)) * 22;
+  const op = Math.min(easeOutCubic(inU), outU);
+  el.style.display = el.dataset.displayMode || 'block';
+  el.style.opacity = String(op.toFixed(3));
+  const tx = centeredX ? 'translateX(-50%) ' : '';
+  el.style.transform = `${tx}translateY(${dy.toFixed(1)}px) scale(${sc.toFixed(3)})`;
+}
+
 function computeFourActTiming(cfg) {
   const total = Math.max(cfg.total_dur || 30, 6);
   const ar = cfg.arabic_window;

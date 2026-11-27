@@ -179,18 +179,20 @@ class TestIslamicVisualsV10(unittest.TestCase):
             fake_tts = wdir / "t.wav"
             fake_tts.write_bytes(b"RIFF" + b"\x00" * 64)
 
-            # 1) Short Qur'an Ayah (<=20s) uses real uncut Mishary Alafasy Qari!
-            with patch("src.arabic_audio.fetch_everyayah_quran_wav", return_value=(fake_qari, 15.5)):
+            # 1) Short complete Qur'an Ayah (<=20s) uses real uncut Mishary Alafasy Qari + word timings!
+            fake_segs = [{"i": 0, "s": 0.1, "e": 0.9}, {"i": 1, "s": 0.9, "e": 1.8}]
+            with patch("src.arabic_audio.fetch_everyayah_quran_wav", return_value=(fake_qari, 15.5)), \
+                 patch("src.arabic_audio.fetch_quran_word_timings", return_value=fake_segs):
                 res = resolve_dalil_arabic_audio(
                     PILLAR_TOPIC_BANKS["quran_mental_peace"][2]["dalil"], wdir, cfg, is_short=True
                 )
                 assert res is not None
                 self.assertTrue(res.is_real_qari)
                 self.assertIn("everyayah:", res.source)
+                self.assertEqual(len(res.word_timings), 2)
 
-            # 2) Ultra-long Qur'an Ayah (>20s) on Short NEVER chops Qari mid-verse -> routes to Saudi Arabic TTS!
-            fake_qari.write_bytes(b"RIFF" + b"\x00" * 64)
-            with patch("src.arabic_audio.fetch_everyayah_quran_wav", return_value=(fake_qari, 53.0)), \
+            # 2) Curated Qur'an excerpt (is_excerpt=True, e.g., 2:286) routes straight to ar-SA-HamedNeural so displayed words match spoken audio 100%!
+            with patch("src.arabic_audio.fetch_everyayah_quran_wav") as mock_everyayah, \
                  patch("src.arabic_audio.synthesize_arabic_tts_wav", return_value=(fake_tts, 4.2)):
                 res = resolve_dalil_arabic_audio(
                     PILLAR_TOPIC_BANKS["hadith_cinematic_story"][3]["dalil"], wdir, cfg, is_short=True
@@ -198,6 +200,7 @@ class TestIslamicVisualsV10(unittest.TestCase):
                 assert res is not None
                 self.assertFalse(res.is_real_qari)
                 self.assertIn("ar-SA-HamedNeural", res.source)
+                mock_everyayah.assert_not_called()
 
             # 3) Hadith / Prophetic Dua routes cleanly to Saudi Arabic TTS (ar-SA-HamedNeural)
             with patch("src.arabic_audio.synthesize_arabic_tts_wav", return_value=(fake_tts, 3.8)):
@@ -207,6 +210,56 @@ class TestIslamicVisualsV10(unittest.TestCase):
                 assert res is not None
                 self.assertFalse(res.is_real_qari)
                 self.assertIn("ar-SA-HamedNeural", res.source)
+
+    def test_v12_complete_verses_papercraft_kit_and_exact_word_sync(self) -> None:
+        # 1) Verify all 11 studio-lit 2.5D Paper-Cutout transparent PNG sprites exist in assets/papercraft_kit/
+        kit_dir = Path(__file__).resolve().parent.parent / "assets" / "papercraft_kit"
+        expected_sprites = {
+            "presenter_point.png", "presenter_scroll.png", "presenter_dua.png",
+            "sunburst_3d.png", "calendar_3d.png", "plaque_islamic.png",
+            "open_book_3d.png", "cloud_3d.png", "dome_medallion_3d.png",
+            "garden_arch_fg.png", "sunrise_hills_fg.png",
+        }
+        present = {p.name for p in kit_dir.glob("*.png")}
+        self.assertTrue(expected_sprites.issubset(present), f"Missing sprites: {expected_sprites - present}")
+
+        # 2) Complete Qur'an verses (13:28, 14:7, 2:153, 25:63) have full Ayah Arabic matching EveryAyah 1:1
+        by_cit = {
+            item["dalil"]["citation"]: item["dalil"]
+            for bank in PILLAR_TOPIC_BANKS.values()
+            for item in bank
+        }
+        self.assertIn("الَّذِينَ آمَنُوا", by_cit["QUR'AN 13:28"]["arabic"])
+        self.assertIn("أَلَا بِذِكْرِ اللَّهِ", by_cit["QUR'AN 13:28"]["arabic"])
+        self.assertIn("وَإِذْ تَأَذَّنَ", by_cit["QUR'AN 14:7"]["arabic"])
+        self.assertIn("يَـٰٓأَيُّهَا", by_cit["QUR'AN 2:153"]["arabic"])
+        self.assertIn("قَالُوا سَلَامًا", by_cit["QUR'AN 25:63"]["arabic"])
+        for ex_cit in ("QUR'AN 13:11", "QUR'AN 65:3", "QUR'AN 3:173", "QUR'AN 2:286"):
+            self.assertTrue(by_cit[ex_cit].get("is_excerpt"), f"Expected is_excerpt=True on {ex_cit}")
+
+        # 3) All 6 modes wire exact millisecond Arabic word karaoke (`buildArabicKaraokeHTML` + `updateArabicKaraokeAt`)
+        sample = PILLAR_TOPIC_BANKS["quran_mental_peace"][0]
+        dalil_payload = _resolve_dalil_payload(
+            topic_meta={"topic": sample["topic"], "pillar_label": "Qur'an Peace", "channel_handle": "@HabitSains", "dalil": sample["dalil"]},
+            scenes_meta=[],
+        )
+        payload = {
+            "fps": 24,
+            "total_dur": 30.0,
+            "dalil": dalil_payload,
+            "scenes": [{"idx": 0, "start": 0.0, "end": 30.0, "badge": "01 • HOOK", "headline": "Quiet Mind"}],
+            "captions": [],
+            "rms": [0.3] * 24,
+        }
+        for mode in ISLAMIC_VISUAL_MODES:
+            for w, h in ((720, 1280), (1280, 720)):
+                html = build_islamic_visual_html(mode, payload, w, h)
+                self.assertIn("buildArabicKaraokeHTML", html, f"{mode} missing buildArabicKaraokeHTML")
+                self.assertIn("updateArabicKaraokeAt", html, f"{mode} missing updateArabicKaraokeAt")
+                self.assertIn("springOut", html, f"{mode} missing springOut true-motion curve")
+                if mode == "islamic_paper_craft":
+                    self.assertIn("sunburst_3d", html)
+                    self.assertIn("window._assetsReady", html)
 
     def test_four_act_storytelling_staging_across_all_30_topics_and_6_modes(self) -> None:
         # Every single curated topic must resolve a valid 4-Act visual plan

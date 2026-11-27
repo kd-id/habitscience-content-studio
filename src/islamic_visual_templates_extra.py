@@ -100,6 +100,10 @@ def build_nature_transform_html(payload: dict[str, Any], font_css: str, width: i
     text-shadow: 0 2px 14px rgba(253, 224, 71, 0.35);
     margin-bottom: {10 if is_short else 4}px;
   }}
+  .ar-title .arw {{ color: rgba(255, 250, 238, 0.38); }}
+  .ar-title .arw.lit {{ color: #FDE047; text-shadow: 0 0 24px rgba(253, 224, 71, 0.85); }}
+  .ar-title .arw.past {{ color: #FFFDF7; }}
+  .ar-title .arw-punct {{ color: rgba(253, 224, 71, 0.80); }}
   .tr-sub {{
     font-family: 'Georgia', serif;
     font-size: {tr_size}px; font-weight: 600; line-height: 1.3;
@@ -232,7 +236,12 @@ const STORY = CFG.story_acts || {{}};
 
 const ACTS = computeFourActTiming(CFG);
 
-document.getElementById('arTitle').textContent = CFG.dalil.arabic;
+const AR_BUILT = buildArabicKaraokeHTML(CFG.dalil.arabic, 'nat_ar', 'arw');
+document.getElementById('arTitle').innerHTML = AR_BUILT.html;
+if (AR_BUILT.count >= 10) {{
+  document.getElementById('arTitle').style.fontSize = (IS_SHORT ? 39 : 33) + 'px';
+  document.getElementById('arTitle').style.lineHeight = '1.44';
+}}
 document.getElementById('trSub').textContent = CFG.dalil.transliteration;
 document.getElementById('enSub').textContent = '"' + CFG.dalil.translation + '"';
 document.getElementById('citChip').textContent = '✦  ' + CFG.dalil.citation + '  ✦';
@@ -258,6 +267,23 @@ for (let i = 0; i < 64; i++) {{
     ph: i * 0.87,
     extinguishAt: 0.24 + ((i * 37) % 100) / 100 * 0.26,
   }});
+}}
+const EMBERS = [];
+for (let i = 0; i < 48; i++) {{
+  EMBERS.push({{ x: ((i * 179.3) % 1000) / 1000, y: ((i * 263.7) % 1000) / 1000, sp: 0.14 + (i % 5) * 0.04, r: 1.5 + (i % 3) * 1.1, ph: i * 1.1 }});
+}}
+const RAIN_DROPS = [];
+for (let i = 0; i < 68; i++) {{
+  RAIN_DROPS.push({{ x: ((i * 149.1) % 1000) / 1000, y: ((i * 311.3) % 1000) / 1000, sp: 0.95 + (i % 4) * 0.22, len: 18 + (i % 3) * 9 }});
+}}
+const PETALS = [];
+for (let i = 0; i < 34; i++) {{
+  const cols = ['#FBCFE8', '#FCE7F3', '#FEF08A', '#FFFFFF'];
+  PETALS.push({{ x: ((i * 211.7) % 1000) / 1000, y: ((i * 167.3) % 1000) / 1000, spX: 28 + (i % 4) * 12, spY: 0.06 + (i % 3) * 0.025, sz: 4.5 + (i % 3) * 1.8, col: cols[i % cols.length], ph: i * 0.9 }});
+}}
+const GRASS = [];
+for (let i = 0; i < 64; i++) {{
+  GRASS.push({{ x: (i / 64) + ((i * 37) % 10) * 0.0015, h: 16 + (i % 5) * 7, ph: i * 0.63 }});
 }}
 const FLOWERS = [];
 for (let i = 0; i < 95; i++) {{
@@ -427,7 +453,7 @@ window.renderAt = function(t) {{
   ctx.fillRect(0, horizonY, W, H - horizonY);
   drawHexCracks(horizonY, 1 - grassMix);
 
-  // Act 1 & early Act 2: Flames extinguishing with steam
+  // Act 1 & early Act 2: Flames extinguishing with steam + rising ember sparks!
   if (envP < 0.54) {{
     for (const fl of FLAMES) {{
       const fy = horizonY + 22 + fl.depth * (H - horizonY - 40);
@@ -443,6 +469,29 @@ window.renderAt = function(t) {{
         ctx.fill();
       }}
     }}
+    const embA = clamp01((0.44 - envP) / 0.18);
+    if (embA > 0.02) {{
+      for (const em of EMBERS) {{
+        const ex = em.x * W + Math.sin(t * 2.4 + em.ph) * 24;
+        const ey = H - (((em.y + t * em.sp) % 1) * H);
+        ctx.fillStyle = `rgba(253, 210, 88, ${{embA * (0.45 + 0.50 * Math.sin(t * 5 + em.ph))}})`;
+        ctx.beginPath(); ctx.arc(ex, ey, em.r, 0, Math.PI * 2); ctx.fill();
+      }}
+    }}
+  }}
+
+  // Act 2: Diagonal cleansing silver-blue rain curtain sweeping across flames!
+  if (envP > 0.20 && envP < 0.58) {{
+    const rainA = Math.sin(clamp01((envP - 0.20) / 0.38) * Math.PI) * 0.56;
+    ctx.save();
+    ctx.strokeStyle = `rgba(186, 230, 253, ${{rainA}})`;
+    ctx.lineWidth = 1.8;
+    for (const rd of RAIN_DROPS) {{
+      const rx = ((rd.x * W - t * 90) % (W + 40) + (W + 40)) % (W + 40) - 20;
+      const ry = ((rd.y + t * rd.sp) % 1) * H;
+      ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 7, ry + rd.len); ctx.stroke();
+    }}
+    ctx.restore();
   }}
 
   // Act 2..4: Teardrop into rippling pool
@@ -457,12 +506,14 @@ window.renderAt = function(t) {{
     pg.addColorStop(0, '#93D5FA'); pg.addColorStop(1, '#3B82B6');
     ctx.fillStyle = pg;
     ctx.beginPath(); ctx.ellipse(poolX, poolY, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
-    const rip = (t * 0.8) % 1.0;
-    ctx.strokeStyle = `rgba(255,255,255,${{(1 - rip) * 0.65}})`;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.ellipse(poolX, poolY, 10 + rip * rx * 0.72, 4 + rip * ry * 0.72, 0, 0, Math.PI * 2);
-    ctx.stroke();
+    for (let r = 0; r < 2; r++) {{
+      const rip = (t * 0.8 + r * 0.5) % 1.0;
+      ctx.strokeStyle = `rgba(255,255,255,${{(1 - rip) * 0.65}})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(poolX, poolY, 10 + rip * rx * 0.78, 4 + rip * ry * 0.78, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }}
 
     if (envP < 0.80) {{
       const dropCyc = (t * 0.72) % 1.0;
@@ -476,23 +527,57 @@ window.renderAt = function(t) {{
     }}
   }}
 
-  // Act 3 & Act 4: Wildflowers & blooming apple + cherry blossom trees!
+  // Act 3 & Act 4: Swaying grass blades, blooming wildflowers, spring trees & drifting sakura petals!
+  if (envP > 0.50) {{
+    const gGrow = clamp01((envP - 0.50) / 0.16);
+    ctx.save();
+    ctx.strokeStyle = `rgba(52, 128, 48, ${{0.68 * gGrow}})`;
+    ctx.lineWidth = 2.4;
+    for (const gr of GRASS) {{
+      const gx = gr.x * W;
+      const gy = H - 8;
+      const sway = Math.sin(t * 2.1 + gr.ph) * 10 * gGrow;
+      ctx.beginPath();
+      ctx.moveTo(gx, gy);
+      ctx.quadraticCurveTo(gx + sway * 0.5, gy - gr.h * 0.6 * gGrow, gx + sway, gy - gr.h * gGrow);
+      ctx.stroke();
+    }}
+    ctx.restore();
+  }}
   if (envP > 0.54) {{
     for (const fw of FLOWERS) {{
       if (envP < fw.appearAt) continue;
       const a = Math.min((envP - fw.appearAt) / 0.08, 1);
-      const fx = fw.x * W;
+      const fx = fw.x * W + Math.sin(t * 1.8 + fw.x * 12) * 2.5;
       const fy = horizonY + 14 + fw.y * (H - horizonY - 26);
       if (Math.hypot((fx - poolX) / 96, (fy - poolY) / 36) < 1.1) continue;
       ctx.fillStyle = fw.col;
       ctx.globalAlpha = a * 0.92;
-      ctx.beginPath(); ctx.arc(fx, fy, fw.r, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(fx, fy, fw.r * springOut(a), 0, Math.PI * 2); ctx.fill();
     }}
     ctx.globalAlpha = 1;
-    const treeGrow = Math.min(Math.max((envP - 0.74) / 0.16, 0), 1);
+    const rawTree = clamp01((envP - 0.72) / 0.16);
+    const treeGrow = rawTree > 0 ? springOut(rawTree) : 0;
     const tScale = IS_SHORT ? 0.96 : 0.78;
     drawTree(W * 0.16, horizonY + (H - horizonY) * 0.34, tScale, '#3D9140', '#EF4444', treeGrow, t);
     drawTree(W * 0.84, horizonY + (H - horizonY) * 0.33, tScale * 0.94, '#F9A8D4', '#FCE7F3', treeGrow, t);
+
+    // Floating blossom petals & golden pollen gliding gracefully across the meadow!
+    const petA = clamp01((envP - 0.66) / 0.14);
+    if (petA > 0.02) {{
+      for (const pt of PETALS) {{
+        const px = ((pt.x * W + t * pt.spX) % (W + 40) + (W + 40)) % (W + 40) - 20;
+        const py = ((pt.y + t * pt.spY) % 1) * H;
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(t * 2.2 + pt.ph);
+        ctx.globalAlpha = petA * 0.85;
+        ctx.fillStyle = pt.col;
+        ctx.beginPath(); ctx.ellipse(0, 0, pt.sz, pt.sz * 0.55, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }}
+      ctx.globalAlpha = 1;
+    }}
   }}
 
   // Draw Act-Specific Center-Stage Canvas Visuals!
@@ -532,33 +617,32 @@ window.renderAt = function(t) {{
   const miniCit = document.getElementById('miniCit');
   const arWin = CFG.arabic_window;
 
+  // Smooth spring entrance/exit on Act 2 Dalil & Act 4 Climax cards!
+  const arDurSec = Math.max(ACTS.arEnd - ACTS.arStart, 2.0);
+  const climDurSec = Math.max(ACTS.total - ACTS.climaxStart, 2.0);
+  animateActCard(dalilStage, act.name === 'DALIL', act.localT, arDurSec, true);
+  animateActCard(climaxCard, act.name === 'CLIMAX', act.localT, climDurSec, true);
+
   if (act.name === 'HOOK') {{
-    dalilStage.style.display = 'none';
-    climaxCard.style.display = 'none';
     actPill.textContent = 'ACT 1 • ' + (STORY.hook_kicker || 'THE HOOK');
     actPill.style.borderColor = '#F87171';
     actPill.style.color = '#FCA5A5';
     headEl.textContent = (CFG.scenes[0] && CFG.scenes[0].headline) || CFG.dalil.topic;
     miniCit.textContent = '';
   }} else if (act.name === 'DALIL') {{
-    dalilStage.style.display = 'block';
-    climaxCard.style.display = 'none';
     actPill.textContent = (arWin && arWin.is_qari) ? `ACT 2 • TILAWAH (${{arWin.reciter}})` : 'ACT 2 • VERIFIED PROPHETIC WISDOM';
     actPill.style.borderColor = '#FDE68A';
     actPill.style.color = '#FDE68A';
     headEl.textContent = CFG.dalil.citation;
     miniCit.textContent = '';
+    updateArabicKaraokeAt(t, arWin, AR_BUILT.count, 'nat_ar', 'arw', act.localT);
   }} else if (act.name === 'EXPLAINER') {{
-    dalilStage.style.display = 'none';
-    climaxCard.style.display = 'none';
     actPill.textContent = 'ACT 3 • THE SCIENCE';
     actPill.style.borderColor = '#34D399';
     actPill.style.color = '#6EE7B7';
     headEl.textContent = (cur && cur.headline) || 'HOW IT RESETS YOUR MIND';
     miniCit.textContent = '✦  ' + CFG.dalil.citation + '  ✦';
   }} else {{
-    dalilStage.style.display = 'none';
-    climaxCard.style.display = 'block';
     actPill.textContent = 'ACT 4 • THE TAKEAWAY';
     actPill.style.borderColor = '#34D399';
     actPill.style.color = '#A7F3D0';
@@ -607,452 +691,10 @@ window.renderAt = function(t) {{
 # ---------------------------------------------------------------------------
 
 def build_paper_craft_html(payload: dict[str, Any], font_css: str, width: int, height: int) -> str:
-    cfg_json = json.dumps(payload, ensure_ascii=False)
-    is_short = height >= width
+    """Delegate Format 3 (`islamic_paper_craft`) directly to Studio v12 Multi-Layer 2.5D Paper-Cutout Motion."""
+    from src.paper_craft_motion import build_paper_craft_25d_html
 
-    return f"""<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  {font_css}
-  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  html, body {{
-    width: {width}px; height: {height}px; overflow: hidden;
-    background: #A9D2DD;
-    font-family: 'Segoe UI', 'Trebuchet MS', Arial, sans-serif;
-    color: #1E2F42;
-  }}
-  #bgCanvas {{ position: absolute; inset: 0; width: {width}px; height: {height}px; display: block; }}
-
-  .top-paper {{
-    position: absolute; top: {52 if is_short else 16}px; left: 30px; right: 30px;
-    z-index: 6; display: flex; flex-direction: column; align-items: center; text-align: center;
-    pointer-events: none;
-  }}
-  .pill-tag {{
-    display: inline-block; padding: 5px 18px; border-radius: 999px;
-    background: #1E2F42; color: #F5F1E3;
-    font-size: 13px; font-weight: 900; letter-spacing: 2.2px; text-transform: uppercase;
-    box-shadow: 0 6px 14px rgba(15, 28, 42, 0.22);
-    margin-bottom: {10 if is_short else 5}px;
-  }}
-  .cutout-headline {{
-    font-size: {38 if is_short else 32}px; font-weight: 900; line-height: 1.12;
-    color: #1E2F42; text-transform: uppercase; letter-spacing: 0.4px;
-    max-width: {640 if is_short else 960}px;
-    text-shadow: 0 3px 0 #F5F1E3, 0 8px 16px rgba(15, 28, 42, 0.20);
-  }}
-  .mini-cit {{
-    margin-top: 5px; font-size: 12px; font-weight: 800; letter-spacing: 2px;
-    color: #0F5E48; text-transform: uppercase;
-  }}
-
-  /* ACT 2 ONLY: Arabic calligraphy cream paper card */
-  .ar-ribbon {{
-    position: absolute; left: 50%; transform: translateX(-50%);
-    top: {222 if is_short else 124}px;
-    z-index: 7; width: {640 if is_short else 880}px;
-    background: #F7F3E6;
-    border: 3px solid #D97706;
-    border-radius: 20px;
-    padding: {18 if is_short else 12}px 24px;
-    text-align: center;
-    box-shadow: 0 0 28px rgba(229, 190, 102, 0.55), 6px 12px 24px rgba(15, 28, 42, 0.24);
-    display: none;
-  }}
-  .ar-script {{
-    font-family: 'AmiriCalligraphy', 'Amiri', serif;
-    direction: rtl; unicode-bidi: embed;
-    font-size: {42 if is_short else 34}px; font-weight: 700; line-height: 1.5;
-    color: #1E2F42; margin-bottom: 6px;
-  }}
-  .ar-tr {{
-    font-size: {18 if is_short else 16}px; font-weight: 700; color: #334155;
-    margin-bottom: 6px;
-  }}
-  .ar-cit {{
-    display: inline-block; padding: 3px 14px; border-radius: 999px;
-    background: rgba(229, 190, 102, 0.30);
-    font-size: 13px; font-weight: 800; letter-spacing: 2px;
-    color: #92400E; text-transform: uppercase;
-  }}
-
-  /* ACT 4 ONLY: Cream & Gold Paper-Cutout Core Lesson Card */
-  .climax-paper {{
-    position: absolute; left: 50%; transform: translateX(-50%);
-    top: {220 if is_short else 126}px;
-    z-index: 7; width: {620 if is_short else 760}px;
-    background: #FAF6EA;
-    border: 3px solid #0F766E;
-    border-radius: 20px;
-    padding: {20 if is_short else 14}px 26px;
-    text-align: center;
-    box-shadow: 6px 12px 24px rgba(15, 28, 42, 0.24);
-    display: none;
-  }}
-  .climax-kicker {{
-    font-size: 13px; font-weight: 900; letter-spacing: 2.6px;
-    color: #0F766E; text-transform: uppercase; margin-bottom: 8px;
-  }}
-  .climax-lesson {{
-    font-size: {32 if is_short else 27}px; font-weight: 900; line-height: 1.22;
-    color: #1E2F42; margin-bottom: 10px;
-  }}
-  .climax-cit {{
-    display: inline-block; padding: 4px 14px; border-radius: 999px;
-    background: #1E2F42; color: #F5D076;
-    font-size: 12px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
-  }}
-
-  .sub-area {{
-    position: absolute; left: 28px; right: 28px;
-    bottom: {64 if is_short else 24}px;
-    z-index: 9; text-align: center;
-  }}
-  .sub-paper {{
-    display: inline-block; max-width: {640 if is_short else 960}px;
-    padding: 11px 22px; border-radius: 14px;
-    background: #F6F2E6;
-    border: 2px solid rgba(30, 47, 66, 0.18);
-    box-shadow: 4px 10px 22px rgba(15, 28, 42, 0.24);
-  }}
-  #subText {{
-    font-size: {30 if is_short else 26}px; font-weight: 800; line-height: 1.24; color: #1E2F42;
-  }}
-  #subText .hi {{
-    color: #0F5E48; background: rgba(229, 190, 102, 0.42);
-    padding: 0 5px; border-radius: 6px;
-  }}
-
-  .brand-foot {{
-    position: absolute; bottom: {18 if is_short else 5}px; left: 0; right: 0;
-    z-index: 9; text-align: center;
-    font-size: 13px; font-weight: 800; letter-spacing: 2px; color: rgba(30, 47, 66, 0.70);
-  }}
-</style>
-</head>
-<body>
-<canvas id="bgCanvas" width="{width}" height="{height}"></canvas>
-
-<div class="top-paper">
-  <div class="pill-tag" id="pillTag">ACT 1 • HOOK</div>
-  <div class="cutout-headline" id="headline"></div>
-  <div class="mini-cit" id="miniCit"></div>
-</div>
-
-<div class="ar-ribbon" id="arRibbon">
-  <div class="ar-script" id="arScript"></div>
-  <div class="ar-tr" id="arTr"></div>
-  <div class="ar-cit" id="arCit"></div>
-</div>
-
-<div class="climax-paper" id="climaxPaper">
-  <div class="climax-kicker">✦  THE SUNNAH LESSON  ✦</div>
-  <div class="climax-lesson" id="climaxLesson"></div>
-  <div class="climax-cit" id="climaxCit"></div>
-</div>
-
-<div class="sub-area"><div class="sub-paper" id="subPaper"><div id="subText"></div></div></div>
-<div class="brand-foot" id="brandFoot"></div>
-
-<script>
-const CFG = {cfg_json};
-const W = {width}, H = {height};
-const IS_SHORT = H >= W;
-const ctx = document.getElementById('bgCanvas').getContext('2d');
-const STORY = CFG.story_acts || {{}};
-
-{STORY_ACTS_JS}
-
-const ACTS = computeFourActTiming(CFG);
-
-document.getElementById('arScript').textContent = CFG.dalil.arabic;
-document.getElementById('arTr').textContent = CFG.dalil.transliteration;
-document.getElementById('arCit').textContent = '✦  ' + CFG.dalil.citation + '  ✦';
-document.getElementById('climaxLesson').textContent = STORY.core_lesson || CFG.dalil.translation;
-document.getElementById('climaxCit').textContent = '✦  ' + CFG.dalil.citation + '  •  SAVE & SHARE  ✦';
-document.getElementById('brandFoot').textContent = CFG.dalil.handle + '  •  PAPER CRAFT SUNNAH STORY';
-
-function setPaperShadow(dx = 5, dy = 10, blur = 16, alpha = 0.22) {{
-  ctx.shadowColor = `rgba(15, 28, 42, ${{alpha}})`;
-  ctx.shadowBlur = blur; ctx.shadowOffsetX = dx; ctx.shadowOffsetY = dy;
-}}
-function clearShadow() {{
-  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-}}
-
-function drawPaperCloud(x, y, s) {{
-  ctx.save(); setPaperShadow(3, 7, 12, 0.16);
-  ctx.fillStyle = '#F7F4EA';
-  ctx.beginPath();
-  ctx.arc(x, y, 22 * s, 0, Math.PI * 2);
-  ctx.arc(x + 22 * s, y - 8 * s, 26 * s, 0, Math.PI * 2);
-  ctx.arc(x + 48 * s, y, 20 * s, 0, Math.PI * 2);
-  ctx.fillRect(x, y, 48 * s, 20 * s);
-  ctx.fill(); ctx.restore();
-}}
-
-function drawPaperSunburst(cx, cy, r, t) {{
-  ctx.save(); ctx.translate(cx, cy); ctx.rotate(t * 0.14);
-  setPaperShadow(4, 8, 14, 0.18);
-  const rays = 12;
-  for (let i = 0; i < rays; i++) {{
-    ctx.save(); ctx.rotate((i / rays) * Math.PI * 2);
-    ctx.fillStyle = (i % 2 === 0) ? '#F7F4EA' : '#ECD082';
-    ctx.beginPath();
-    ctx.moveTo(-8, -r * 1.18); ctx.lineTo(8, -r * 1.18);
-    ctx.lineTo(13, -r * 1.95); ctx.lineTo(-13, -r * 1.95);
-    ctx.closePath(); ctx.fill(); ctx.restore();
-  }}
-  ctx.fillStyle = '#E6C167';
-  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
-  clearShadow();
-  ctx.fillStyle = '#EED082';
-  ctx.beginPath(); ctx.arc(-4, -4, r * 0.78, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-}}
-
-function drawPaperTree(x, y, s, variant) {{
-  ctx.save(); ctx.translate(x, y); setPaperShadow(4, 8, 12, 0.22);
-  if (variant === 'pine') {{
-    ctx.fillStyle = '#5B402D'; ctx.fillRect(-5 * s, -20 * s, 10 * s, 24 * s);
-    for (let k = 0; k < 3; k++) {{
-      ctx.fillStyle = k === 0 ? '#2E5B43' : (k === 1 ? '#3D7354' : '#4E8C65');
-      const base = -18 * s - k * 24 * s; const hw = (36 - k * 7) * s;
-      ctx.beginPath(); ctx.moveTo(-hw, base); ctx.lineTo(0, base - 38 * s); ctx.lineTo(hw, base); ctx.closePath(); ctx.fill();
-    }}
-  }} else {{
-    ctx.fillStyle = '#6A4C36'; ctx.fillRect(-6 * s, -62 * s, 12 * s, 64 * s);
-    ctx.fillStyle = '#4B7F52';
-    ctx.beginPath();
-    ctx.arc(0, -78 * s, 30 * s, 0, Math.PI * 2);
-    ctx.arc(-22 * s, -64 * s, 22 * s, 0, Math.PI * 2);
-    ctx.arc(22 * s, -62 * s, 22 * s, 0, Math.PI * 2);
-    ctx.fill();
-    clearShadow(); ctx.fillStyle = '#689F69';
-    ctx.beginPath(); ctx.arc(-8 * s, -84 * s, 16 * s, 0, Math.PI * 2); ctx.fill();
-  }}
-  ctx.restore();
-}}
-
-// Respectful FACELESS minimalist Muslim presenter in navy kurta/koko — ZERO facial features!
-function drawFacelessPresenter(x, baseY, s, pose, t) {{
-  ctx.save(); ctx.translate(x, baseY + Math.sin(t * 2.2) * 3 * s);
-  setPaperShadow(5, 10, 14, 0.24);
-  ctx.fillStyle = '#182534';
-  ctx.fillRect(-20 * s, -98 * s, 16 * s, 82 * s);
-  ctx.fillRect(4 * s, -98 * s, 16 * s, 82 * s);
-  ctx.fillStyle = '#3B2F2F';
-  ctx.beginPath();
-  ctx.roundRect(-24 * s, -16 * s, 22 * s, 12 * s, 5 * s);
-  ctx.roundRect(2 * s, -16 * s, 22 * s, 12 * s, 5 * s);
-  ctx.fill();
-  ctx.fillStyle = '#1E3148';
-  ctx.beginPath(); ctx.roundRect(-30 * s, -214 * s, 60 * s, 134 * s, 16 * s); ctx.fill();
-  clearShadow(); ctx.fillStyle = '#2B425E'; ctx.fillRect(-3 * s, -212 * s, 6 * s, 54 * s);
-
-  setPaperShadow(3, 6, 10, 0.20); ctx.fillStyle = '#1A2B3F';
-  ctx.beginPath(); ctx.roundRect(-42 * s, -206 * s, 16 * s, 82 * s, 8 * s); ctx.fill();
-
-  ctx.save(); ctx.translate(26 * s, -198 * s);
-  if (pose === 'point') {{
-    ctx.rotate(-0.85 + Math.sin(t * 2.5) * 0.06);
-    ctx.fillStyle = '#1A2B3F'; ctx.beginPath(); ctx.roundRect(0, -8 * s, 72 * s, 16 * s, 8 * s); ctx.fill();
-    ctx.fillStyle = '#E8C5A8'; ctx.beginPath(); ctx.arc(76 * s, 0, 9 * s, 0, Math.PI * 2); ctx.fill();
-  }} else if (pose === 'dua') {{
-    ctx.rotate(-2.1 + Math.sin(t * 1.8) * 0.05);
-    ctx.fillStyle = '#1A2B3F'; ctx.beginPath(); ctx.roundRect(0, -8 * s, 54 * s, 15 * s, 7 * s); ctx.fill();
-    ctx.fillStyle = '#E8C5A8'; ctx.beginPath(); ctx.arc(58 * s, 0, 8 * s, 0, Math.PI * 2); ctx.fill();
-  }} else {{
-    ctx.fillStyle = '#1A2B3F'; ctx.beginPath(); ctx.roundRect(-4 * s, 0, 16 * s, 80 * s, 8 * s); ctx.fill();
-  }}
-  ctx.restore();
-
-  ctx.fillStyle = '#E8C5A8';
-  ctx.beginPath(); ctx.roundRect(-18 * s, -264 * s, 36 * s, 44 * s, 16 * s); ctx.fill();
-  clearShadow(); ctx.fillStyle = '#18222F';
-  ctx.beginPath(); ctx.arc(0, -252 * s, 19 * s, Math.PI * 1.05, Math.PI * 1.95);
-  ctx.lineTo(18 * s, -242 * s); ctx.lineTo(-18 * s, -242 * s); ctx.closePath(); ctx.fill();
-  ctx.beginPath(); ctx.arc(0, -234 * s, 18 * s, 0.1 * Math.PI, 0.9 * Math.PI); ctx.fill();
-  ctx.restore();
-}}
-
-function drawPaperHillsScene(t) {{
-  const baseH = H * (IS_SHORT ? 0.80 : 0.84);
-  ctx.save(); setPaperShadow(0, -4, 14, 0.16);
-  ctx.fillStyle = '#82B378';
-  ctx.beginPath(); ctx.moveTo(0, baseH - 70);
-  ctx.quadraticCurveTo(W * 0.28, baseH - 150, W * 0.56, baseH - 85);
-  ctx.quadraticCurveTo(W * 0.82, baseH - 140, W, baseH - 78);
-  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
-
-  ctx.fillStyle = '#558B59';
-  ctx.beginPath(); ctx.moveTo(0, baseH - 12);
-  ctx.quadraticCurveTo(W * 0.30, baseH - 80, W * 0.62, baseH - 22);
-  ctx.quadraticCurveTo(W * 0.85, baseH - 60, W, baseH - 18);
-  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
-
-  ctx.fillStyle = '#3B6E4A';
-  ctx.beginPath(); ctx.moveTo(0, baseH + 40);
-  ctx.quadraticCurveTo(W * 0.48, baseH - 10, W, baseH + 34);
-  ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
-  ctx.restore();
-
-  const sc = IS_SHORT ? 1.0 : 0.76;
-  drawPaperTree(W * 0.12, baseH - 18, sc * 0.88, 'pine');
-  drawPaperTree(W * 0.88, baseH - 22, sc * 1.0, 'round');
-  drawPaperTree(W * 0.78, baseH + 14, sc * 0.72, 'pine');
-}}
-
-function drawOpenPaperBookProp(cx, cy, s, t) {{
-  ctx.save(); ctx.translate(cx, cy); setPaperShadow(6, 12, 18, 0.22);
-  for (let layer = 2; layer >= 0; layer--) {{
-    const dy = layer * 7 * s;
-    ctx.fillStyle = layer === 0 ? '#FAF7EE' : (layer === 1 ? '#EAE4D3' : '#D4CCB7');
-    ctx.beginPath();
-    ctx.moveTo(0, dy);
-    ctx.quadraticCurveTo(-85 * s, -22 * s + dy, -175 * s, 4 * s + dy);
-    ctx.lineTo(-160 * s, 56 * s + dy);
-    ctx.quadraticCurveTo(-80 * s, 32 * s + dy, 0, 52 * s + dy);
-    ctx.quadraticCurveTo(80 * s, 32 * s + dy, 160 * s, 56 * s + dy);
-    ctx.lineTo(175 * s, 4 * s + dy);
-    ctx.quadraticCurveTo(85 * s, -22 * s + dy, 0, dy);
-    ctx.closePath(); ctx.fill();
-  }}
-  clearShadow();
-  drawPaperSunburst(0, -104 * s + Math.sin(t * 2.0) * 6 * s, 44 * s, t);
-  ctx.restore();
-}}
-
-function drawIslamicArchMedallion(cx, cy, s) {{
-  ctx.save(); ctx.translate(cx, cy); setPaperShadow(6, 12, 20, 0.22);
-  ctx.fillStyle = '#E5BE66';
-  ctx.beginPath();
-  ctx.moveTo(0, -135 * s);
-  ctx.bezierCurveTo(85 * s, -105 * s, 118 * s, -25 * s, 108 * s, 52 * s);
-  ctx.bezierCurveTo(92 * s, 112 * s, 36 * s, 124 * s, 0, 138 * s);
-  ctx.bezierCurveTo(-36 * s, 124 * s, -92 * s, 112 * s, -108 * s, 52 * s);
-  ctx.bezierCurveTo(-118 * s, -25 * s, -85 * s, -105 * s, 0, -135 * s);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#FAF6EA';
-  ctx.beginPath(); ctx.arc(0, 4 * s, 92 * s, 0, Math.PI * 2); ctx.fill();
-  clearShadow();
-  ctx.fillStyle = '#1E2F42';
-  ctx.font = `900 ${{24 * s}}px 'Segoe UI', sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText('PEACE &', 0, -12 * s);
-  ctx.fillStyle = '#0F766E';
-  ctx.fillText('BARAKAH', 0, 18 * s);
-  ctx.restore();
-}}
-
-window.renderAt = function(t) {{
-  const act = getCurrentAct(t, ACTS);
-
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#9ECAD6'); bg.addColorStop(0.65, '#B7DCE6'); bg.addColorStop(1, '#CEE7EE');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-
-  drawPaperCloud(((W * 0.10 + t * 9) % (W + 140)) - 70, H * (IS_SHORT ? 0.24 : 0.26), IS_SHORT ? 0.95 : 0.80);
-  drawPaperCloud(((W * 0.72 + t * 6) % (W + 140)) - 70, H * (IS_SHORT ? 0.28 : 0.30), IS_SHORT ? 0.82 : 0.70);
-
-  const sc = IS_SHORT ? 1.0 : 0.72;
-  const pal = {{
-    bgCard: '#FAF6EA',
-    border: '#E5BE66',
-    ink: '#1E2F42',
-    muted: '#64748B',
-    accent: '#B45309',
-    good: '#059669',
-    light: true,
-  }};
-
-  drawPaperHillsScene(t);
-
-  if (act.name === 'HOOK') {{
-    drawPaperSunburst(W * 0.84, H * 0.28, 42 * sc, t);
-    drawFacelessPresenter(W * (IS_SHORT ? 0.20 : 0.20), H * (IS_SHORT ? 0.86 : 0.90), sc * 0.96, 'point', t);
-    const hx = IS_SHORT ? W * 0.54 : W * 0.56;
-    const hy = H * (IS_SHORT ? 0.45 : 0.48);
-    drawAct1HookVisual(ctx, STORY.hook_visual || 'rushing_calendar', hx, hy, IS_SHORT ? 1.08 : 0.88, act.localT, t, pal);
-  }} else if (act.name === 'DALIL') {{
-    drawOpenPaperBookProp(W * 0.56, H * (IS_SHORT ? 0.67 : 0.68), sc * 0.96, t);
-    drawFacelessPresenter(W * (IS_SHORT ? 0.20 : 0.22), H * (IS_SHORT ? 0.86 : 0.90), sc * 0.96, 'point', t);
-  }} else if (act.name === 'EXPLAINER') {{
-    drawFacelessPresenter(W * (IS_SHORT ? 0.20 : 0.18), H * (IS_SHORT ? 0.87 : 0.90), sc * 0.92, 'point', t);
-    const ex = IS_SHORT ? W * 0.50 : W * 0.57;
-    const ey = H * (IS_SHORT ? 0.43 : 0.48);
-    drawAct3ExplainerVisual(ctx, STORY, ex, ey, IS_SHORT ? 1.02 : 0.88, act.localT, t, pal);
-  }} else {{
-    drawIslamicArchMedallion(W * (IS_SHORT ? 0.42 : 0.46), H * (IS_SHORT ? 0.68 : 0.68), sc * 0.84);
-    drawFacelessPresenter(W * (IS_SHORT ? 0.78 : 0.76), H * (IS_SHORT ? 0.86 : 0.90), sc * 0.98, 'dua', t);
-  }}
-
-  let cur = CFG.scenes[CFG.scenes.length - 1];
-  for (const s of CFG.scenes) {{
-    if (t >= s.start && t <= s.end) {{ cur = s; break; }}
-  }}
-
-  const pillTag = document.getElementById('pillTag');
-  const headEl = document.getElementById('headline');
-  const miniCit = document.getElementById('miniCit');
-  const arRibbon = document.getElementById('arRibbon');
-  const climaxPaper = document.getElementById('climaxPaper');
-  const arWin = CFG.arabic_window;
-
-  if (act.name === 'HOOK') {{
-    arRibbon.style.display = 'none';
-    climaxPaper.style.display = 'none';
-    pillTag.textContent = 'ACT 1 • ' + (STORY.hook_kicker || 'THE HOOK');
-    pillTag.style.background = '#B91C1C';
-    headEl.textContent = (CFG.scenes[0] && CFG.scenes[0].headline) || CFG.dalil.topic;
-    miniCit.textContent = '';
-  }} else if (act.name === 'DALIL') {{
-    arRibbon.style.display = 'block';
-    climaxPaper.style.display = 'none';
-    pillTag.textContent = (arWin && arWin.is_qari) ? `ACT 2 • TILAWAH` : 'ACT 2 • VERIFIED HADITH';
-    pillTag.style.background = '#B45309';
-    headEl.textContent = CFG.dalil.citation;
-    miniCit.textContent = '';
-  }} else if (act.name === 'EXPLAINER') {{
-    arRibbon.style.display = 'none';
-    climaxPaper.style.display = 'none';
-    pillTag.textContent = 'ACT 3 • THE SCIENCE';
-    pillTag.style.background = '#0F766E';
-    headEl.textContent = (cur && cur.headline) || 'WHY IT WORKS';
-    miniCit.textContent = '✦  ' + CFG.dalil.citation + '  ✦';
-  }} else {{
-    arRibbon.style.display = 'none';
-    climaxPaper.style.display = 'block';
-    pillTag.textContent = 'ACT 4 • THE LESSON';
-    pillTag.style.background = '#1E2F42';
-    headEl.textContent = (cur && cur.headline) || 'DAILY SUNNAH';
-    miniCit.textContent = '';
-  }}
-
-  let cap = null;
-  for (const c of CFG.captions) {{
-    if (t >= c.start - 0.06 && t <= c.end + 0.14) {{ cap = c; break; }}
-  }}
-  const subPaper = document.getElementById('subPaper');
-  const subText = document.getElementById('subText');
-  if (act.name === 'DALIL') {{
-    subPaper.style.opacity = '1';
-    subText.innerHTML = `<span class="hi" style="font-style:italic">"${{CFG.dalil.translation}}"</span>`;
-  }} else if (cap && cap.words && cap.words.length) {{
-    subPaper.style.opacity = '1';
-    subText.innerHTML = cap.words.map(w => {{
-      const isSpoken = t >= w.s && t <= w.e + 0.12;
-      return isSpoken ? `<span class="hi">${{w.w}}</span>` : w.w;
-    }}).join(' ');
-  }} else {{
-    subPaper.style.opacity = '0';
-  }}
-}};
-</script>
-</body>
-</html>"""
+    return build_paper_craft_25d_html(payload, font_css, width=width, height=height)
 
 
 # ---------------------------------------------------------------------------
@@ -1126,6 +768,10 @@ def build_cinematic_metaphor_html(payload: dict[str, Any], font_css: str, width:
     text-shadow: 0 2px 16px rgba(253, 224, 130, 0.40);
     margin-bottom: 10px;
   }}
+  .ar-float .arw {{ color: rgba(255, 250, 238, 0.36); }}
+  .ar-float .arw.lit {{ color: #FDE68A; text-shadow: 0 0 24px rgba(253, 224, 130, 0.85); }}
+  .ar-float .arw.past {{ color: #FFFDF7; }}
+  .ar-float .arw-punct {{ color: rgba(253, 224, 130, 0.78); }}
   .tr-float {{
     font-family: 'Georgia', serif; font-size: {21 if is_short else 18}px;
     color: #FDE68A; margin-bottom: 8px;
@@ -1221,7 +867,12 @@ const STORY = CFG.story_acts || {{}};
 const ACTS = computeFourActTiming(CFG);
 
 document.getElementById('citPill').textContent = '✦  ' + CFG.dalil.citation + '  ✦';
-document.getElementById('arFloat').textContent = CFG.dalil.arabic;
+const AR_BUILT = buildArabicKaraokeHTML(CFG.dalil.arabic, 'cin_ar', 'arw');
+document.getElementById('arFloat').innerHTML = AR_BUILT.html;
+if (AR_BUILT.count >= 10) {{
+  document.getElementById('arFloat').style.fontSize = (IS_SHORT ? 37 : 31) + 'px';
+  document.getElementById('arFloat').style.lineHeight = '1.44';
+}}
 document.getElementById('trFloat').textContent = CFG.dalil.transliteration;
 document.getElementById('climaxLesson').textContent = STORY.core_lesson || CFG.dalil.translation;
 document.getElementById('climaxCit').textContent = '✦  ' + CFG.dalil.citation + '  •  SAVE & SHARE  ✦';
@@ -1236,6 +887,14 @@ const STARS = [];
 for (let i = 0; i < 95; i++) {{
   STARS.push({{ x: ((i * 211.3) % 1000) / 1000, y: ((i * 349.1) % 620) / 1000, r: 0.9 + (i % 4) * 0.45, ph: i * 1.1 }});
 }}
+const SEA_GLINTS = [];
+for (let i = 0; i < 36; i++) {{
+  SEA_GLINTS.push({{ x: ((i * 163.7) % 1000) / 1000, d: ((i * 271.3) % 1000) / 1000, ph: i * 1.2 }});
+}}
+const SUNSET_DUST = [];
+for (let i = 0; i < 42; i++) {{
+  SUNSET_DUST.push({{ x: ((i * 191.9) % 1000) / 1000, y: ((i * 257.1) % 1000) / 1000, sp: 0.03 + (i % 4) * 0.014, r: 1.5 + (i % 3) * 1.1, ph: i * 0.85 }});
+}}
 
 function drawNeedleOceanShot(lt, t) {{
   const horY = H * 0.36;
@@ -1248,6 +907,7 @@ function drawNeedleOceanShot(lt, t) {{
   seaG.addColorStop(0.65, '#3E7B8C'); seaG.addColorStop(1, '#1E4658');
   ctx.fillStyle = seaG; ctx.fillRect(0, horY, W, H - horY);
 
+  // Rolling sunlit ocean swells + live sparkling sun-glints!
   for (let i = 0; i < 42; i++) {{
     const p = Math.pow(i / 42, 1.55);
     const wy = horY + p * (H - horY);
@@ -1255,26 +915,82 @@ function drawNeedleOceanShot(lt, t) {{
     ctx.fillStyle = `rgba(254, 240, 192, ${{0.30 * (1 - p * 0.55)}})`;
     ctx.fillRect(W * 0.08 + shift, wy, W * 0.84, 2 + p * 7);
   }}
+  for (const gl of SEA_GLINTS) {{
+    const gx = gl.x * W + Math.sin(t * 1.4 + gl.ph) * 18;
+    const gy = horY + 14 + Math.pow(gl.d, 1.35) * (H - horY - 30);
+    const ga = Math.max(0, Math.sin(t * 3.8 + gl.ph)) * 0.75;
+    ctx.fillStyle = `rgba(255, 250, 224, ${{ga}})`;
+    ctx.beginPath(); ctx.ellipse(gx, gy, 5 + gl.d * 10, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+  }}
 
-  const tipY = H * (IS_SHORT ? 0.42 : 0.44) + Math.sin(t * 1.2) * 8;
+  // TRUE ANIMATED NEEDLE ACTION:
+  // 0.00..0.34 -> Descends smoothly into sunlit ocean surface!
+  // 0.34..0.56 -> Dips tip under water triggering expanding concentric golden impact ripples + mist!
+  // 0.56..1.00 -> Lifts gracefully back up holding the radiant glowing pearl droplet!
+  const waterHitY = H * (IS_SHORT ? 0.54 : 0.58);
+  const liftedTipY = H * (IS_SHORT ? 0.40 : 0.43);
+  const startTipY = H * 0.25;
+  let tipY;
+  let rippleAge = -1;
+  let dropReveal = 0;
+
+  if (lt < 0.34) {{
+    const u = easeInOutQuad(lt / 0.34);
+    tipY = startTipY + (waterHitY - startTipY) * u;
+  }} else if (lt < 0.56) {{
+    const u = (lt - 0.34) / 0.22;
+    tipY = waterHitY + Math.sin(u * Math.PI) * (IS_SHORT ? 34 : 22);
+    rippleAge = u;
+    dropReveal = clamp01((u - 0.45) / 0.55) * 0.4;
+  }} else {{
+    const u = easeOutCubic((lt - 0.56) / 0.44);
+    tipY = waterHitY + (liftedTipY - waterHitY) * u + Math.sin(t * 1.6) * 5 * u;
+    rippleAge = 1.0 + (lt - 0.56) * 1.6;
+    dropReveal = 0.4 + 0.6 * springOut(clamp01((lt - 0.56) / 0.24));
+  }}
+
+  // Live concentric impact ripples expanding across the ocean surface when needle dips!
+  if (rippleAge >= 0) {{
+    for (let r = 0; r < 4; r++) {{
+      const rc = rippleAge * 0.65 - r * 0.14;
+      if (rc <= 0 || rc > 1.25) continue;
+      const alpha = clamp01(1 - rc / 1.25) * 0.80;
+      ctx.strokeStyle = `rgba(255, 248, 214, ${{alpha}})`;
+      ctx.lineWidth = Math.max(1.2, 4.0 * (1 - rc * 0.65));
+      ctx.beginPath();
+      ctx.ellipse(W * 0.5, waterHitY + 12, 16 + rc * W * 0.42, 6 + rc * H * 0.085, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }}
+  }}
+
+  // Gleaming metallic silver sewing needle with subtle glint
   const nGrad = ctx.createLinearGradient(W * 0.5 - 16, 0, W * 0.5 + 16, 0);
-  nGrad.addColorStop(0, 'rgba(190, 224, 240, 0.75)');
-  nGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.98)');
-  nGrad.addColorStop(1, 'rgba(170, 205, 225, 0.70)');
+  nGrad.addColorStop(0, 'rgba(190, 224, 240, 0.78)');
+  nGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.99)');
+  nGrad.addColorStop(1, 'rgba(170, 205, 225, 0.72)');
   ctx.fillStyle = nGrad;
   ctx.beginPath();
-  ctx.moveTo(W * 0.5 - 15, H * 0.16); ctx.lineTo(W * 0.5 + 15, H * 0.16);
+  ctx.moveTo(W * 0.5 - 15, Math.min(tipY - 290, H * 0.10));
+  ctx.lineTo(W * 0.5 + 15, Math.min(tipY - 290, H * 0.10));
   ctx.lineTo(W * 0.5 + 12, tipY - 68); ctx.lineTo(W * 0.5, tipY);
   ctx.lineTo(W * 0.5 - 12, tipY - 68); ctx.closePath(); ctx.fill();
 
-  const dropY = tipY + 36 + Math.sin(t * 1.8) * 5;
-  const glow = ctx.createRadialGradient(W * 0.5, dropY, 4, W * 0.5, dropY, 74);
-  glow.addColorStop(0, 'rgba(255, 252, 236, 0.96)');
-  glow.addColorStop(0.36, 'rgba(254, 232, 168, 0.42)');
-  glow.addColorStop(1, 'rgba(254, 232, 168, 0)');
-  ctx.fillStyle = glow; ctx.fillRect(W * 0.5 - 78, dropY - 78, 156, 156);
-  ctx.fillStyle = '#FFFDF5';
-  ctx.beginPath(); ctx.arc(W * 0.5, dropY, 24, 0, Math.PI * 2); ctx.fill();
+  // Radiant glowing pearl droplet emerging as needle lifts out of the ocean!
+  if (dropReveal > 0.02) {{
+    const dropY = tipY + 28 * dropReveal + Math.sin(t * 2.2) * 3;
+    const glowR = 78 * dropReveal;
+    const glow = ctx.createRadialGradient(W * 0.5, dropY, 4, W * 0.5, dropY, Math.max(glowR, 10));
+    glow.addColorStop(0, `rgba(255, 252, 236, ${{0.96 * dropReveal}})`);
+    glow.addColorStop(0.36, `rgba(254, 232, 168, ${{0.44 * dropReveal}})`);
+    glow.addColorStop(1, 'rgba(254, 232, 168, 0)');
+    ctx.fillStyle = glow; ctx.fillRect(W * 0.5 - 88, dropY - 88, 176, 176);
+    ctx.fillStyle = '#FFFDF5';
+    ctx.beginPath();
+    ctx.moveTo(W * 0.5, dropY - 24 * dropReveal);
+    ctx.bezierCurveTo(W * 0.5 + 22 * dropReveal, dropY + 2 * dropReveal, W * 0.5 + 20 * dropReveal, dropY + 22 * dropReveal, W * 0.5, dropY + 22 * dropReveal);
+    ctx.bezierCurveTo(W * 0.5 - 20 * dropReveal, dropY + 22 * dropReveal, W * 0.5 - 22 * dropReveal, dropY + 2 * dropReveal, W * 0.5, dropY - 24 * dropReveal);
+    ctx.fill();
+  }}
 }}
 
 function drawDeepOceanVistaShot(lt, t) {{
@@ -1287,16 +1003,35 @@ function drawDeepOceanVistaShot(lt, t) {{
     ctx.fillStyle = `rgba(255,255,255,${{0.65 * tw}})`;
     ctx.beginPath(); ctx.arc(st.x * W, st.y * horY, st.r, 0, Math.PI * 2); ctx.fill();
   }}
+  // Occasional moonlit shooting star!
+  const shCyc = (t * 0.25) % 1.0;
+  if (shCyc < 0.20) {{
+    const u = shCyc / 0.20;
+    const sx = W * (0.20 + u * 0.52), sy = horY * (0.16 + u * 0.28);
+    const sg = ctx.createLinearGradient(sx, sy, sx - 64, sy - 20);
+    sg.addColorStop(0, `rgba(255, 250, 224, ${{Math.sin(u * Math.PI) * 0.85}})`);
+    sg.addColorStop(1, 'rgba(255, 250, 224, 0)');
+    ctx.strokeStyle = sg; ctx.lineWidth = 2.0;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx - 64, sy - 20); ctx.stroke();
+  }}
   const seaG = ctx.createLinearGradient(0, horY, 0, H);
   seaG.addColorStop(0, '#172947'); seaG.addColorStop(0.55, '#1D3354'); seaG.addColorStop(1, '#0F1C32');
   ctx.fillStyle = seaG; ctx.fillRect(0, horY, W, H - horY);
   for (let i = 0; i < 28; i++) {{
     const p = i / 28;
     const wy = horY + 18 + Math.pow(p, 1.35) * (H - horY);
-    const drift = Math.sin(t * 1.1 + i * 0.6) * 24;
-    ctx.strokeStyle = `rgba(148, 184, 224, ${{0.14 + 0.12 * p}})`;
+    const drift = Math.sin(t * 1.2 + i * 0.6) * 28;
+    ctx.strokeStyle = `rgba(148, 184, 224, ${{0.14 + 0.14 * p}})`;
     ctx.lineWidth = 2 + p * 8;
     ctx.beginPath(); ctx.moveTo(-40 + drift, wy - 28); ctx.lineTo(W + 40 + drift, wy + 52); ctx.stroke();
+  }}
+  // Drifting translucent silver sea-mist bands along horizon!
+  for (let m = 0; m < 4; m++) {{
+    const mx = (((m * 0.30 * W + t * (16 + m * 5)) % (W + 320)) + (W + 320)) % (W + 320) - 160;
+    const mg = ctx.createRadialGradient(mx, horY + 8, 10, mx, horY + 8, 180);
+    mg.addColorStop(0, 'rgba(186, 214, 242, 0.14)');
+    mg.addColorStop(1, 'rgba(186, 214, 242, 0)');
+    ctx.fillStyle = mg; ctx.beginPath(); ctx.ellipse(mx, horY + 8, 180, 40, 0, 0, Math.PI * 2); ctx.fill();
   }}
 }}
 
@@ -1308,13 +1043,17 @@ function drawEndlessPlainShot(lt, t) {{
   const pG = ctx.createLinearGradient(0, horY, 0, H);
   pG.addColorStop(0, '#4A5154'); pG.addColorStop(0.45, '#5E6566'); pG.addColorStop(1, '#2D343B');
   ctx.fillStyle = pG; ctx.fillRect(0, horY, W, H - horY);
+  // Smooth continuous forward camera flyover across the endless plain!
   for (const fg of PLAIN_FIGS) {{
-    const p = Math.pow(fg.depth, 1.4);
+    const movingDepth = (fg.depth + t * 0.065) % 1.0;
+    const p = Math.pow(movingDepth, 1.45);
     const fy = horY + 24 + p * (H - horY - 56);
-    const fx = fg.x * W; const h = 10 + p * 26;
-    ctx.fillStyle = fg.luminous ? '#F8FAFC' : 'rgba(22, 30, 42, 0.78)';
+    const fx = W * 0.5 + (fg.x - 0.5) * W * (0.45 + p * 0.85);
+    const h = 10 + p * 28;
+    const alpha = Math.sin(movingDepth * Math.PI);
+    ctx.fillStyle = fg.luminous ? `rgba(248, 250, 252, ${{alpha}})` : `rgba(22, 30, 42, ${{0.78 * alpha}})`;
     ctx.beginPath(); ctx.arc(fx, fy - h, h * 0.16, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = fg.luminous ? '#F8FAFC' : 'rgba(22, 30, 42, 0.78)';
+    ctx.strokeStyle = fg.luminous ? `rgba(248, 250, 252, ${{alpha}})` : `rgba(22, 30, 42, ${{0.78 * alpha}})`;
     ctx.lineWidth = Math.max(1.2, h * 0.08);
     ctx.beginPath(); ctx.moveTo(fx, fy - h * 0.84); ctx.lineTo(fx, fy - h * 0.28);
     ctx.moveTo(fx, fy - h * 0.28); ctx.lineTo(fx - h * 0.18, fy);
@@ -1329,9 +1068,9 @@ function drawMirrorRippleShot(lt, t) {{
   const cy = H * 0.62;
   for (let r = 0; r < 6; r++) {{
     const cyc = (t * 0.42 + r / 6) % 1.0;
-    ctx.strokeStyle = `rgba(253, 224, 130, ${{(1 - cyc) * 0.52}})`;
+    ctx.strokeStyle = `rgba(253, 224, 130, ${{(1 - cyc) * 0.55}})`;
     ctx.lineWidth = 2.4 * (1 - cyc * 0.5);
-    ctx.beginPath(); ctx.ellipse(W * 0.5, cy, 18 + cyc * W * 0.46, 6 + cyc * H * 0.12, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(W * 0.5, cy, 18 + cyc * W * 0.48, 6 + cyc * H * 0.12, 0, 0, Math.PI * 2); ctx.stroke();
   }}
 }}
 
@@ -1342,17 +1081,46 @@ function drawWarmSunsetCloudsShot(lt, t) {{
   bg.addColorStop(0, '#2B2B6E'); bg.addColorStop(0.42, '#73578E');
   bg.addColorStop(0.72, '#D0838C'); bg.addColorStop(1, '#F0B484');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  // Slowly rotating volumetric golden-rose sunset god-rays!
+  ctx.save();
+  ctx.translate(sunX, sunY);
+  ctx.rotate(t * 0.055);
+  for (let i = 0; i < 12; i++) {{
+    ctx.save();
+    ctx.rotate((i / 12) * Math.PI * 2);
+    const rg = ctx.createLinearGradient(0, 0, 0, -Math.max(W, H) * 0.85);
+    rg.addColorStop(0, 'rgba(255, 242, 198, 0.22)');
+    rg.addColorStop(0.55, 'rgba(255, 206, 152, 0.07)');
+    rg.addColorStop(1, 'rgba(255, 206, 152, 0)');
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.moveTo(-10, 0); ctx.lineTo(-95, -Math.max(W, H) * 0.85);
+    ctx.lineTo(95, -Math.max(W, H) * 0.85); ctx.lineTo(10, 0);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }}
+  ctx.restore();
+
   const orb = ctx.createRadialGradient(sunX, sunY, 12, sunX, sunY, W * 0.58);
   orb.addColorStop(0, 'rgba(255, 250, 214, 0.98)'); orb.addColorStop(0.24, 'rgba(255, 212, 134, 0.72)');
   orb.addColorStop(0.58, 'rgba(232, 134, 138, 0.28)'); orb.addColorStop(1, 'rgba(43, 43, 110, 0)');
   ctx.fillStyle = orb; ctx.fillRect(0, 0, W, H);
   for (let i = 0; i < 14; i++) {{
-    const cx = ((i * 193 + t * (7 + (i % 3) * 4)) % (W + 260)) - 130;
+    const cx = ((i * 193 + t * (9 + (i % 3) * 5)) % (W + 260)) - 130;
     const cy = H * (0.28 + (i % 6) * 0.11); const rr = 75 + (i % 4) * 32;
     const cg = ctx.createRadialGradient(cx, cy, 8, cx, cy, rr);
-    cg.addColorStop(0, i > 6 ? 'rgba(255, 206, 172, 0.28)' : 'rgba(130, 96, 152, 0.24)');
+    cg.addColorStop(0, i > 6 ? 'rgba(255, 206, 172, 0.30)' : 'rgba(130, 96, 152, 0.26)');
     cg.addColorStop(1, 'rgba(255, 206, 172, 0)');
     ctx.fillStyle = cg; ctx.fillRect(cx - rr, cy - rr, rr * 2, rr * 2);
+  }}
+  // Rising luminous golden sunset dust motes!
+  for (const d of SUNSET_DUST) {{
+    const dx = d.x * W + Math.sin(t * 1.1 + d.ph) * 20;
+    const dy = ((d.y - t * d.sp) % 1 + 1) % 1 * H;
+    const da = 0.25 + 0.45 * Math.sin(t * 2.4 + d.ph);
+    ctx.fillStyle = `rgba(255, 246, 208, ${{da}})`;
+    ctx.beginPath(); ctx.arc(dx, dy, d.r, 0, Math.PI * 2); ctx.fill();
   }}
 }}
 
@@ -1401,27 +1169,25 @@ window.renderAt = function(t) {{
   const climaxCard = document.getElementById('climaxCard');
   const arWin = CFG.arabic_window;
 
+  const arDurSec = Math.max(ACTS.arEnd - ACTS.arStart, 2.0);
+  const climDurSec = Math.max(ACTS.total - ACTS.climaxStart, 2.0);
+  animateActCard(dalilSpot, act.name === 'DALIL', act.localT, arDurSec, true);
+  animateActCard(climaxCard, act.name === 'CLIMAX', act.localT, climDurSec, true);
+
   if (act.name === 'HOOK') {{
-    dalilSpot.style.display = 'none';
-    climaxCard.style.display = 'none';
     actChip.textContent = 'ACT 1 • ' + (STORY.hook_kicker || 'PICTURE THIS');
     hookHead.textContent = (CFG.scenes[0] && CFG.scenes[0].headline) || CFG.dalil.topic;
     miniCit.textContent = '';
   }} else if (act.name === 'DALIL') {{
-    dalilSpot.style.display = 'block';
-    climaxCard.style.display = 'none';
     actChip.textContent = (arWin && arWin.is_qari) ? `ACT 2 • TILAWAH (${{arWin.reciter}})` : 'ACT 2 • SACRED WISDOM';
     hookHead.textContent = CFG.dalil.citation;
     miniCit.textContent = '';
+    updateArabicKaraokeAt(t, arWin, AR_BUILT.count, 'cin_ar', 'arw', act.localT);
   }} else if (act.name === 'EXPLAINER') {{
-    dalilSpot.style.display = 'none';
-    climaxCard.style.display = 'none';
     actChip.textContent = 'ACT 3 • THE MIND SHIFT';
     hookHead.textContent = (cur && cur.headline) || 'HOW IT TRANSFORMS YOU';
     miniCit.textContent = '✦  ' + CFG.dalil.citation + '  ✦';
   }} else {{
-    dalilSpot.style.display = 'none';
-    climaxCard.style.display = 'block';
     actChip.textContent = 'ACT 4 • THE LESSON';
     hookHead.textContent = (cur && cur.headline) || 'QUIET SURRENDER';
     miniCit.textContent = '';

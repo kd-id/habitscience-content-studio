@@ -40,8 +40,8 @@ from src.islamic_story_acts import STORY_ACTS_JS, resolve_story_acts
 from src.islamic_visual_templates_extra import (
     build_cinematic_metaphor_html,
     build_nature_transform_html,
-    build_paper_craft_html,
 )
+from src.paper_craft_motion import build_paper_craft_25d_html
 from src.sfx_engine import mix_nature_voice_soundscape
 from src.voiceover import TrackAudioBundle, probe_duration_sec
 
@@ -237,6 +237,7 @@ def _resolve_dalil_payload(topic_meta: dict[str, Any] | None, scenes_meta: list[
         "badge_num": badge_num,
         "badge_label": badge_label,
         "visual_theme": visual_theme,
+        "is_excerpt": bool(dalil.get("is_excerpt", False)),
         "particle_shapes": [str(s) for s in particle_shapes],
     }
 
@@ -319,6 +320,10 @@ def _build_luminous_sky_html(payload: dict[str, Any], width: int, height: int) -
     text-shadow: 0 3px 16px rgba(245, 208, 118, 0.38), 0 2px 8px rgba(0,0,0,0.55);
     margin-bottom: 10px;
   }}
+  .arabic-text .arw {{ color: rgba(255, 250, 238, 0.38); }}
+  .arabic-text .arw.lit {{ color: #F5D076; text-shadow: 0 0 22px rgba(245, 208, 118, 0.78); }}
+  .arabic-text .arw.past {{ color: #FFFDF7; }}
+  .arabic-text .arw-punct {{ color: rgba(245, 208, 118, 0.78); }}
 
   .translit {{
     font-size: {tr_size}px; font-weight: 600; color: #FDE68A;
@@ -445,7 +450,12 @@ const STORY = CFG.story_acts || {{}};
 
 const ACTS = computeFourActTiming(CFG);
 
-document.getElementById('arText').textContent = CFG.dalil.arabic;
+const AR_BUILT = buildArabicKaraokeHTML(CFG.dalil.arabic, 'sky_ar', 'arw');
+document.getElementById('arText').innerHTML = AR_BUILT.html;
+if (AR_BUILT.count >= 10) {{
+  document.getElementById('arText').style.fontSize = (IS_SHORT ? 39 : 32) + 'px';
+  document.getElementById('arText').style.lineHeight = '1.46';
+}}
 document.getElementById('trText').textContent = CFG.dalil.transliteration;
 document.getElementById('enText').textContent = '"' + CFG.dalil.translation + '"';
 document.getElementById('citText').textContent = '✦  ' + CFG.dalil.citation + '  ✦';
@@ -472,6 +482,18 @@ const SKY_STAGES = [
 const STARS = [];
 for (let i = 0; i < 85; i++) {{
   STARS.push({{ x: ((i * 197.3) % 1000) / 1000, y: ((i * 313.7) % 580) / 1000, r: 0.8 + (i % 4) * 0.45, ph: i * 1.13 }});
+}}
+const SKY_CLOUDS = [];
+for (let i = 0; i < 8; i++) {{
+  SKY_CLOUDS.push({{ x0: (i * 0.17) % 1, y: 0.16 + (i % 4) * 0.11, w: 150 + (i % 3) * 65, sp: 10 + (i % 4) * 5, a: 0.12 + (i % 3) * 0.05 }});
+}}
+const BIRDS = [];
+for (let i = 0; i < 6; i++) {{
+  BIRDS.push({{ x0: 0.05 + i * 0.07, y: 0.44 + (i % 3) * 0.05, sp: 24 + (i % 2) * 8, sz: 7 + (i % 3) * 2.5, ph: i * 1.3 }});
+}}
+const LANTERN_ORBS = [];
+for (let i = 0; i < 24; i++) {{
+  LANTERN_ORBS.push({{ x: 0.25 + ((i * 137) % 500) / 1000, y: ((i * 233) % 1000) / 1000, sp: 0.035 + (i % 4) * 0.014, r: 1.8 + (i % 3) * 1.1, ph: i * 0.9 }});
 }}
 
 function lerp(a, b, t) {{ return a + (b - a) * t; }}
@@ -573,12 +595,36 @@ function drawPrayerSkyScene(progress, t) {{
       ctx.fillStyle = `rgba(255, 250, 232, ${{starA * tw * 0.85}})`;
       ctx.beginPath(); ctx.arc(st.x * W, st.y * horizonY, st.r, 0, Math.PI * 2); ctx.fill();
     }}
+    // Occasional graceful shooting star during starry Fajr / Isha skies!
+    const shCyc = (t * 0.22) % 1.0;
+    if (shCyc < 0.24) {{
+      const u = shCyc / 0.24;
+      const sx = W * (0.18 + u * 0.46), sy = horizonY * (0.14 + u * 0.22);
+      const sg = ctx.createLinearGradient(sx, sy, sx - 64, sy - 24);
+      sg.addColorStop(0, `rgba(255, 250, 224, ${{starA * Math.sin(u * Math.PI) * 0.92}})`);
+      sg.addColorStop(1, 'rgba(255, 250, 224, 0)');
+      ctx.strokeStyle = sg; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx - 64, sy - 24); ctx.stroke();
+    }}
+  }}
+
+  // Multi-layer drifting glowing twilight clouds!
+  for (const cl of SKY_CLOUDS) {{
+    const span = W + cl.w * 2;
+    const cx = (((cl.x0 * W + t * cl.sp) % span) + span) % span - cl.w;
+    const cy = cl.y * horizonY + Math.sin(t * 0.5 + cl.x0 * 6) * 4;
+    const cg = ctx.createRadialGradient(cx, cy, cl.w * 0.1, cx, cy, cl.w * 0.65);
+    cg.addColorStop(0, rgb(sunC, cl.a * 1.15));
+    cg.addColorStop(0.55, rgb(botC, cl.a * 0.55));
+    cg.addColorStop(1, rgb(botC, 0));
+    ctx.fillStyle = cg;
+    ctx.beginPath(); ctx.ellipse(cx, cy, cl.w * 0.65, cl.w * 0.19, 0, 0, Math.PI * 2); ctx.fill();
   }}
 
   const sunX = W * (0.20 + progress * 0.60);
-  const halo = ctx.createRadialGradient(sunX, sunY, 8, sunX, sunY, 170);
+  const halo = ctx.createRadialGradient(sunX, sunY, 8, sunX, sunY, 175 + Math.sin(t * 1.5) * 10);
   halo.addColorStop(0, rgb(sunC, 0.72)); halo.addColorStop(0.35, rgb(sunC, 0.24)); halo.addColorStop(1, rgb(sunC, 0.0));
-  ctx.fillStyle = halo; ctx.fillRect(sunX - 180, sunY - 180, 360, 360);
+  ctx.fillStyle = halo; ctx.fillRect(sunX - 190, sunY - 190, 380, 380);
 
   if (starA > 0.52) {{
     ctx.save(); ctx.fillStyle = rgb(sunC, 0.95);
@@ -589,6 +635,34 @@ function drawPrayerSkyScene(progress, t) {{
   }} else {{
     ctx.fillStyle = rgb(sunC, 0.92);
     ctx.beginPath(); ctx.arc(sunX, sunY, 26, 0, Math.PI * 2); ctx.fill();
+  }}
+
+  // Animated flock of soaring birds gliding gracefully across daylight/sunset skies!
+  if (starA < 0.68) {{
+    const bAlpha = clamp01((0.68 - starA) / 0.35) * 0.65;
+    ctx.save();
+    ctx.strokeStyle = `rgba(12, 22, 42, ${{bAlpha}})`;
+    ctx.lineWidth = 2.0;
+    for (const b of BIRDS) {{
+      const bx = (((b.x0 * W + t * b.sp) % (W + 140)) + (W + 140)) % (W + 140) - 70;
+      const by = b.y * horizonY + Math.sin(t * 1.4 + b.ph) * 10;
+      const flap = Math.sin(t * 7.2 + b.ph) * b.sz * 0.65;
+      ctx.beginPath();
+      ctx.moveTo(bx - b.sz, by - flap);
+      ctx.quadraticCurveTo(bx - b.sz * 0.4, by - b.sz * 0.35, bx, by);
+      ctx.quadraticCurveTo(bx + b.sz * 0.4, by - b.sz * 0.35, bx + b.sz, by - flap);
+      ctx.stroke();
+    }}
+    ctx.restore();
+  }}
+
+  // Rising warm golden mosque lantern light orbs!
+  for (const lo of LANTERN_ORBS) {{
+    const ox = lo.x * W + Math.sin(t * 1.2 + lo.ph) * 18;
+    const oy = horizonY - (((lo.y + t * lo.sp) % 1) * (horizonY * 0.68));
+    const oa = (0.18 + 0.35 * Math.sin(t * 2.2 + lo.ph)) * (0.45 + starA * 0.55);
+    ctx.fillStyle = `rgba(253, 224, 132, ${{oa}})`;
+    ctx.beginPath(); ctx.arc(ox, oy, lo.r, 0, Math.PI * 2); ctx.fill();
   }}
 
   const waterG = ctx.createLinearGradient(0, horizonY, 0, H);
@@ -648,33 +722,31 @@ window.renderAt = function(t) {{
   const stepLabel = document.getElementById('stepLabel');
   const arWin = CFG.arabic_window;
 
+  const arDurSec = Math.max(ACTS.arEnd - ACTS.arStart, 2.0);
+  const climDurSec = Math.max(ACTS.total - ACTS.climaxStart, 2.0);
+  animateActCard(dalilBox, act.name === 'DALIL', act.localT, arDurSec, true);
+  animateActCard(climaxBox, act.name === 'CLIMAX', act.localT, climDurSec, true);
+
   if (act.name === 'HOOK') {{
-    dalilBox.style.display = 'none';
-    climaxBox.style.display = 'none';
     actPill.textContent = 'ACT 1 • ' + (STORY.hook_kicker || 'THE HOOK');
     actPill.style.borderColor = '#F87171'; actPill.style.color = '#FCA5A5';
     headEl.textContent = (CFG.scenes[0] && CFG.scenes[0].headline) || CFG.dalil.topic;
     miniCit.textContent = '';
     stepLabel.textContent = '1. THE HOOK';
   }} else if (act.name === 'DALIL') {{
-    dalilBox.style.display = 'block';
-    climaxBox.style.display = 'none';
     actPill.textContent = (arWin && arWin.is_qari) ? `ACT 2 • TILAWAH (${{arWin.reciter}})` : 'ACT 2 • PROPHETIC SUNNAH';
     actPill.style.borderColor = '#F5D076'; actPill.style.color = '#F5D076';
     headEl.textContent = CFG.dalil.citation;
     miniCit.textContent = '';
     stepLabel.textContent = '2. VERIFIED DALIL';
+    updateArabicKaraokeAt(t, arWin, AR_BUILT.count, 'sky_ar', 'arw', act.localT);
   }} else if (act.name === 'EXPLAINER') {{
-    dalilBox.style.display = 'none';
-    climaxBox.style.display = 'none';
     actPill.textContent = 'ACT 3 • THE SCIENCE';
     actPill.style.borderColor = '#34D399'; actPill.style.color = '#6EE7B7';
     headEl.textContent = (cur && cur.headline) || 'HOW IT REWIRES YOUR DAY';
     miniCit.textContent = '✦  ' + CFG.dalil.citation + '  ✦';
     stepLabel.textContent = '3. MIND SCIENCE';
   }} else {{
-    dalilBox.style.display = 'none';
-    climaxBox.style.display = 'block';
     actPill.textContent = 'ACT 4 • THE LESSON';
     actPill.style.borderColor = '#F5D076'; actPill.style.color = '#FDE68A';
     headEl.textContent = (cur && cur.headline) || 'START TODAY';
@@ -790,8 +862,9 @@ def _build_gold_visualizer_html(payload: dict[str, Any], width: int, height: int
     max-width: {650 if is_short else 1040}px; margin-bottom: {12 if is_short else 4}px;
   }}
   .ar-w {{ color: rgba(255, 250, 238, 0.34); }}
-  .ar-w.lit {{ color: #F4C95D; text-shadow: 0 0 22px rgba(244, 201, 93, 0.65); }}
-  .ar-w.past {{ color: rgba(255, 248, 232, 0.90); }}
+  .ar-w.lit {{ color: #F4C95D; text-shadow: 0 0 24px rgba(244, 201, 93, 0.78); }}
+  .ar-w.past {{ color: rgba(255, 248, 232, 0.92); }}
+  .ar-w-punct {{ color: rgba(244, 201, 93, 0.76); }}
   .tr-line {{
     font-family: 'Georgia', serif; font-style: italic;
     font-size: {18 if is_short else 15}px; color: rgba(203, 213, 225, 0.72);
@@ -907,42 +980,69 @@ document.getElementById('climaxLesson').textContent = STORY.core_lesson || CFG.d
 document.getElementById('climaxCit').textContent = '✦  ' + CFG.dalil.citation + '  •  SAVE & SHARE  ✦';
 document.getElementById('brandFoot').textContent = CFG.dalil.handle + '  ·  QUR\\'AN & CALM MIND SCIENCE';
 
-const AR_WORDS = CFG.dalil.arabic.split(/\\s+/).filter(Boolean);
-document.getElementById('arKaraoke').innerHTML = AR_WORDS.map((w, i) => `<span class="ar-w" id="arw_${{i}}">${{w}}</span>`).join(' ');
+const AR_BUILT = buildArabicKaraokeHTML(CFG.dalil.arabic, 'arw', 'ar-w');
+const arKaraokeEl = document.getElementById('arKaraoke');
+arKaraokeEl.innerHTML = AR_BUILT.html;
+if (AR_BUILT.count >= 10) {{
+  arKaraokeEl.style.fontSize = (IS_SHORT ? 39 : 34) + 'px';
+  arKaraokeEl.style.lineHeight = '1.44';
+  document.getElementById('karaokeWrap').style.top = (IS_SHORT ? '56%' : '59%');
+}}
+document.getElementById('karaokeWrap').dataset.displayMode = 'flex';
+document.getElementById('topHeader').dataset.displayMode = 'block';
+document.getElementById('climaxGold').dataset.displayMode = 'block';
 
 const DUST = [];
 for (let i = 0; i < 65; i++) {{
   DUST.push({{ x: ((i * 173.9) % 1000) / 1000, y: ((i * 289.1) % 1000) / 1000, r: 0.9 + (i % 4) * 0.55, sp: 0.012 + (i % 5) * 0.005, ph: i * 0.9 }});
 }}
-
-function drawIslamicStarPattern(cx, cy, t, alpha) {{
-  ctx.save(); ctx.translate(cx, cy); ctx.rotate(t * 0.035);
-  ctx.strokeStyle = `rgba(218, 178, 86, ${{alpha}})`; ctx.lineWidth = 1.2;
-  const maxR = IS_SHORT ? 275 : 220;
-  for (const r of [maxR * 0.58, maxR * 0.82, maxR]) {{
-    for (const rot of [0, Math.PI / 4]) {{
-      ctx.save(); ctx.rotate(rot); ctx.strokeRect(-r * 0.72, -r * 0.72, r * 1.44, r * 1.44); ctx.restore();
-    }}
-    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
-  }}
-  ctx.restore();
+const BOKEH = [];
+for (let i = 0; i < 14; i++) {{
+  BOKEH.push({{ x: ((i * 191.3) % 1000) / 1000, y: ((i * 331.7) % 1000) / 1000, r: 18 + (i % 4) * 14, sp: 0.008 + (i % 3) * 0.005, ph: i * 1.4 }});
 }}
 
-function drawGoldSunburst(cx, cy, amp, t) {{
+function drawIslamicStarPattern(cx, cy, t, alpha) {{
+  // Dual counter-rotating sacred Rub el Hizb geometric rings!
+  const maxR = IS_SHORT ? 275 : 220;
+  for (const layer of [{{ dir: 1, spd: 0.042, mult: 1.0 }}, {{ dir: -1, spd: 0.028, mult: 0.64 }}]) {{
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(t * layer.spd * layer.dir);
+    ctx.strokeStyle = `rgba(218, 178, 86, ${{alpha}})`; ctx.lineWidth = 1.25;
+    for (const r of [maxR * 0.58 * layer.mult, maxR * 0.82 * layer.mult, maxR * layer.mult]) {{
+      for (const rot of [0, Math.PI / 4]) {{
+        ctx.save(); ctx.rotate(rot); ctx.strokeRect(-r * 0.72, -r * 0.72, r * 1.44, r * 1.44); ctx.restore();
+      }}
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+    }}
+    ctx.restore();
+  }}
+}}
+
+function drawGoldSunburst(cx, cy, amp, t, bloomSc = 1.0) {{
   const baseR = IS_SHORT ? 114 : 70;
   const bars = 72;
   ctx.save(); ctx.translate(cx, cy);
+  ctx.scale(bloomSc, bloomSc);
+
+  // Audio-reactive expanding 24k Gold shockwave pulse rings!
+  for (let p = 0; p < 3; p++) {{
+    const cyc = (t * 0.52 + p * 0.33) % 1.0;
+    const rad = baseR + 24 + cyc * (IS_SHORT ? 160 : 120) + amp * 28;
+    ctx.strokeStyle = `rgba(244, 201, 93, ${{(1 - cyc) * (0.14 + amp * 0.24)}})`;
+    ctx.lineWidth = 2.0 * (1 - cyc * 0.6);
+    ctx.beginPath(); ctx.arc(0, 0, rad, 0, Math.PI * 2); ctx.stroke();
+  }}
+
   ctx.fillStyle = 'rgba(7, 7, 10, 0.92)';
   ctx.beginPath(); ctx.arc(0, 0, baseR - 2, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = 'rgba(244, 201, 93, 0.78)'; ctx.lineWidth = 2.0;
+  ctx.strokeStyle = 'rgba(244, 201, 93, 0.82)'; ctx.lineWidth = 2.2;
   ctx.beginPath(); ctx.arc(0, 0, baseR - 3, 0, Math.PI * 2); ctx.stroke();
-  ctx.strokeStyle = 'rgba(244, 201, 93, 0.25)'; ctx.lineWidth = 1.2;
+  ctx.strokeStyle = 'rgba(244, 201, 93, 0.28)'; ctx.lineWidth = 1.2;
   ctx.beginPath(); ctx.arc(0, 0, baseR - 13, 0, Math.PI * 2); ctx.stroke();
 
   for (let i = 0; i < bars; i++) {{
-    const ang = (i / bars) * Math.PI * 2 - Math.PI / 2;
+    const ang = (i / bars) * Math.PI * 2 - Math.PI / 2 + t * 0.08;
     const wave = 0.52 + 0.48 * Math.sin(i * 0.55 + t * 5.2) * Math.cos(i * 0.25 - t * 3.1);
-    const barLen = 10 + (amp * 68 + 10) * (0.35 + 0.65 * Math.abs(wave));
+    const barLen = 10 + (amp * 76 + 10) * (0.35 + 0.65 * Math.abs(wave));
     const x1 = Math.cos(ang) * (baseR + 5), y1 = Math.sin(ang) * (baseR + 5);
     const x2 = Math.cos(ang) * (baseR + 5 + barLen), y2 = Math.sin(ang) * (baseR + 5 + barLen);
     const g = ctx.createLinearGradient(x1, y1, x2, y2);
@@ -971,17 +1071,27 @@ window.renderAt = function(t) {{
   const amp = CFG.rms.length ? CFG.rms[fIdx] : 0.35;
 
   const cx = W * 0.5;
-  const cy = H * (IS_SHORT ? 0.38 : 0.41);
+  const cy = H * (IS_SHORT ? 0.36 : 0.39);
   ctx.fillStyle = '#050507';
   ctx.fillRect(0, 0, W, H);
 
-  const auraMult = act.name === 'CLIMAX' ? 1.35 : (act.name === 'DALIL' ? 1.15 : 0.75);
-  const auraR = (IS_SHORT ? 330 : 280) * auraMult + amp * 36;
+  const auraMult = act.name === 'CLIMAX' ? 1.35 : (act.name === 'DALIL' ? 1.18 : 0.78);
+  const auraR = (IS_SHORT ? 330 : 280) * auraMult + amp * 42;
   const aura = ctx.createRadialGradient(cx, cy, 18, cx, cy, auraR);
   aura.addColorStop(0, `rgba(212, 168, 68, ${{(0.20 + amp * 0.16) * auraMult}})`);
   aura.addColorStop(0.5, 'rgba(142, 102, 32, 0.08)');
   aura.addColorStop(1, 'rgba(5, 5, 7, 0)');
   ctx.fillStyle = aura; ctx.fillRect(0, 0, W, H);
+
+  // Floating luxury golden bokeh orbs drifting softly
+  for (const b of BOKEH) {{
+    const bx = b.x * W + Math.sin(t * 0.45 + b.ph) * 26;
+    const by = ((b.y - t * b.sp) % 1 + 1) % 1 * H;
+    const bg = ctx.createRadialGradient(bx, by, 2, bx, by, b.r);
+    bg.addColorStop(0, `rgba(244, 201, 93, ${{0.09 + 0.05 * Math.sin(t * 1.4 + b.ph)}})`);
+    bg.addColorStop(1, 'rgba(244, 201, 93, 0)');
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(bx, by, b.r, 0, Math.PI * 2); ctx.fill();
+  }}
 
   drawIslamicStarPattern(cx, cy, t, act.name === 'DALIL' ? 0.095 : 0.06);
 
@@ -1003,10 +1113,15 @@ window.renderAt = function(t) {{
     light: false,
   }};
 
+  const arDurSec = Math.max(ACTS.arEnd - ACTS.arStart, 2.0);
+  const climDurSec = Math.max(ACTS.total - ACTS.climaxStart, 2.0);
+
   if (act.name === 'HOOK') {{
     drawAct1HookVisual(ctx, STORY.hook_visual || 'racing_mind', cx, H * (IS_SHORT ? 0.45 : 0.48), IS_SHORT ? 1.16 : 0.90, act.localT, t, pal);
   }} else if (act.name === 'DALIL') {{
-    drawGoldSunburst(cx, cy, amp, t);
+    const bloomU = clamp01((act.localT * arDurSec) / 0.72);
+    const bloomSc = 0.74 + 0.26 * springOut(bloomU);
+    drawGoldSunburst(cx, cy, amp, t, bloomSc);
   }} else if (act.name === 'EXPLAINER') {{
     drawAct3ExplainerVisual(ctx, STORY, cx, H * (IS_SHORT ? 0.45 : 0.47), IS_SHORT ? 1.05 : 0.88, act.localT, t, pal);
   }}
@@ -1025,46 +1140,35 @@ window.renderAt = function(t) {{
   const miniCit = document.getElementById('miniCit');
   const arWin = CFG.arabic_window;
 
+  animateActCard(topHeader, act.name === 'DALIL', act.localT, arDurSec, false);
+  animateActCard(karaokeWrap, act.name === 'DALIL', act.localT, arDurSec, false);
+  animateActCard(climaxGold, act.name === 'CLIMAX', act.localT, climDurSec, true);
+
+  let activeArIdx = -1;
   if (act.name === 'HOOK') {{
     actHeader.style.display = 'flex';
-    topHeader.style.display = 'none';
-    karaokeWrap.style.display = 'none';
-    climaxGold.style.display = 'none';
     actPill.textContent = 'ACT 1 • ' + (STORY.hook_kicker || 'STILL LOUD INSIDE?');
     actPill.style.borderColor = '#F87171'; actPill.style.color = '#FCA5A5';
     actTitle.textContent = (CFG.scenes[0] && CFG.scenes[0].headline) || CFG.dalil.topic;
     miniCit.textContent = '';
   }} else if (act.name === 'DALIL') {{
     actHeader.style.display = 'none';
-    topHeader.style.display = 'block';
-    karaokeWrap.style.display = 'flex';
-    climaxGold.style.display = 'none';
-    const activeArIdx = Math.min(Math.floor(act.localT * AR_WORDS.length), AR_WORDS.length - 1);
-    for (let i = 0; i < AR_WORDS.length; i++) {{
-      const el = document.getElementById(`arw_${{i}}`);
-      if (el) el.className = 'ar-w' + (i === activeArIdx ? ' lit' : (i < activeArIdx ? ' past' : ''));
-    }}
+    activeArIdx = updateArabicKaraokeAt(t, arWin, AR_BUILT.count, 'arw', 'ar-w', act.localT);
   }} else if (act.name === 'EXPLAINER') {{
     actHeader.style.display = 'flex';
-    topHeader.style.display = 'none';
-    karaokeWrap.style.display = 'none';
-    climaxGold.style.display = 'none';
     actPill.textContent = 'ACT 3 • THE SCIENCE';
     actPill.style.borderColor = '#34D399'; actPill.style.color = '#6EE7B7';
     actTitle.textContent = (cur && cur.headline) || 'HOW IT CALMS YOUR MIND';
     miniCit.textContent = '✦  ' + CFG.dalil.citation + '  ✦';
   }} else {{
     actHeader.style.display = 'flex';
-    topHeader.style.display = 'none';
-    karaokeWrap.style.display = 'none';
-    climaxGold.style.display = 'block';
     actPill.textContent = 'ACT 4 • THE LESSON';
     actPill.style.borderColor = '#F4C95D'; actPill.style.color = '#F4C95D';
     actTitle.textContent = (cur && cur.headline) || 'PEACE OF MIND';
     miniCit.textContent = '';
   }}
 
-  // English narration karaoke across ALL 4 Acts (or illuminated translation during Qari tilawah!)
+  // English narration karaoke across ALL 4 Acts (or translation paced to real Arabic word progress during Qari tilawah!)
   let cap = null;
   for (const c of CFG.captions) {{
     if (t >= c.start - 0.06 && t <= c.end + 0.14) {{ cap = c; break; }}
@@ -1072,7 +1176,10 @@ window.renderAt = function(t) {{
   const enEl = document.getElementById('enKaraoke');
   if (act.name === 'DALIL') {{
     const trWords = ('"' + CFG.dalil.translation + '"').split(/\\s+/).filter(Boolean);
-    const litIdx = Math.floor(act.localT * trWords.length);
+    const arFrac = (activeArIdx >= 0 && AR_BUILT.count > 0)
+      ? ((activeArIdx + 0.5) / AR_BUILT.count)
+      : act.localT;
+    const litIdx = Math.min(Math.floor(clamp01(arFrac) * trWords.length), trWords.length - 1);
     enEl.innerHTML = trWords.map((w, i) => {{
       if (i === litIdx) return `<span class="en-w lit">${{w}}</span>`;
       if (i < litIdx) return `<span class="en-w past">${{w}}</span>`;
@@ -1174,6 +1281,10 @@ def _build_particle_map_html(payload: dict[str, Any], width: int, height: int) -
     color: #F4C95D; text-shadow: 0 0 20px rgba(244, 201, 93, 0.45);
     margin-bottom: 8px;
   }}
+  .ar-quote .arw {{ color: rgba(255, 250, 238, 0.36); }}
+  .ar-quote .arw.lit {{ color: #F4C95D; text-shadow: 0 0 24px rgba(244, 201, 93, 0.80); }}
+  .ar-quote .arw.past {{ color: #FFFDF7; }}
+  .ar-quote .arw-punct {{ color: rgba(244, 201, 93, 0.78); }}
   .tr-quote {{
     font-family: 'Georgia', serif; font-size: {20 if is_short else 17}px;
     color: #E2E8F0; margin-bottom: 10px;
@@ -1284,7 +1395,12 @@ const STORY = CFG.story_acts || {{}};
 
 const ACTS = computeFourActTiming(CFG);
 
-document.getElementById('arQuote').textContent = CFG.dalil.arabic;
+const AR_BUILT = buildArabicKaraokeHTML(CFG.dalil.arabic, 'pm_ar', 'arw');
+document.getElementById('arQuote').innerHTML = AR_BUILT.html;
+if (AR_BUILT.count >= 10) {{
+  document.getElementById('arQuote').style.fontSize = (IS_SHORT ? 35 : 30) + 'px';
+  document.getElementById('arQuote').style.lineHeight = '1.44';
+}}
 document.getElementById('trQuote').textContent = CFG.dalil.transliteration;
 document.getElementById('citBadge').textContent = '✦  ' + CFG.dalil.citation + '  ✦';
 document.getElementById('climaxLesson').textContent = STORY.core_lesson || CFG.dalil.translation;
@@ -1391,46 +1507,93 @@ window.renderAt = function(t) {{
   document.getElementById('progFill').style.width = (progress * 100).toFixed(2) + '%';
 
   const act = getCurrentAct(t, ACTS);
-  const mood = MOODS[Math.min(act.num - 1, MOODS.length - 1)];
-  const c0 = mood.c0, c1 = mood.c1, acc = mood.accent;
+  const sIdx = Math.min(act.num - 1, SHAPES.length - 1);
+  const prevIdx = Math.max(0, sIdx - 1);
+  const actDur = act.name === 'HOOK' ? Math.max(ACTS.arStart, 1)
+    : (act.name === 'DALIL' ? Math.max(ACTS.arEnd - ACTS.arStart, 1)
+    : (act.name === 'EXPLAINER' ? Math.max(ACTS.climaxStart - ACTS.arEnd, 1)
+    : Math.max(ACTS.total - ACTS.climaxStart, 1)));
+  const actElapsed = act.localT * actDur;
+  const morphU = (sIdx === 0) ? 1.0 : easeInOutQuad(clamp01(actElapsed / 1.35));
+
+  // Smoothly blend mood palette across Act transitions!
+  const mPrev = MOODS[Math.min(prevIdx, MOODS.length - 1)];
+  const mCurr = MOODS[Math.min(sIdx, MOODS.length - 1)];
+  const c0 = lerpRGB(mPrev.c0, mCurr.c0, morphU);
+  const c1 = lerpRGB(mPrev.c1, mCurr.c1, morphU);
+  const acc = lerpRGB(mPrev.accent, mCurr.accent, morphU);
 
   const bg = ctx.createRadialGradient(CX, CY, 20, CX, CY, Math.max(W, H) * 0.72);
   bg.addColorStop(0, `rgb(${{c0[0]}},${{c0[1]}},${{c0[2]}})`);
   bg.addColorStop(1, `rgb(${{c1[0]}},${{c1[1]}},${{c1[2]}})`);
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-  // Pick constellation shape matched to the current Act
-  const sIdx = Math.min(act.num - 1, SHAPES.length - 1);
-  const A = SHAPES[sIdx];
+  // Occasional cosmic shooting star streak!
+  const shCyc = (t * 0.27) % 1.0;
+  if (shCyc < 0.22) {{
+    const u = shCyc / 0.22;
+    const sx = W * (0.85 - u * 0.65), sy = H * (0.10 + u * 0.24);
+    const sg = ctx.createLinearGradient(sx, sy, sx + 78, sy - 28);
+    sg.addColorStop(0, `rgba(255, 252, 232, ${{Math.sin(u * Math.PI) * 0.85}})`);
+    sg.addColorStop(1, 'rgba(255, 252, 232, 0)');
+    ctx.strokeStyle = sg; ctx.lineWidth = 2.0;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + 78, sy - 28); ctx.stroke();
+  }}
+
+  // TRUE 3D ORBITAL VORTEX PARTICLE MORPHING between previous Act shape & current Act shape!
+  const P0 = SHAPES[prevIdx];
+  const P1 = SHAPES[sIdx];
   const fIdx = Math.min(Math.floor(t * CFG.fps), Math.max(CFG.rms.length - 1, 0));
   const amp = CFG.rms.length ? CFG.rms[fIdx] : 0.25;
+  const rotY = t * 0.34;
+  const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+  const swirlAmp = Math.sin(morphU * Math.PI) * 1.45;
 
-  // Dim particles subtly behind Act 1 & Act 3 UI diagrams so diagrams pop razor-sharp, shine brightly in Act 2 & Act 4!
-  const partAlpha = (act.name === 'DALIL' || act.name === 'CLIMAX') ? 0.95 : 0.34;
+  const partAlpha = (act.name === 'DALIL' || act.name === 'CLIMAX') ? 0.95 : 0.42;
   ctx.save();
   ctx.globalAlpha = partAlpha;
-  const halo = ctx.createRadialGradient(CX, CY, 12, CX, CY, RAD * 1.25);
-  halo.addColorStop(0, `rgba(${{acc[0]}},${{acc[1]}},${{acc[2]}},${{0.18 + amp * 0.12}})`);
+  const halo = ctx.createRadialGradient(CX, CY, 12, CX, CY, RAD * 1.32);
+  halo.addColorStop(0, `rgba(${{acc[0]}},${{acc[1]}},${{acc[2]}},${{0.20 + amp * 0.14}})`);
   halo.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = halo; ctx.fillRect(0, 0, W, H);
 
-  ctx.strokeStyle = `rgba(${{acc[0]}},${{acc[1]}},${{acc[2]}}, 0.14)`; ctx.lineWidth = 1;
+  const curPts = [];
+  for (let i = 0; i < N_PART; i++) {{
+    const a = P0[i], b = P1[i];
+    let lx = lerp(a.x - CX, b.x - CX, morphU);
+    let ly = lerp(a.y - CY, b.y - CY, morphU);
+    // Mid-transition swirling vortex torque!
+    if (swirlAmp > 0.005) {{
+      const dist = Math.hypot(lx, ly);
+      const ang = Math.atan2(ly, lx) + swirlAmp * (1.0 - Math.min(dist / (RAD * 1.6), 0.7));
+      const expand = 1.0 + swirlAmp * 0.18;
+      lx = Math.cos(ang) * dist * expand;
+      ly = Math.sin(ang) * dist * expand;
+    }}
+    // Gentle 3D depth orbit around Y axis!
+    const zDepth = Math.sin(a.ph * 1.7 + t * 0.8) * 38;
+    const rx = lx * (0.86 + 0.14 * cosY) + zDepth * sinY * 0.45;
+    const persp = 1.0 + (zDepth * cosY) / 420.0;
+    const px = CX + rx * persp + Math.sin(t * 1.3 + a.ph) * 3.8;
+    const py = CY + ly * persp + Math.cos(t * 1.1 + a.ph * 1.3) * 3.8;
+    curPts.push({{ x: px, y: py, sz: b.sz * persp, ph: a.ph }});
+  }}
+
+  ctx.strokeStyle = `rgba(${{acc[0]}},${{acc[1]}},${{acc[2]}}, 0.16)`; ctx.lineWidth = 1;
   ctx.beginPath();
   for (let i = 0; i < N_PART - 12; i += 12) {{
-    if (Math.hypot(A[i + 12].x - A[i].x, A[i + 12].y - A[i].y) < 130) {{
-      ctx.moveTo(A[i].x, A[i].y); ctx.lineTo(A[i + 12].x, A[i + 12].y);
+    if (Math.hypot(curPts[i + 12].x - curPts[i].x, curPts[i + 12].y - curPts[i].y) < 135) {{
+      ctx.moveTo(curPts[i].x, curPts[i].y); ctx.lineTo(curPts[i + 12].x, curPts[i + 12].y);
     }}
   }}
   ctx.stroke();
 
   for (let i = 0; i < N_PART; i++) {{
-    const pa = A[i];
-    const px = pa.x + Math.sin(t * 1.3 + pa.ph) * 4.5;
-    const py = pa.y + Math.cos(t * 1.1 + pa.ph * 1.3) * 4.5;
-    const rad = pa.sz * (0.9 + amp * 0.30);
-    const bright = 0.55 + 0.45 * Math.sin(t * 2.6 + pa.ph);
+    const cp = curPts[i];
+    const rad = Math.max(0.8, cp.sz * (0.9 + amp * 0.32));
+    const bright = 0.55 + 0.45 * Math.sin(t * 2.6 + cp.ph);
     ctx.fillStyle = (i % 3 === 0) ? `rgba(255, 245, 210, ${{bright}})` : `rgba(${{acc[0]}},${{acc[1]}},${{acc[2]}},${{bright * 0.92}})`;
-    ctx.beginPath(); ctx.arc(px, py, rad, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cp.x, cp.y, rad, 0, Math.PI * 2); ctx.fill();
   }}
   ctx.restore();
 
@@ -1462,30 +1625,28 @@ window.renderAt = function(t) {{
   const climaxCosmic = document.getElementById('climaxCosmic');
   const arWin = CFG.arabic_window;
 
+  const arDurSec = Math.max(ACTS.arEnd - ACTS.arStart, 2.0);
+  const climDurSec = Math.max(ACTS.total - ACTS.climaxStart, 2.0);
+  animateActCard(dalilPanel, act.name === 'DALIL', act.localT, arDurSec, true);
+  animateActCard(climaxCosmic, act.name === 'CLIMAX', act.localT, climDurSec, true);
+
   if (act.name === 'HOOK') {{
-    dalilPanel.style.display = 'none';
-    climaxCosmic.style.display = 'none';
     actChip.textContent = 'ACT 1 • ' + (STORY.hook_kicker || 'THE FRAMEWORK');
     actChip.style.borderColor = '#F87171'; actChip.style.color = '#FCA5A5';
     titleEl.textContent = (CFG.scenes[0] && CFG.scenes[0].headline) || CFG.dalil.topic;
     miniCit.textContent = '';
   }} else if (act.name === 'DALIL') {{
-    dalilPanel.style.display = 'block';
-    climaxCosmic.style.display = 'none';
     actChip.textContent = (arWin && arWin.is_qari) ? `ACT 2 • TILAWAH (${{arWin.reciter}})` : 'ACT 2 • VERIFIED WISDOM';
     actChip.style.borderColor = '#F4C95D'; actChip.style.color = '#F4C95D';
     titleEl.textContent = CFG.dalil.citation;
     miniCit.textContent = '';
+    updateArabicKaraokeAt(t, arWin, AR_BUILT.count, 'pm_ar', 'arw', act.localT);
   }} else if (act.name === 'EXPLAINER') {{
-    dalilPanel.style.display = 'none';
-    climaxCosmic.style.display = 'none';
     actChip.textContent = 'ACT 3 • THE SCIENCE';
     actChip.style.borderColor = '#34D399'; actChip.style.color = '#6EE7B7';
     titleEl.textContent = (cur && cur.headline) || 'HOW IT WORKS';
     miniCit.textContent = '✦  ' + CFG.dalil.citation + '  ✦';
   }} else {{
-    dalilPanel.style.display = 'none';
-    climaxCosmic.style.display = 'block';
     actChip.textContent = 'ACT 4 • THE LESSON';
     actChip.style.borderColor = '#38BDF8'; actChip.style.color = '#7DD3FC';
     titleEl.textContent = (cur && cur.headline) || 'YOUR DAILY SHIFT';
@@ -1531,7 +1692,7 @@ def build_islamic_visual_html(mode: str, payload: dict[str, Any], width: int, he
     if m == "islamic_nature_transform":
         return build_nature_transform_html(p, _load_amiri_font_css(), width, height)
     if m == "islamic_paper_craft":
-        return build_paper_craft_html(p, _load_amiri_font_css(), width, height)
+        return build_paper_craft_25d_html(p, _load_amiri_font_css(), width, height)
     if m == "islamic_cinematic_metaphor":
         return build_cinematic_metaphor_html(p, _load_amiri_font_css(), width, height)
     if m == "islamic_gold_visualizer":
@@ -1680,12 +1841,21 @@ def _assemble_bilingual_voice_and_timeline(
             concat_files.append(arabic_res.audio_path)
             cursor += ar_dur
             ar_end = round(cursor, 3)
+            shifted_ar_timings = [
+                {
+                    "i": int(wt.get("i", k)),
+                    "s": round(ar_start + float(wt.get("s", 0.0)), 3),
+                    "e": round(ar_start + float(wt.get("e", 0.0)), 3),
+                }
+                for k, wt in enumerate(getattr(arabic_res, "word_timings", None) or [])
+            ]
             arabic_window = {
                 "start": ar_start,
                 "end": ar_end,
                 "reciter": arabic_res.reciter_label,
                 "is_qari": arabic_res.is_real_qari,
                 "source": arabic_res.source,
+                "word_timings": shifted_ar_timings,
             }
 
             concat_files.append(sil_post_ar)
@@ -1824,8 +1994,8 @@ def render_islamic_visual_video_for_pipeline(
             br = pw.chromium.launch(**launch_kw)
             page = br.new_page(viewport={"width": gl_w, "height": gl_h}, device_scale_factor=dsf)
             page.set_content(html_doc, wait_until="load")
-            # Ensure embedded Amiri Arabic calligraphy fonts finish loading before frame 0!
-            page.evaluate("() => document.fonts.ready")
+            # Ensure embedded Amiri fonts AND any 2.5D paper-craft sprites finish loading before frame 0!
+            page.evaluate("() => Promise.all([document.fonts.ready, window._assetsReady || Promise.resolve()])")
 
             jpg_q = 86 if is_cloud else 92
             try:
