@@ -385,5 +385,32 @@
       "failed": 0
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-28_212227_niyyah-the-3-second-prophetic-pause/PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-28_231511_why-the-quran-says-relief-comes-with",
+    "slug": "why-the-quran-says-relief-comes-with-hardship-no",
+    "topic": "Why the Qur'an Says Relief Comes WITH Hardship, Not Just After (94:5-6)",
+    "pillar": "quran_mental_peace",
+    "pillar_label": "Qur'an Wisdom & Mental Peace",
+    "generated_at_wib": "2026-11-28 23:22:46 WIB",
+    "publish_mode": "scheduled",
+    "visual_style_long": "islamic_gold_visualizer",
+    "visual_style_short": "islamic_gold_visualizer",
+    "external_ids": {
+      "Instagram Reels": "18098867687485579",
+      "Instagram Carousel": "17997963429063356",
+      "X & Threads": "threads:18104722376060918",
+      "Facebook Page Reels": "1510049704375994"
+    },
+    "counts": {
+      "total": 8,
+      "published": 3,
+      "scheduled": 1,
+      "drafted": 0,
+      "dry_run_ready": 0,
+      "pending_setup": 2,
+      "failed": 2
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-28_231511_why-the-quran-says-relief-comes-with/PUBLISH_REPORT.md"
   }
 ]
