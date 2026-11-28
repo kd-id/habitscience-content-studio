@@ -147,7 +147,13 @@ def _upload_youtube_video(
             thumb_uploaded = True
         except Exception as exc:
             thumb_uploaded = False
-            thumb_note = f" (thumbnail dilewati — pastikan verifikasi nomor HP di YouTube Studio: {type(exc).__name__})"
+            err_s = str(exc)
+            if "429" in err_s or "too many thumbnails" in err_s.lower() or "rateLimitExceeded" in err_s:
+                thumb_note = " (thumbnail dilewati sementara — kena batas rate-limit upload thumbnail harian YouTube HTTP 429, akun sudah terverifikasi)"
+            elif "403" in err_s and "forbidden" in err_s.lower():
+                thumb_note = f" (thumbnail dilewati — pastikan verifikasi nomor HP di YouTube Studio: {type(exc).__name__})"
+            else:
+                thumb_note = f" (thumbnail dilewati: {type(exc).__name__} — {err_s[:120]})"
 
     return {
         "video_id": video_id,
