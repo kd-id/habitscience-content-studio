@@ -356,5 +356,34 @@
       "failed": 1
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-28_142120_why-small-daily-habits-beat-big-burs/PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-28_212227_niyyah-the-3-second-prophetic-pause",
+    "slug": "niyyah-the-3-second-prophetic-pause-that-breaks",
+    "topic": "Niyyah: The 3-Second Prophetic Pause That Breaks Autopilot Living",
+    "pillar": "sunnah_paper_story",
+    "pillar_label": "Sunnah Craft Stories",
+    "generated_at_wib": "2026-11-28 21:33:12 WIB",
+    "publish_mode": "scheduled",
+    "visual_style_long": "islamic_paper_craft",
+    "visual_style_short": "islamic_paper_craft",
+    "external_ids": {
+      "YouTube Long (16:9)": "z95t5-IYv8A",
+      "YouTube Shorts (9:16)": "LJPlu7xS6OI",
+      "Instagram Reels": "18038992808903785",
+      "Instagram Carousel": "18114708728622741",
+      "X & Threads": "threads:17915632344378920",
+      "Facebook Page Reels": "1092383197231972"
+    },
+    "counts": {
+      "total": 8,
+      "published": 3,
+      "scheduled": 3,
+      "drafted": 0,
+      "dry_run_ready": 0,
+      "pending_setup": 2,
+      "failed": 0
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-28_212227_niyyah-the-3-second-prophetic-pause/PUBLISH_REPORT.md"
   }
 ]
