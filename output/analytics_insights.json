@@ -1,5 +1,5 @@
 {
-  "updated_at_wib": "2026-11-28 04:09:47 WIB",
+  "updated_at_wib": "2026-11-28 19:19:34 WIB",
   "platform_status": {
     "youtube": "OK",
     "instagram": "OK",
@@ -8,74 +8,76 @@
   },
   "account_stats": {
     "yt_subscribers": 0,
-    "yt_channel_views": 21,
+    "yt_channel_views": 103,
     "ig_followers": 193,
     "fb_followers": 1407
   },
   "growth_deltas": {
     "has_previous_snapshot": true,
-    "delta_total_views": 1830,
+    "delta_total_views": 851,
     "delta_yt_subs": 0,
     "delta_ig_followers": 0,
     "delta_fb_followers": 0
   },
   "rising_videos": [
     {
+      "id": "1673817127530424",
+      "title": "Why is Surah Al-Kahf recommended every Friday? ",
+      "platform": "Facebook Page Reels",
+      "url": "https://www.facebook.com/reel/1673817127530424/",
+      "views": 290,
+      "delta_views": 290,
+      "likes": 2,
+      "comments": 0
+    },
+    {
+      "id": "2549115875498049",
+      "title": "Do you ever find yourself hesitating when you ask Allah, as if your prayer is too big",
+      "platform": "Facebook Page Reels",
+      "url": "https://www.facebook.com/reel/2549115875498049/",
+      "views": 191,
+      "delta_views": 191,
+      "likes": 6,
+      "comments": 0
+    },
+    {
+      "id": "18126340543944817",
+      "title": "Feeling frozen before starting your work isn't laziness. The Prophet ﷺ taught us that",
+      "platform": "Threads",
+      "url": "https://www.threads.com/@kha_zaki94/post/DgRJOsTlljJ",
+      "views": 151,
+      "delta_views": 151,
+      "likes": 2,
+      "comments": 0
+    },
+    {
+      "id": "18045489899833689",
+      "title": "Ever feel fired up on Monday—then completely burned out by Thursday? The Prophet taug",
+      "platform": "Threads",
+      "url": "https://www.threads.com/@kha_zaki94/post/DgRuAuEFoQ-",
+      "views": 82,
+      "delta_views": 82,
+      "likes": 0,
+      "comments": 1
+    },
+    {
       "id": "18024089387952095",
       "title": "Surah Al-Kahf isn't just a Friday routine—it's a weekly compass. Its 4 stories guard ",
       "platform": "Threads",
       "url": "https://www.threads.com/@kha_zaki94/post/DgQO7bDCcJV",
-      "views": 580,
-      "delta_views": 580,
-      "likes": 3,
-      "comments": 0
-    },
-    {
-      "id": "18107034554355851",
-      "title": "You can turn off every notification and still feel loud inside. Surah Ar-Ra'd (13:28)",
-      "platform": "Threads",
-      "url": "https://www.threads.com/@kha_zaki94/post/DgP5Y39FUJE",
-      "views": 278,
-      "delta_views": 278,
-      "likes": 3,
-      "comments": 0
-    },
-    {
-      "id": "18046791887841749",
-      "title": "Picture dipping a needle into the ocean. It takes nothing away. In Sahih Muslim 2577,",
-      "platform": "Threads",
-      "url": "https://www.threads.com/@kha_zaki94/post/DgQbiYmGRjB",
-      "views": 220,
-      "delta_views": 220,
-      "likes": 1,
-      "comments": 0
-    },
-    {
-      "id": "2216336289276832",
-      "title": "Have you ever sat in a completely quiet room and still felt loud inside?",
-      "platform": "Facebook Page Reels",
-      "url": "https://www.facebook.com/reel/2216336289276832/",
-      "views": 213,
-      "delta_views": 213,
-      "likes": 0,
-      "comments": 0
-    },
-    {
-      "id": "1163653472977576",
-      "title": "Every seven days, we are invited to pause the noise and refresh our hearts. The Proph",
-      "platform": "Facebook Page Reels",
-      "url": "https://www.facebook.com/reel/1163653472977576/",
-      "views": 186,
-      "delta_views": 186,
-      "likes": 1,
+      "views": 640,
+      "delta_views": 60,
+      "likes": 4,
       "comments": 0
     }
   ],
   "video_views_snapshot": {
-    "8Mhpatu-7mA": 69,
+    "8Mhpatu-7mA": 87,
     "Ft-zCxDQUvo": 0,
-    "O8itVKXQfLc": 20,
+    "O8itVKXQfLc": 24,
     "msjbalDs-QY": 1,
+    "18500821681108682": 0,
+    "18137708509780239": 0,
     "18121227815075043": 0,
     "18037752602911758": 0,
     "17910422220600166": 0,
@@ -87,22 +89,24 @@
     "18167039356494393": 0,
     "17918364459471028": 0,
     "17875363980643025": 0,
-    "2549115875498049": 0,
-    "1673817127530424": 0,
-    "2216336289276832": 213,
-    "1163653472977576": 186,
-    "1147155471226922": 114,
-    "1679406323549773": 202,
-    "18046791887841749": 220,
-    "18024089387952095": 580,
-    "18107034554355851": 278,
-    "18002292969021014": 170,
+    "2549115875498049": 191,
+    "1673817127530424": 290,
+    "2216336289276832": 217,
+    "1163653472977576": 205,
+    "1147155471226922": 118,
+    "1679406323549773": 203,
+    "18045489899833689": 82,
+    "18126340543944817": 151,
+    "18046791887841749": 230,
+    "18024089387952095": 640,
+    "18107034554355851": 291,
+    "18002292969021014": 174,
     "18141534982724268": 3,
     "18140640016644833": 13
   },
-  "public_video_count": 27,
-  "scheduled_or_draft_count": 14,
-  "total_views_all_platforms": 2069,
+  "public_video_count": 31,
+  "scheduled_or_draft_count": 18,
+  "total_views_all_platforms": 2920,
   "top_videos": [
     {
       "platform": "Threads",
@@ -113,11 +117,11 @@
       "privacy": "public",
       "publish_at": "",
       "published_at": "2026-11-27T17:37:41+0000",
-      "views": 580,
-      "likes": 3,
+      "views": 640,
+      "likes": 4,
       "comments": 0,
       "saves": 0,
-      "score": 598.0,
+      "score": 664.0,
       "is_studio_video": true,
       "pillar": "Sunnah & Brain Science Map"
     },
@@ -130,13 +134,31 @@
       "privacy": "public",
       "publish_at": "",
       "published_at": "2026-11-27T14:29:28+0000",
-      "views": 278,
-      "likes": 3,
+      "views": 291,
+      "likes": 4,
       "comments": 0,
       "saves": 0,
-      "score": 296.0,
+      "score": 315.0,
       "is_studio_video": true,
       "pillar": "Qur'an Wisdom & Mental Peace"
+    },
+    {
+      "platform": "Facebook Page Reels",
+      "format": "short",
+      "id": "1673817127530424",
+      "title": "Why is Surah Al-Kahf recommended every Friday? ",
+      "url": "https://www.facebook.com/reel/1673817127530424/",
+      "privacy": "public",
+      "publish_at": "",
+      "published_at": "2026-11-27T17:37:44+0000",
+      "views": 290,
+      "likes": 2,
+      "comments": 0,
+      "saves": 0,
+      "score": 302.0,
+      "is_studio_video": true,
+      "visual_style": "islamic_particle_map",
+      "pillar": "Sunnah & Brain Science Map"
     },
     {
       "platform": "Threads",
@@ -147,12 +169,30 @@
       "privacy": "public",
       "publish_at": "",
       "published_at": "2026-11-27T19:27:52+0000",
-      "views": 220,
-      "likes": 1,
+      "views": 230,
+      "likes": 2,
       "comments": 0,
       "saves": 0,
-      "score": 226.0,
+      "score": 242.0,
       "is_studio_video": true,
+      "pillar": "Reflective Hadith & Qur'an Metaphors"
+    },
+    {
+      "platform": "Facebook Page Reels",
+      "format": "short",
+      "id": "2549115875498049",
+      "title": "Do you ever find yourself hesitating when you ask Allah, as if your prayer is too big",
+      "url": "https://www.facebook.com/reel/2549115875498049/",
+      "privacy": "public",
+      "publish_at": "",
+      "published_at": "2026-11-27T19:27:55+0000",
+      "views": 191,
+      "likes": 6,
+      "comments": 0,
+      "saves": 0,
+      "score": 227.0,
+      "is_studio_video": true,
+      "visual_style": "islamic_cinematic_metaphor",
       "pillar": "Reflective Hadith & Qur'an Metaphors"
     },
     {
@@ -164,31 +204,14 @@
       "privacy": "public",
       "publish_at": "",
       "published_at": "2026-11-27T14:29:32+0000",
-      "views": 213,
+      "views": 217,
       "likes": 0,
       "comments": 0,
       "saves": 0,
-      "score": 213.0,
+      "score": 217.0,
       "is_studio_video": true,
       "visual_style": "islamic_gold_visualizer",
       "pillar": "Qur'an Wisdom & Mental Peace"
-    },
-    {
-      "platform": "Facebook Page Reels",
-      "format": "short",
-      "id": "1679406323549773",
-      "title": "Ever feel exhausted after working all day yet struggle to finish your most important ",
-      "url": "https://www.facebook.com/reel/1679406323549773/",
-      "privacy": "public",
-      "publish_at": "",
-      "published_at": "2026-11-26T14:47:00+0000",
-      "views": 202,
-      "likes": 1,
-      "comments": 0,
-      "saves": 0,
-      "score": 208.0,
-      "is_studio_video": true,
-      "visual_style": "pov_3d_toon"
     },
     {
       "platform": "Facebook Page Reels",
@@ -199,14 +222,31 @@
       "privacy": "public",
       "publish_at": "",
       "published_at": "2026-11-27T11:56:46+0000",
-      "views": 186,
+      "views": 205,
       "likes": 1,
       "comments": 0,
       "saves": 0,
-      "score": 192.0,
+      "score": 211.0,
       "is_studio_video": true,
       "visual_style": "islamic_paper_craft",
       "pillar": "Sunnah Craft Stories"
+    },
+    {
+      "platform": "Facebook Page Reels",
+      "format": "short",
+      "id": "1679406323549773",
+      "title": "Ever feel exhausted after working all day yet struggle to finish your most important ",
+      "url": "https://www.facebook.com/reel/1679406323549773/",
+      "privacy": "public",
+      "publish_at": "",
+      "published_at": "2026-11-26T14:47:00+0000",
+      "views": 203,
+      "likes": 1,
+      "comments": 0,
+      "saves": 0,
+      "score": 209.0,
+      "is_studio_video": true,
+      "visual_style": "pov_3d_toon"
     },
     {
       "platform": "Threads",
@@ -217,70 +257,97 @@
       "privacy": "public",
       "publish_at": "",
       "published_at": "2026-11-27T11:56:44+0000",
-      "views": 170,
+      "views": 174,
       "likes": 1,
       "comments": 0,
       "saves": 0,
-      "score": 176.0,
+      "score": 180.0,
       "is_studio_video": true,
       "pillar": "Sunnah Craft Stories"
     },
     {
-      "platform": "Facebook Page Reels",
-      "format": "short",
-      "id": "1147155471226922",
-      "title": "Did you know that leaving your phone face down on your desk still steals your focus? ",
-      "url": "https://www.facebook.com/reel/1147155471226922/",
+      "platform": "Threads",
+      "format": "text",
+      "id": "18126340543944817",
+      "title": "Feeling frozen before starting your work isn't laziness. The Prophet ﷺ taught us that",
+      "url": "https://www.threads.com/@kha_zaki94/post/DgRJOsTlljJ",
       "privacy": "public",
       "publish_at": "",
-      "published_at": "2026-11-26T22:48:27+0000",
-      "views": 114,
+      "published_at": "2026-11-28T02:07:07+0000",
+      "views": 151,
+      "likes": 2,
+      "comments": 0,
+      "saves": 0,
+      "score": 163.0,
+      "is_studio_video": true,
+      "pillar": "Minute Wisdom & Healing Duas"
+    }
+  ],
+  "scheduled_queue": [
+    {
+      "platform": "YouTube Shorts",
+      "format": "short",
+      "id": "rCe4y7-nBzE",
+      "title": "Why Small Daily Habits Beat Big Bursts of Motivation... #Shorts",
+      "url": "https://studio.youtube.com/video/rCe4y7-nBzE/edit",
+      "privacy": "scheduled",
+      "publish_at": "2026-12-03T19:00:00Z",
+      "published_at": "2026-11-28T07:25:37Z",
+      "views": 0,
       "likes": 0,
       "comments": 0,
       "saves": 0,
-      "score": 114.0,
-      "is_studio_video": true,
-      "visual_style": "pov_3d_toon",
-      "pillar": "Everyday Focus & Habits"
+      "score": 0.0,
+      "is_studio_video": true
+    },
+    {
+      "platform": "YouTube Long",
+      "format": "long",
+      "id": "wXdjYJmOir8",
+      "title": "Why Small Daily Habits Beat Big Bursts of Motivation (Sunnah of...",
+      "url": "https://studio.youtube.com/video/wXdjYJmOir8/edit",
+      "privacy": "scheduled",
+      "publish_at": "2026-12-03T16:00:00Z",
+      "published_at": "2026-11-28T07:25:34Z",
+      "views": 0,
+      "likes": 0,
+      "comments": 0,
+      "saves": 0,
+      "score": 0.0,
+      "is_studio_video": true
     },
     {
       "platform": "YouTube Shorts",
       "format": "short",
-      "id": "8Mhpatu-7mA",
-      "title": "Why Face-Down Phones Ruin Focus #Shorts",
-      "url": "https://youtu.be/8Mhpatu-7mA",
-      "privacy": "public",
-      "publish_at": "",
-      "published_at": "2026-11-27T19:00:04Z",
-      "views": 69,
+      "id": "E-pLAl4244o",
+      "title": "Why You Feel Paralyzed (And the Prophetic Cure) #Shorts",
+      "url": "https://studio.youtube.com/video/E-pLAl4244o/edit",
+      "privacy": "scheduled",
+      "publish_at": "2026-12-02T19:00:00Z",
+      "published_at": "2026-11-28T02:05:16Z",
+      "views": 0,
       "likes": 0,
       "comments": 0,
       "saves": 0,
-      "score": 69.0,
-      "is_studio_video": true,
-      "visual_style": "pov_3d_toon",
-      "pillar": "Everyday Focus & Habits"
+      "score": 0.0,
+      "is_studio_video": true
     },
     {
-      "platform": "Instagram Reels",
-      "format": "short",
-      "id": "18121227815075043",
-      "title": "Never let human scarcity limit your prayers. In Sahih Muslim 2577, Allah reminds us t",
-      "url": "https://www.instagram.com/reel/DgQb2GDqibB/",
-      "privacy": "public",
-      "publish_at": "",
-      "published_at": "2026-11-27T19:30:59+0000",
-      "views": 0,
-      "likes": 4,
+      "platform": "YouTube Long",
+      "format": "long",
+      "id": "DvVr3oCl-Bw",
+      "title": "Feeling Stuck? The Prophetic Dua That Clears Mental Weight",
+      "url": "https://studio.youtube.com/video/DvVr3oCl-Bw/edit",
+      "privacy": "scheduled",
+      "publish_at": "2026-12-02T16:00:00Z",
+      "published_at": "2026-11-28T02:05:11Z",
+      "views": 1,
+      "likes": 0,
       "comments": 0,
       "saves": 0,
-      "score": 24.0,
-      "is_studio_video": true,
-      "visual_style": "islamic_cinematic_metaphor",
-      "pillar": "Reflective Hadith & Qur'an Metaphors"
-    }
-  ],
-  "scheduled_queue": [
+      "score": 1.0,
+      "is_studio_video": true
+    },
     {
       "platform": "YouTube Shorts",
       "format": "short",
@@ -376,103 +443,39 @@
       "saves": 0,
       "score": 0.0,
       "is_studio_video": true
-    },
-    {
-      "platform": "YouTube Shorts",
-      "format": "short",
-      "id": "9K5N7ma3z54",
-      "title": "Why Friday Resets Your Heart & Brain #Shorts",
-      "url": "https://studio.youtube.com/video/9K5N7ma3z54/edit",
-      "privacy": "scheduled",
-      "publish_at": "2026-11-28T19:00:00Z",
-      "published_at": "2026-11-27T11:54:37Z",
-      "views": 0,
-      "likes": 0,
-      "comments": 0,
-      "saves": 0,
-      "score": 0.0,
-      "is_studio_video": true
-    },
-    {
-      "platform": "YouTube Long",
-      "format": "long",
-      "id": "pf0p1RqBXLU",
-      "title": "Why Friday Resets Your Mind & Soul (Sunnah & Science)",
-      "url": "https://studio.youtube.com/video/pf0p1RqBXLU/edit",
-      "privacy": "scheduled",
-      "publish_at": "2026-11-28T16:00:00Z",
-      "published_at": "2026-11-27T11:54:33Z",
-      "views": 0,
-      "likes": 0,
-      "comments": 0,
-      "saves": 0,
-      "score": 0.0,
-      "is_studio_video": true
-    },
-    {
-      "platform": "YouTube Shorts",
-      "format": "short",
-      "id": "3skAxg79Z0M",
-      "title": "How do video games affect brain development in... #Shorts",
-      "url": "https://studio.youtube.com/video/3skAxg79Z0M/edit",
-      "privacy": "private",
-      "publish_at": "",
-      "published_at": "2026-11-26T08:10:15Z",
-      "views": 0,
-      "likes": 0,
-      "comments": 0,
-      "saves": 0,
-      "score": 0.0,
-      "is_studio_video": true
-    },
-    {
-      "platform": "YouTube Long",
-      "format": "long",
-      "id": "CjFMLYvyd7o",
-      "title": "How do video games affect brain development in children... (Science Explained)",
-      "url": "https://studio.youtube.com/video/CjFMLYvyd7o/edit",
-      "privacy": "private",
-      "publish_at": "",
-      "published_at": "2026-11-26T08:10:09Z",
-      "views": 0,
-      "likes": 0,
-      "comments": 0,
-      "saves": 0,
-      "score": 0.0,
-      "is_studio_video": true
     }
   ],
   "style_leaderboard": {
     "short": {
       "pov_3d_toon": {
         "videos": 6,
-        "total_views": 405,
-        "avg_views": 67.5,
-        "avg_score": 69.5
+        "total_views": 432,
+        "avg_views": 72.0,
+        "avg_score": 75.0
       },
       "islamic_cinematic_metaphor": {
         "videos": 2,
-        "total_views": 0,
-        "avg_views": 0.0,
-        "avg_score": 12.0
+        "total_views": 191,
+        "avg_views": 95.5,
+        "avg_score": 125.5
       },
       "islamic_particle_map": {
         "videos": 2,
-        "total_views": 0,
-        "avg_views": 0.0,
-        "avg_score": 0.0
+        "total_views": 290,
+        "avg_views": 145.0,
+        "avg_score": 151.0
       },
       "islamic_gold_visualizer": {
         "videos": 2,
-        "total_views": 213,
-        "avg_views": 106.5,
-        "avg_score": 109.5
+        "total_views": 217,
+        "avg_views": 108.5,
+        "avg_score": 111.5
       },
       "islamic_paper_craft": {
         "videos": 1,
-        "total_views": 186,
-        "avg_views": 186.0,
-        "avg_score": 192.0
+        "total_views": 205,
+        "avg_views": 205.0,
+        "avg_score": 211.0
       }
     },
     "long": {
@@ -487,33 +490,45 @@
   "pillar_leaderboard": {
     "Everyday Focus & Habits": {
       "videos": 6,
-      "total_views": 186,
-      "avg_views": 31.0,
-      "avg_score": 33.0
+      "total_views": 208,
+      "avg_views": 34.7,
+      "avg_score": 36.7
+    },
+    "Prophetic Habits & Daily Sunnah": {
+      "videos": 2,
+      "total_views": 82,
+      "avg_views": 41.0,
+      "avg_score": 53.0
+    },
+    "Minute Wisdom & Healing Duas": {
+      "videos": 2,
+      "total_views": 151,
+      "avg_views": 75.5,
+      "avg_score": 81.5
     },
     "Reflective Hadith & Qur'an Metaphors": {
       "videos": 4,
-      "total_views": 220,
-      "avg_views": 55.0,
-      "avg_score": 62.5
+      "total_views": 421,
+      "avg_views": 105.2,
+      "avg_score": 123.2
     },
     "Sunnah & Brain Science Map": {
       "videos": 4,
-      "total_views": 580,
-      "avg_views": 145.0,
-      "avg_score": 149.5
+      "total_views": 930,
+      "avg_views": 232.5,
+      "avg_score": 241.5
     },
     "Qur'an Wisdom & Mental Peace": {
       "videos": 4,
-      "total_views": 491,
-      "avg_views": 122.8,
-      "avg_score": 128.8
+      "total_views": 508,
+      "avg_views": 127.0,
+      "avg_score": 134.5
     },
     "Sunnah Craft Stories": {
       "videos": 3,
-      "total_views": 356,
-      "avg_views": 118.7,
-      "avg_score": 122.7
+      "total_views": 379,
+      "avg_views": 126.3,
+      "avg_score": 130.3
     }
   },
   "interaction_summary": {
@@ -521,44 +536,45 @@
     "top_votes": []
   },
   "system_health": {
-    "total_episodes": 14,
+    "total_episodes": 16,
     "next_youtube_date": ""
   },
   "winning_patterns": [
-    "Specific time-based morning/afternoon dopamine traps (e.g. 7 AM, 2 PM crash)",
-    "Concrete brain metrics (-40% focus, 23-minute attention residue)",
-    "Interactive A/B survival choice cliffhangers driving Part 2 anticipation"
+    "Reframing routine rituals (Surah Al-Kahf on Friday) into high-utility cognitive shields and weekly psychological resets.",
+    "Targeting internal digital fatigue ('feeling loud inside despite quiet rooms') by linking somatic nervous system overstimulation with Qur'anic remembrance.",
+    "Translating timeless spiritual metaphors (e.g., needle dipped in the ocean) into tangible mental models that relieve modern existential anxiety."
   ],
   "recommended_sequels": [
     {
-      "topic": "Part 2: Surah Al-Kahf isn't just a Friday routine—it's a weekly co — What Happens Next in Your Brain",
-      "angle": "Direct sequel expanding on our top-performing video (580 views on Threads) with deeper neuroscience + 3-step fix",
-      "hook": "Everyone loved our breakdown on Surah Al-Kahf isn't just a Friday routine—it'—here is Part 2 showing what happens inside your brain next.",
-      "source_video_id": "18024089387952095",
-      "source_views": 580,
+      "topic": "The 4 Mental Shields of Surah Al-Kahf Explained",
+      "angle": "Direct Part 2 to the #1 post: breaks down how each of the 4 stories insulates the prefrontal cortex against modern ego, wealth, and dopamine traps.",
+      "hook": "You recite Surah Al-Kahf every Friday, but did you know each of its four stories directly guards a specific neurological blind spot?",
       "keywords": [
-        "surah",
-        "kahf",
-        "isnt",
-        "just",
-        "friday",
-        "part 2",
-        "neuroscience"
+        "Surah Al Kahf",
+        "Friday habit",
+        "cognitive bias",
+        "spiritual neuroscience"
       ]
     },
     {
-      "topic": "Part 2: You can turn off every notification and still feel loud in — What Happens Next in Your Brain",
-      "angle": "Direct sequel expanding on our top-performing video (278 views on Threads) with deeper neuroscience + 3-step fix",
-      "hook": "Everyone loved our breakdown on You can turn off every notification and still—here is Part 2 showing what happens inside your brain next.",
-      "source_video_id": "18107034554355851",
-      "source_views": 278,
+      "topic": "Why Silence Feels Loud: Calming Your Default Mode Network",
+      "angle": "Follow-up to the viral 'quiet room' hook: reveals the neuroscience of why cutting notifications triggers rumination and how Dhikr stabilizes attention.",
+      "hook": "Ever notice that when you finally turn off all your screens, your internal thoughts only scream louder?",
       "keywords": [
-        "you",
-        "can",
-        "turn",
-        "off",
-        "every",
-        "part 2",
+        "mental noise",
+        "Default Mode Network",
+        "Dhikr focus",
+        "Surah Ar Rad"
+      ]
+    },
+    {
+      "topic": "The Needle & Ocean Protocol: Breaking Scarcity Anxiety",
+      "angle": "Capitalizes on the strong traction of Sahih Muslim 2577 by applying the infinite ocean metaphor to rewire the brain out of chronic fight-or-flight scarcity.",
+      "hook": "Your brain treats every missed opportunity like survival panic—until you visualize dipping a single needle into the open ocean.",
+      "keywords": [
+        "scarcity mindset",
+        "Hadith metaphor",
+        "anxiety relief",
         "neuroscience"
       ]
     }
@@ -566,7 +582,7 @@
   "vote_tally": {},
   "next_style_plan": {
     "long_style": "cozy_diorama",
-    "short_style": "islamic_gold_visualizer",
-    "reason": "exploit_best(long=cozy_diorama,short=islamic_gold_visualizer)"
+    "short_style": "islamic_particle_map",
+    "reason": "exploit_best(long=cozy_diorama,short=islamic_particle_map)"
   }
 }
