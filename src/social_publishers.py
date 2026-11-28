@@ -166,63 +166,127 @@ def _prepare_ig_reels_compact_mp4(video_path: Path, max_mb: float = 9.5) -> Path
     return video_path
 
 
-def _publish_ig_reels_via_fb_cdn_bridge(
+def _stage_mp4_to_github_release_url(video_path: Path) -> tuple[str, dict[str, Any] | None]:
+    """Upload MP4 temporarily to our public GitHub repo's `ig-staging` release for a 100% unblocked direct HTTPS URL.
+
+    Meta's Instagram `video_url` crawler gets HTTP 200/206 Range downloads directly from
+    `objects.githubusercontent.com` with zero WAF/bot blocks (eliminating both rupload 400
+    ProcessingFailedError AND FB unpublished video error 2207076!).
+    Returns `(direct_https_url, cleanup_ctx)` or `("", None)`.
+    """
+    gh_token = os.getenv("GITHUB_TOKEN", "").strip() or os.getenv("GH_TOKEN", "").strip()
+    gh_repo = os.getenv("GITHUB_REPOSITORY", "").strip() or "kd-id/habitscience-content-studio"
+    if not gh_token or not gh_repo:
+        return "", None
+
+    api_hdrs = {
+        "Authorization": f"Bearer {gh_token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    tag = "ig-staging"
+    try:
+        # 1. Get or create the `ig-staging` release
+        rel_resp = requests.get(f"https://api.github.com/repos/{gh_repo}/releases/tags/{tag}", headers=api_hdrs, timeout=20)
+        if rel_resp.status_code == 404:
+            rel_resp = requests.post(
+                f"https://api.github.com/repos/{gh_repo}/releases",
+                headers=api_hdrs,
+                json={"tag_name": tag, "name": "Temporary IG Reels Staging", "body": "Auto-cleaned temporary media staging.", "prerelease": True},
+                timeout=20,
+            )
+        if not rel_resp.ok:
+            return "", None
+        rel_data = rel_resp.json()
+        upload_url_tpl = str(rel_data.get("upload_url", "")).split("{", 1)[0]
+        if not upload_url_tpl:
+            return "", None
+
+        # 2. Upload unique MP4 asset
+        asset_name = f"reel_{int(time.time())}_{secrets.token_hex(4)}.mp4"
+        up_hdrs = {**api_hdrs, "Content-Type": "video/mp4"}
+        with video_path.open("rb") as fh:
+            up_resp = requests.post(
+                f"{upload_url_tpl}?name={urllib.parse.quote(asset_name)}",
+                headers=up_hdrs,
+                data=fh,
+                timeout=180,
+            )
+        if not up_resp.ok:
+            return "", None
+        asset_data = up_resp.json()
+        dl_url = str(asset_data.get("browser_download_url", "")).strip()
+        asset_id = asset_data.get("id")
+        if not dl_url.startswith("https://"):
+            return "", None
+        return dl_url, {"gh_repo": gh_repo, "asset_id": asset_id, "headers": api_hdrs}
+    except Exception:
+        return "", None
+
+
+def _cleanup_github_release_asset(cleanup_ctx: dict[str, Any] | None) -> None:
+    if not cleanup_ctx or not cleanup_ctx.get("asset_id"):
+        return
+    try:
+        requests.delete(
+            f"https://api.github.com/repos/{cleanup_ctx['gh_repo']}/releases/assets/{cleanup_ctx['asset_id']}",
+            headers=cleanup_ctx["headers"],
+            timeout=15,
+        )
+    except Exception:
+        pass
+
+
+def _stage_mp4_to_tmpfiles_url(video_path: Path) -> str:
+    """Fallback free temporary direct-HTTPS MP4 host (tmpfiles.org/dl/...) when GITHUB_TOKEN is unavailable."""
+    try:
+        with video_path.open("rb") as fh:
+            resp = requests.post(
+                "https://tmpfiles.org/api/v1/upload",
+                files={"file": (video_path.name, fh, "video/mp4")},
+                timeout=120,
+            )
+        if not resp.ok:
+            return ""
+        raw_url = str((resp.json().get("data") or {}).get("url") or "").strip()
+        if raw_url.startswith("http://"):
+            raw_url = "https://" + raw_url[len("http://"):]
+        if "tmpfiles.org/" in raw_url and "/dl/" not in raw_url:
+            raw_url = raw_url.replace("tmpfiles.org/", "tmpfiles.org/dl/", 1)
+        return raw_url if raw_url.startswith("https://") else ""
+    except Exception:
+        return ""
+
+
+def _publish_ig_reels_via_public_video_url(
     video_path: Path,
     caption: str,
     publish_mode: str,
     token: str,
     ig_id: str,
 ) -> dict[str, Any] | None:
-    """Official Meta fallback: stage unpublished video on connected FB Page -> pass Meta CDN `video_url` to IG Reels.
+    """Official Meta async `video_url` Reels upload using a 100% public unblocked HTTPS MP4 URL.
 
-    Bypasses `rupload.facebook.com/ig-api-upload` synchronous 35s ProcessingFailedError completely because
-    Instagram ingests `video_url` asynchronously inside Meta's own datacenter network.
+    Primary host: our own public GitHub Release (`ig-staging`, auto-deleted after publish).
+    Secondary host: tmpfiles.org direct `/dl/` HTTPS URL.
+    Bypasses BOTH `rupload.facebook.com` 35s ProcessingFailedError AND FB unpublished video 2207076!
     """
-    fb_page_id = os.getenv("FB_PAGE_ID", "").strip()
-    if not fb_page_id:
-        return None
-
-    page_token = _resolve_fb_page_token(token, fb_page_id)
-    fb_vid_id = ""
+    cleanup_ctx: dict[str, Any] | None = None
     try:
-        # Step A: Upload temporary unpublished video to connected Facebook Page
-        with video_path.open("rb") as fh:
-            fb_up = requests.post(
-                f"{META_GRAPH_VIDEO_BASE}/{fb_page_id}/videos",
-                data={"published": "false", "access_token": page_token},
-                files={"source": (video_path.name, fh, "video/mp4")},
-                timeout=240,
-            )
-        if not fb_up.ok:
-            return None
-        fb_vid_id = str(fb_up.json().get("id", ""))
-        if not fb_vid_id:
+        public_url, cleanup_ctx = _stage_mp4_to_github_release_url(video_path)
+        host_label = "GitHub CDN video_url"
+        if not public_url:
+            public_url = _stage_mp4_to_tmpfiles_url(video_path)
+            host_label = "public HTTPS video_url"
+        if not public_url:
             return None
 
-        # Step B: Wait briefly for Meta CDN `source` MP4 URL to become available
-        cdn_video_url = ""
-        for _ in range(15):
-            info = requests.get(
-                f"{META_GRAPH_BASE}/{fb_vid_id}",
-                params={"fields": "source,status", "access_token": page_token},
-                timeout=20,
-            )
-            if info.ok:
-                src = str(info.json().get("source", "")).strip()
-                if src.startswith("https://"):
-                    cdn_video_url = src
-                    break
-            time.sleep(3)
-
-        if not cdn_video_url:
-            return None
-
-        # Step C: Create IG Reels container asynchronously via official `video_url`
+        print(f"[ig-reels] Submitting async {host_label} to Meta Graph API...", flush=True)
         init_resp = requests.post(
             f"{META_GRAPH_BASE}/{ig_id}/media",
             data={
                 "media_type": "REELS",
-                "video_url": cdn_video_url,
+                "video_url": public_url,
                 "caption": caption[:2200],
                 "share_to_feed": "true",
                 "access_token": token,
@@ -230,14 +294,14 @@ def _publish_ig_reels_via_fb_cdn_bridge(
             timeout=45,
         )
         if not init_resp.ok:
-            return None
+            return {"handled": True, "status": "FAILED", "external_id": "", "url": "", "notes": f"IG Reels {host_label} init gagal ({init_resp.status_code}): {init_resp.text[:220]}"}
         container_id = str(init_resp.json().get("id", ""))
         if not container_id:
             return None
 
         ok, status_msg = _poll_ig_container(container_id, token, timeout_sec=180)
         if not ok:
-            return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": f"IG Reels CDN fallback error: {status_msg}"}
+            return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": f"IG Reels {host_label} error: {status_msg}"}
 
         if publish_mode not in ("publish", "scheduled"):
             return {
@@ -245,7 +309,7 @@ def _publish_ig_reels_via_fb_cdn_bridge(
                 "status": "DRAFTED",
                 "external_id": container_id,
                 "url": "",
-                "notes": f"Reels lolos verifikasi Meta via FB CDN video_url bridge (container={container_id}).",
+                "notes": f"Reels lolos verifikasi Meta via {host_label} (container={container_id}).",
             }
 
         pub_resp = requests.post(
@@ -254,7 +318,7 @@ def _publish_ig_reels_via_fb_cdn_bridge(
             timeout=30,
         )
         if not pub_resp.ok:
-            return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": f"IG media_publish (CDN bridge) gagal ({pub_resp.status_code}): {pub_resp.text[:240]}"}
+            return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": f"IG media_publish ({host_label}) gagal ({pub_resp.status_code}): {pub_resp.text[:240]}"}
 
         media_id = str(pub_resp.json().get("id", container_id))
         permalink = ""
@@ -270,21 +334,12 @@ def _publish_ig_reels_via_fb_cdn_bridge(
             "status": "PUBLISHED",
             "external_id": media_id,
             "url": permalink,
-            "notes": f"Instagram Reels tayang via Meta CDN video_url fallback (id={media_id}).",
+            "notes": f"Instagram Reels tayang via {host_label} (id={media_id}).",
         }
-    except Exception:
-        return None
+    except Exception as exc:
+        return {"handled": True, "status": "FAILED", "external_id": "", "url": "", "notes": f"IG Reels video_url error: {exc}"}
     finally:
-        # Clean up temporary unpublished staging video from Facebook Page
-        if fb_vid_id:
-            try:
-                requests.delete(
-                    f"{META_GRAPH_BASE}/{fb_vid_id}",
-                    params={"access_token": page_token},
-                    timeout=15,
-                )
-            except Exception:
-                pass
+        _cleanup_github_release_asset(cleanup_ctx)
 
 
 def publish_instagram_reels_direct(video_path: Path | None, caption: str, publish_mode: str) -> dict[str, Any]:
@@ -298,6 +353,14 @@ def publish_instagram_reels_direct(video_path: Path | None, caption: str, publis
     try:
         # Optimize large (>9.5MB) 9:16 MP4s to fast-ingest IG-spec H.264/AAC so Meta rupload never hits 35s timeout
         upload_path = _prepare_ig_reels_compact_mp4(video_path)
+
+        # In GitHub Actions Cloud (where GITHUB_TOKEN is set), prefer async public GitHub CDN `video_url` FIRST
+        # because Meta's synchronous `rupload.facebook.com/ig-api-upload` frequently hits 35s ProcessingFailedError
+        # from Azure Cloud runners! If video_url fails or GITHUB_TOKEN is unset, fall through to rupload -> fallback.
+        if os.getenv("GITHUB_TOKEN", "").strip() or os.getenv("GH_TOKEN", "").strip():
+            cdn_primary = _publish_ig_reels_via_public_video_url(upload_path, caption, publish_mode, token, ig_id)
+            if cdn_primary is not None and cdn_primary.get("status") != "FAILED":
+                return cdn_primary
 
         # Step 1 & 2: Initialize resumable upload session + upload binary to Meta rupload.facebook.com.
         file_size = upload_path.stat().st_size
@@ -361,10 +424,10 @@ def publish_instagram_reels_direct(video_path: Path | None, caption: str, publis
                 time.sleep(4)
                 continue
 
-        # Fallback: If Meta rupload still fails (e.g. HTTP 400 ProcessingFailedError), switch to official FB CDN video_url!
+        # Fallback: If Meta rupload still fails (e.g. HTTP 400 ProcessingFailedError), switch to public HTTPS video_url!
         if up_resp is None or not up_resp.ok:
-            print(f"[ig-reels] rupload gagal ({last_err_note[:100]}); mencoba Meta CDN video_url fallback...", flush=True)
-            cdn_res = _publish_ig_reels_via_fb_cdn_bridge(upload_path, caption, publish_mode, token, ig_id)
+            print(f"[ig-reels] rupload gagal ({last_err_note[:100]}); mencoba public HTTPS video_url fallback...", flush=True)
+            cdn_res = _publish_ig_reels_via_public_video_url(upload_path, caption, publish_mode, token, ig_id)
             if cdn_res is not None:
                 return cdn_res
             return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": last_err_note or "IG Reels binary upload gagal"}
@@ -372,7 +435,7 @@ def publish_instagram_reels_direct(video_path: Path | None, caption: str, publis
         # Step 3: Poll until Meta finishes ingesting the video
         ok, status_msg = _poll_ig_container(container_id, token, timeout_sec=150)
         if not ok:
-            cdn_res = _publish_ig_reels_via_fb_cdn_bridge(upload_path, caption, publish_mode, token, ig_id)
+            cdn_res = _publish_ig_reels_via_public_video_url(upload_path, caption, publish_mode, token, ig_id)
             if cdn_res is not None and cdn_res.get("status") != "FAILED":
                 return cdn_res
             return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": status_msg}

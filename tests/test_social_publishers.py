@@ -332,28 +332,28 @@ class DirectSocialPublishersTest(unittest.TestCase):
     def test_instagram_reels_falls_back_to_fb_cdn_video_url_on_processing_failed(
         self, mock_post: MagicMock, mock_get: MagicMock, mock_delete: MagicMock, _mock_sleep: MagicMock
     ) -> None:
-        env = {"META_ACCESS_TOKEN": "tok_meta", "IG_BUSINESS_ACCOUNT_ID": "ig_1", "FB_PAGE_ID": "fb_1"}
+        env = {
+            "META_ACCESS_TOKEN": "tok_meta",
+            "IG_BUSINESS_ACCOUNT_ID": "ig_1",
+            "GITHUB_TOKEN": "ghs_test_tok",
+            "GITHUB_REPOSITORY": "kd-id/habitscience-content-studio",
+        }
         with patch.dict(os.environ, env, clear=True):
-            # 2x rupload fails with ProcessingFailedError -> FB unpublished video upload -> IG video_url container -> media_publish
+            # In Cloud (GITHUB_TOKEN set), uses GitHub Release direct HTTPS video_url FIRST -> auto-deletes staging asset!
+            mock_get.side_effect = [
+                _mock_resp(200, {"upload_url": "https://uploads.github.com/repos/kd-id/habitscience-content-studio/releases/1/assets{?name,label}"}),
+                _mock_resp(200, {"status_code": "FINISHED"}),
+                _mock_resp(200, {"permalink": "https://www.instagram.com/reel/GH_CDN_OK/"}),
+            ]
             mock_post.side_effect = [
-                _mock_resp(200, {"id": "c_try1", "uri": "https://rupload.facebook.com/ig-api-upload/v21.0/c_try1"}),
-                _mock_resp(400, {"debug_info": {"type": "ProcessingFailedError"}}),
-                _mock_resp(200, {"id": "c_try2", "uri": "https://rupload.facebook.com/ig-api-upload/v21.0/c_try2"}),
-                _mock_resp(400, {"debug_info": {"type": "ProcessingFailedError"}}),
-                _mock_resp(200, {"id": "fb_vid_tmp"}),
+                _mock_resp(201, {"id": 9991, "browser_download_url": "https://github.com/kd-id/habitscience-content-studio/releases/download/ig-staging/reel_1.mp4"}),
                 _mock_resp(200, {"id": "ig_cdn_cont"}),
                 _mock_resp(200, {"id": "ig_pub_cdn"}),
             ]
-            mock_get.side_effect = [
-                _mock_resp(200, {"access_token": "page_tok"}),
-                _mock_resp(200, {"source": "https://video.xx.fbcdn.net/v/t42/sample.mp4"}),
-                _mock_resp(200, {"status_code": "FINISHED"}),
-                _mock_resp(200, {"permalink": "https://www.instagram.com/reel/CDN_OK/"}),
-            ]
             res = publish_instagram_reels_direct(self.mp4, "Reel caption", "scheduled")
             self.assertEqual(res["status"], "PUBLISHED")
-            self.assertEqual(res["url"], "https://www.instagram.com/reel/CDN_OK/")
-            self.assertIn("CDN video_url fallback", res["notes"])
+            self.assertEqual(res["url"], "https://www.instagram.com/reel/GH_CDN_OK/")
+            self.assertIn("GitHub CDN video_url", res["notes"])
             self.assertEqual(mock_delete.call_count, 1)
 
     @patch("src.publisher.publish_instagram_reels_direct")
