@@ -327,5 +327,34 @@
       "failed": 1
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-28_090037_the-prophetic-dua-against-worry-over/PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-28_142120_why-small-daily-habits-beat-big-burs",
+    "slug": "why-small-daily-habits-beat-big-bursts-of-motiva",
+    "topic": "Why Small Daily Habits Beat Big Bursts of Motivation (Sunnah of Istiqamah)",
+    "pillar": "prophetic_habits",
+    "pillar_label": "Prophetic Habits & Daily Sunnah",
+    "generated_at_wib": "2026-11-28 14:33:39 WIB",
+    "publish_mode": "scheduled",
+    "visual_style_long": "islamic_luminous_sky",
+    "visual_style_short": "islamic_luminous_sky",
+    "external_ids": {
+      "YouTube Long (16:9)": "wXdjYJmOir8",
+      "YouTube Shorts (9:16)": "rCe4y7-nBzE",
+      "Instagram Reels": "18654500707062177",
+      "Instagram Carousel": "18500821681108682",
+      "X & Threads": "threads:18045489899833689",
+      "Facebook Page Reels": "1573159581524597"
+    },
+    "counts": {
+      "total": 8,
+      "published": 2,
+      "scheduled": 3,
+      "drafted": 0,
+      "dry_run_ready": 0,
+      "pending_setup": 2,
+      "failed": 1
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-28_142120_why-small-daily-habits-beat-big-burs/PUBLISH_REPORT.md"
   }
 ]
