@@ -70,6 +70,23 @@ def generate_publish_report(
         ("Copywriting semua platform (YT, Shorts, TikTok, IG, LinkedIn, X, FB) lengkap", bool(yt_long.get("description")) and bool(carousel.get("caption_instagram")) and bool(carousel.get("thread_x"))),
     ]
 
+    reupload_log = publish_summary.get("auto_reupload_log") or []
+    if reupload_log:
+        reup_parts = []
+        for entry in reupload_log:
+            ep = entry.get("platform", "")
+            att = int(entry.get("attempts", 0))
+            mx = int(entry.get("max_rounds", 0))
+            if entry.get("recovered"):
+                reup_parts.append(f"✅ {ep} pulih di ronde #{att}/{mx}")
+            elif entry.get("skipped_permanent"):
+                reup_parts.append(f"⏭ {ep} dilewati (error permanen)")
+            else:
+                reup_parts.append(f"❌ {ep} sudah dicoba {att}/{mx}x — masih gagal")
+        reupload_overview = "; ".join(reup_parts)
+    else:
+        reupload_overview = "Tidak diperlukan (tidak ada gagal sementara)"
+
     # Build Markdown Report
     md: list[str] = [
         f"# Laporan Automasi & Publikasi Konten — `{run_id}`",
@@ -86,6 +103,7 @@ def generate_publish_report(
         f"| **Sumber Ide** | `{meta.get('source', '-')}` |",
         f"| **Engine Scriptwriter** | `{meta.get('generator_mode', '-')}` |",
         f"| **Mode Publish** | `{publish_summary.get('publish_mode')}` |",
+        f"| **Status Auto-Reupload** | {reupload_overview} |",
         f"| **Durasi Total Pipeline** | {elapsed_sec:.1f} detik |",
         f"| **Folder Output** | `{run_dir}` |",
         "",
@@ -101,6 +119,26 @@ def generate_publish_report(
         title_clean = str(item.get("title", "")).replace("|", "/")
         notes_clean = str(item.get("notes", "")).replace("|", "/")
         md.append(f"| **{item['platform']}** | {item['format']} | {badge} | {title_clean} | {link_cell} | {notes_clean} |")
+
+    if reupload_log:
+        md.extend([
+            "",
+            "### 🔄 Riwayat Auto-Reupload Otomatis",
+            "",
+            "| Platform | Percobaan Upload Ulang | Hasil Akhir | Keterangan |",
+            "| :--- | :--- | :--- | :--- |",
+        ])
+        for entry in reupload_log:
+            att = int(entry.get("attempts", 0))
+            mx = int(entry.get("max_rounds", 0))
+            if entry.get("recovered"):
+                res_lbl = "✅ BERHASIL DIUNGGAH ULANG"
+            elif entry.get("skipped_permanent"):
+                res_lbl = "⏭ TIDAK DIULANG (ERROR PERMANEN)"
+            else:
+                res_lbl = "❌ TETAP GAGAL SETELAH AUTO-REUPLOAD"
+            note_c = str(entry.get("notes", "")).replace("|", "/")
+            md.append(f"| **{entry.get('platform', '')}** | {att}/{mx} ronde | {res_lbl} | {note_c} |")
 
     md.extend([
         "",

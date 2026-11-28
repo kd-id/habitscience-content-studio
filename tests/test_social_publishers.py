@@ -325,6 +325,82 @@ class DirectSocialPublishersTest(unittest.TestCase):
         self.assertEqual(summary["auto_reupload_recovered"], ["Instagram Reels", "X & Threads"])
         self.assertEqual(mock_tg_reup.call_count, 1)
 
+    @patch("src.social_publishers.time.sleep", return_value=None)
+    @patch("src.social_publishers.requests.delete")
+    @patch("src.social_publishers.requests.get")
+    @patch("src.social_publishers.requests.post")
+    def test_instagram_reels_falls_back_to_fb_cdn_video_url_on_processing_failed(
+        self, mock_post: MagicMock, mock_get: MagicMock, mock_delete: MagicMock, _mock_sleep: MagicMock
+    ) -> None:
+        env = {"META_ACCESS_TOKEN": "tok_meta", "IG_BUSINESS_ACCOUNT_ID": "ig_1", "FB_PAGE_ID": "fb_1"}
+        with patch.dict(os.environ, env, clear=True):
+            # 2x rupload fails with ProcessingFailedError -> FB unpublished video upload -> IG video_url container -> media_publish
+            mock_post.side_effect = [
+                _mock_resp(200, {"id": "c_try1", "uri": "https://rupload.facebook.com/ig-api-upload/v21.0/c_try1"}),
+                _mock_resp(400, {"debug_info": {"type": "ProcessingFailedError"}}),
+                _mock_resp(200, {"id": "c_try2", "uri": "https://rupload.facebook.com/ig-api-upload/v21.0/c_try2"}),
+                _mock_resp(400, {"debug_info": {"type": "ProcessingFailedError"}}),
+                _mock_resp(200, {"id": "fb_vid_tmp"}),
+                _mock_resp(200, {"id": "ig_cdn_cont"}),
+                _mock_resp(200, {"id": "ig_pub_cdn"}),
+            ]
+            mock_get.side_effect = [
+                _mock_resp(200, {"access_token": "page_tok"}),
+                _mock_resp(200, {"source": "https://video.xx.fbcdn.net/v/t42/sample.mp4"}),
+                _mock_resp(200, {"status_code": "FINISHED"}),
+                _mock_resp(200, {"permalink": "https://www.instagram.com/reel/CDN_OK/"}),
+            ]
+            res = publish_instagram_reels_direct(self.mp4, "Reel caption", "scheduled")
+            self.assertEqual(res["status"], "PUBLISHED")
+            self.assertEqual(res["url"], "https://www.instagram.com/reel/CDN_OK/")
+            self.assertIn("CDN video_url fallback", res["notes"])
+            self.assertEqual(mock_delete.call_count, 1)
+
+    @patch("src.publisher.publish_instagram_reels_direct")
+    def test_auto_reupload_exhausted_failure_explicitly_reported_in_telegram_and_markdown(self, mock_ig: MagicMock) -> None:
+        from src.publisher import _format_telegram_report_html
+        from src.reporter import generate_publish_report
+
+        mock_ig.return_value = {
+            "handled": True, "status": "FAILED", "external_id": "c_err", "url": "",
+            "notes": "IG Reels binary upload gagal (400): ProcessingFailedError",
+        }
+        bp = {
+            "meta": {"topic": "Exhausted Retry Test", "channel_name": "HabitSains", "channel_handle": "@HabitSains"},
+            "youtube_long": {"title": "Long", "description": "d"},
+            "shorts_reels_tiktok": {"title": "Short", "caption_ig_reels": "IG cap"},
+            "carousel_social": {"caption_instagram": "C", "thread_x": ["1"]},
+        }
+        assets = {
+            "youtube_long": {"video_path": ""},
+            "shorts_reels_tiktok": {"video_path": str(self.mp4)},
+            "carousel_social": {"slide_paths": []},
+        }
+        cfg = {
+            "publishing": {"default_mode": "scheduled", "save_payload_snapshots": True, "auto_reupload_delays_sec": [0, 0]},
+            "platforms": {
+                "youtube_long": {"enabled": False}, "youtube_shorts": {"enabled": False},
+                "tiktok": {"enabled": False}, "linkedin": {"enabled": False},
+                "facebook": {"enabled": False}, "instagram_carousel": {"enabled": False},
+                "x_threads": {"enabled": False}, "instagram_reels": {"enabled": True, "adapter": "direct"},
+            },
+        }
+        summary = publish_all_platforms(bp, assets, self.root, cfg, self.root, publish_mode="scheduled")
+        self.assertEqual(mock_ig.call_count, 3)  # 1 initial + 2 auto-reupload rounds
+        self.assertEqual(summary["auto_reupload_failed"], ["Instagram Reels"])
+        self.assertEqual(summary["auto_reupload_log"][0]["attempts"], 2)
+        self.assertIn("sudah dicoba auto-reupload 2/2x", summary["results"][0]["notes"])
+
+        # Verify BOTH Telegram HTML and Markdown report explicitly disclose re-upload attempt count & failure!
+        md_path, _, report_data = generate_publish_report("run_test", self.root, bp, assets, summary, 12.0, self.root / "hist.json")
+        md_text = md_path.read_text(encoding="utf-8")
+        tg_html = _format_telegram_report_html(report_data)
+        self.assertIn("Status Auto-Reupload", md_text)
+        self.assertIn("2/2 ronde", md_text)
+        self.assertIn("Riwayat Auto-Reupload Otomatis", md_text)
+        self.assertIn("Status Auto-Reupload", tg_html)
+        self.assertIn("sudah diulang 2/2x, tetap gagal", tg_html)
+
 
 if __name__ == "__main__":
     unittest.main()

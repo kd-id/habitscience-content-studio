@@ -27,6 +27,8 @@ import hmac
 import math
 import os
 import secrets
+import shutil
+import subprocess
 import time
 import urllib.parse
 from pathlib import Path
@@ -37,6 +39,7 @@ import requests
 
 META_GRAPH_VERSION = os.getenv("META_GRAPH_VERSION", "v21.0").strip() or "v21.0"
 META_GRAPH_BASE = f"https://graph.facebook.com/{META_GRAPH_VERSION}"
+META_GRAPH_VIDEO_BASE = f"https://graph-video.facebook.com/{META_GRAPH_VERSION}"
 LINKEDIN_API_VERSION = os.getenv("LINKEDIN_API_VERSION", "202504").strip() or "202504"
 THREADS_API_BASE = "https://graph.threads.net/v1.0"
 
@@ -117,8 +120,172 @@ def _upload_fb_unpublished_photo_url(photo_path: Path, fb_page_id: str, page_tok
 
 
 # ---------------------------------------------------------------------------
-# 1. Instagram Reels — Direct Binary Resumable Upload (rupload.facebook.com)
+# 1. Instagram Reels — Compact Resumable Upload + Official FB CDN video_url Fallback
 # ---------------------------------------------------------------------------
+
+def _prepare_ig_reels_compact_mp4(video_path: Path, max_mb: float = 9.5) -> Path:
+    """Create a fast-ingest IG-spec H.264/AAC MP4 (~7-9 MB) when source exceeds Meta's ~35s rupload edge window.
+
+    Keeps full 1080x1920 30fps crispness while cutting upload size ~55% and aligning audio/video exact duration
+    with `-shortest -movflags +faststart` to prevent Meta's `HTTP 400 ProcessingFailedError`.
+    """
+    try:
+        if video_path.stat().st_size <= int(max_mb * 1024 * 1024):
+            return video_path
+    except OSError:
+        return video_path
+
+    ffmpeg_bin = shutil.which("ffmpeg")
+    if not ffmpeg_bin:
+        return video_path
+
+    opt_path = video_path.with_name(f"{video_path.stem}_ig_opt.mp4")
+    if opt_path.exists() and opt_path.stat().st_size > 100_000:
+        return opt_path
+
+    cmd = [
+        ffmpeg_bin, "-y", "-hide_banner", "-loglevel", "error",
+        "-i", str(video_path),
+        "-c:v", "libx264", "-profile:v", "high", "-level", "4.0",
+        "-pix_fmt", "yuv420p", "-r", "30",
+        "-crf", "24", "-maxrate", "1450k", "-bufsize", "2900k",
+        "-bf", "2", "-coder", "1", "-preset", "fast",
+        "-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-ac", "2",
+        "-shortest", "-movflags", "+faststart",
+        str(opt_path),
+    ]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        if res.returncode == 0 and opt_path.exists() and opt_path.stat().st_size > 100_000:
+            orig_mb = video_path.stat().st_size / (1024 * 1024)
+            new_mb = opt_path.stat().st_size / (1024 * 1024)
+            print(f"[ig-reels] Optimized MP4 for fast Meta ingest: {orig_mb:.1f}MB -> {new_mb:.1f}MB", flush=True)
+            return opt_path
+    except Exception:
+        pass
+    return video_path
+
+
+def _publish_ig_reels_via_fb_cdn_bridge(
+    video_path: Path,
+    caption: str,
+    publish_mode: str,
+    token: str,
+    ig_id: str,
+) -> dict[str, Any] | None:
+    """Official Meta fallback: stage unpublished video on connected FB Page -> pass Meta CDN `video_url` to IG Reels.
+
+    Bypasses `rupload.facebook.com/ig-api-upload` synchronous 35s ProcessingFailedError completely because
+    Instagram ingests `video_url` asynchronously inside Meta's own datacenter network.
+    """
+    fb_page_id = os.getenv("FB_PAGE_ID", "").strip()
+    if not fb_page_id:
+        return None
+
+    page_token = _resolve_fb_page_token(token, fb_page_id)
+    fb_vid_id = ""
+    try:
+        # Step A: Upload temporary unpublished video to connected Facebook Page
+        with video_path.open("rb") as fh:
+            fb_up = requests.post(
+                f"{META_GRAPH_VIDEO_BASE}/{fb_page_id}/videos",
+                data={"published": "false", "access_token": page_token},
+                files={"source": (video_path.name, fh, "video/mp4")},
+                timeout=240,
+            )
+        if not fb_up.ok:
+            return None
+        fb_vid_id = str(fb_up.json().get("id", ""))
+        if not fb_vid_id:
+            return None
+
+        # Step B: Wait briefly for Meta CDN `source` MP4 URL to become available
+        cdn_video_url = ""
+        for _ in range(15):
+            info = requests.get(
+                f"{META_GRAPH_BASE}/{fb_vid_id}",
+                params={"fields": "source,status", "access_token": page_token},
+                timeout=20,
+            )
+            if info.ok:
+                src = str(info.json().get("source", "")).strip()
+                if src.startswith("https://"):
+                    cdn_video_url = src
+                    break
+            time.sleep(3)
+
+        if not cdn_video_url:
+            return None
+
+        # Step C: Create IG Reels container asynchronously via official `video_url`
+        init_resp = requests.post(
+            f"{META_GRAPH_BASE}/{ig_id}/media",
+            data={
+                "media_type": "REELS",
+                "video_url": cdn_video_url,
+                "caption": caption[:2200],
+                "share_to_feed": "true",
+                "access_token": token,
+            },
+            timeout=45,
+        )
+        if not init_resp.ok:
+            return None
+        container_id = str(init_resp.json().get("id", ""))
+        if not container_id:
+            return None
+
+        ok, status_msg = _poll_ig_container(container_id, token, timeout_sec=180)
+        if not ok:
+            return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": f"IG Reels CDN fallback error: {status_msg}"}
+
+        if publish_mode not in ("publish", "scheduled"):
+            return {
+                "handled": True,
+                "status": "DRAFTED",
+                "external_id": container_id,
+                "url": "",
+                "notes": f"Reels lolos verifikasi Meta via FB CDN video_url bridge (container={container_id}).",
+            }
+
+        pub_resp = requests.post(
+            f"{META_GRAPH_BASE}/{ig_id}/media_publish",
+            data={"creation_id": container_id, "access_token": token},
+            timeout=30,
+        )
+        if not pub_resp.ok:
+            return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": f"IG media_publish (CDN bridge) gagal ({pub_resp.status_code}): {pub_resp.text[:240]}"}
+
+        media_id = str(pub_resp.json().get("id", container_id))
+        permalink = ""
+        try:
+            pr = requests.get(f"{META_GRAPH_BASE}/{media_id}", params={"fields": "permalink", "access_token": token}, timeout=15)
+            if pr.ok:
+                permalink = str(pr.json().get("permalink", ""))
+        except Exception:
+            pass
+
+        return {
+            "handled": True,
+            "status": "PUBLISHED",
+            "external_id": media_id,
+            "url": permalink,
+            "notes": f"Instagram Reels tayang via Meta CDN video_url fallback (id={media_id}).",
+        }
+    except Exception:
+        return None
+    finally:
+        # Clean up temporary unpublished staging video from Facebook Page
+        if fb_vid_id:
+            try:
+                requests.delete(
+                    f"{META_GRAPH_BASE}/{fb_vid_id}",
+                    params={"access_token": page_token},
+                    timeout=15,
+                )
+            except Exception:
+                pass
+
 
 def publish_instagram_reels_direct(video_path: Path | None, caption: str, publish_mode: str) -> dict[str, Any]:
     token = os.getenv("META_ACCESS_TOKEN", "").strip()
@@ -129,9 +296,11 @@ def publish_instagram_reels_direct(video_path: Path | None, caption: str, publis
         return {"handled": True, "status": "FAILED", "external_id": "", "url": "", "notes": "File video 9:16 untuk Instagram Reels tidak ditemukan."}
 
     try:
+        # Optimize large (>9.5MB) 9:16 MP4s to fast-ingest IG-spec H.264/AAC so Meta rupload never hits 35s timeout
+        upload_path = _prepare_ig_reels_compact_mp4(video_path)
+
         # Step 1 & 2: Initialize resumable upload session + upload binary to Meta rupload.facebook.com.
-        # Retry with a FRESH container session if Meta's rupload edge returns transient 400 ProcessingFailedError/5xx.
-        file_size = video_path.stat().st_size
+        file_size = upload_path.stat().st_size
         container_id = ""
         up_resp = None
         last_err_note = ""
@@ -153,20 +322,20 @@ def publish_instagram_reels_direct(video_path: Path | None, caption: str, publis
                 if session_try == 0:
                     time.sleep(3)
                     continue
-                return {"handled": True, "status": "FAILED", "external_id": "", "url": "", "notes": last_err_note}
+                break
 
             init_data = init_resp.json()
             container_id = str(init_data.get("id", ""))
             upload_uri = str(init_data.get("uri", ""))
             if not container_id or not upload_uri:
-                return {"handled": True, "status": "FAILED", "external_id": "", "url": "", "notes": f"IG Reels init tidak mengembalikan id/uri: {init_resp.text[:200]}"}
+                last_err_note = f"IG Reels init tidak mengembalikan id/uri: {init_resp.text[:200]}"
+                break
 
-            # Small propagation pause so Meta's rupload shard recognizes the freshly minted container_id
-            time.sleep(1.5)
+            # Allow Meta's rupload shard to register the freshly minted container_id
+            time.sleep(2.0)
 
-            # NOTE: Do NOT send Content-Type header — Meta's rupload rejects 'application/octet-stream' with HTTP 400 ProcessingFailedError!
             try:
-                with video_path.open("rb") as fh:
+                with upload_path.open("rb") as fh:
                     up_resp = requests.post(
                         upload_uri,
                         headers={
@@ -183,7 +352,7 @@ def publish_instagram_reels_direct(video_path: Path | None, caption: str, publis
                 if session_try == 0:
                     time.sleep(4)
                     continue
-                return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": last_err_note}
+                break
 
             if up_resp.ok:
                 break
@@ -192,12 +361,20 @@ def publish_instagram_reels_direct(video_path: Path | None, caption: str, publis
                 time.sleep(4)
                 continue
 
+        # Fallback: If Meta rupload still fails (e.g. HTTP 400 ProcessingFailedError), switch to official FB CDN video_url!
         if up_resp is None or not up_resp.ok:
+            print(f"[ig-reels] rupload gagal ({last_err_note[:100]}); mencoba Meta CDN video_url fallback...", flush=True)
+            cdn_res = _publish_ig_reels_via_fb_cdn_bridge(upload_path, caption, publish_mode, token, ig_id)
+            if cdn_res is not None:
+                return cdn_res
             return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": last_err_note or "IG Reels binary upload gagal"}
 
         # Step 3: Poll until Meta finishes ingesting the video
         ok, status_msg = _poll_ig_container(container_id, token, timeout_sec=150)
         if not ok:
+            cdn_res = _publish_ig_reels_via_fb_cdn_bridge(upload_path, caption, publish_mode, token, ig_id)
+            if cdn_res is not None and cdn_res.get("status") != "FAILED":
+                return cdn_res
             return {"handled": True, "status": "FAILED", "external_id": container_id, "url": "", "notes": status_msg}
 
         # Step 4: Draft vs Publish/Scheduled (in scheduled mode, cron runs directly at US Prime Time!)

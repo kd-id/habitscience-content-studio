@@ -548,8 +548,28 @@ def publish_all_platforms(
             )
         )
 
-    reupload_delays = config.get("publishing", {}).get("auto_reupload_delays_sec", [20, 45])
+    reupload_delays = config.get("publishing", {}).get("auto_reupload_delays_sec", [25, 60])
     reupload_recovered: list[dict[str, Any]] = []
+    reupload_tracker: dict[str, dict[str, Any]] = {}
+    max_rounds = len(reupload_delays) if isinstance(reupload_delays, list) else 0
+
+    # Record permanent-error platforms that explicitly skip auto-reupload so reports never stay silent
+    if mode != "dry-run":
+        for rec in results:
+            if rec.get("status") == "FAILED" and _is_permanent_error(str(rec.get("notes", ""))):
+                plat = str(rec.get("platform", ""))
+                reupload_tracker[plat] = {
+                    "platform": plat,
+                    "attempts": 0,
+                    "max_rounds": max_rounds,
+                    "recovered": False,
+                    "skipped_permanent": True,
+                    "final_status": "FAILED",
+                    "url": "",
+                    "notes": str(rec.get("notes", "")),
+                }
+                rec["notes"] = f"{rec.get('notes', '')} (auto-reupload dilewati: error permanen token/kuota)"
+
     if mode != "dry-run" and isinstance(reupload_delays, list):
         for r_idx, wait_sec in enumerate(reupload_delays, start=1):
             failed_indices = [
@@ -561,7 +581,7 @@ def publish_all_platforms(
                 break
             if float(wait_sec) > 0:
                 print(
-                    f"[publisher] Auto-reupload ronde {r_idx}/{len(reupload_delays)}: "
+                    f"[publisher] Auto-reupload ronde {r_idx}/{max_rounds}: "
                     f"menunggu {int(wait_sec)} dtk lalu mengulang {len(failed_indices)} platform yang gagal...",
                     flush=True,
                 )
@@ -570,6 +590,21 @@ def publish_all_platforms(
             for idx in failed_indices:
                 rec = results[idx]
                 plat = str(rec.get("platform", ""))
+                entry = reupload_tracker.setdefault(
+                    plat,
+                    {
+                        "platform": plat,
+                        "attempts": 0,
+                        "max_rounds": max_rounds,
+                        "recovered": False,
+                        "skipped_permanent": False,
+                        "final_status": "FAILED",
+                        "url": "",
+                        "notes": str(rec.get("notes", "")),
+                    },
+                )
+                entry["attempts"] = r_idx
+
                 if plat in label_to_social:
                     s_key, s_cap = label_to_social[plat]
                     d_retry = _call_direct_social(s_key, s_cap)
@@ -577,11 +612,15 @@ def publish_all_platforms(
                         rec["status"] = d_retry["status"]
                         rec["external_id"] = d_retry.get("external_id", "")
                         rec["url"] = d_retry.get("url", "")
-                        rec["notes"] = f"{d_retry.get('notes', '')} (auto-reupload #{r_idx} sukses)"
+                        rec["notes"] = f"{d_retry.get('notes', '')} (auto-reupload #{r_idx} sukses, ronde {r_idx}/{max_rounds})"
+                        entry.update({"recovered": True, "final_status": rec["status"], "url": rec["url"], "notes": rec["notes"]})
                         reupload_recovered.append(dict(rec))
                         print(f"[publisher] Auto-reupload #{r_idx} SUKSES untuk {plat}!", flush=True)
-                    elif d_retry.get("notes"):
-                        rec["notes"] = str(d_retry.get("notes"))
+                    else:
+                        raw_err = str(d_retry.get("notes") or rec.get("notes") or "Upload gagal")
+                        rec["notes"] = f"{raw_err} (sudah dicoba auto-reupload {r_idx}/{max_rounds}x — masih gagal)"
+                        entry.update({"recovered": False, "final_status": "FAILED", "notes": rec["notes"]})
+                        print(f"[publisher] Auto-reupload #{r_idx}/{max_rounds} masih GAGAL untuk {plat}: {raw_err[:120]}", flush=True)
                 elif plat == "YouTube Long (16:9)" and youtube_service:
                     yt_cfg = platforms_cfg.get("youtube_long", {})
                     v_p = Path(assets["youtube_long"]["video_path"]) if assets.get("youtube_long", {}).get("video_path") else None
@@ -607,10 +646,12 @@ def publish_all_platforms(
                             rec["status"] = "SCHEDULED" if (mode == "scheduled" and yt_long_publish_at) else ("PUBLISHED" if mode == "publish" else "DRAFTED")
                             rec["external_id"] = up["video_id"]
                             rec["url"] = up["watch_url"] if mode == "publish" else up["studio_url"]
-                            rec["notes"] = f"Upload sukses (auto-reupload #{r_idx} sukses)."
+                            rec["notes"] = f"Upload sukses (auto-reupload #{r_idx} sukses, ronde {r_idx}/{max_rounds})."
+                            entry.update({"recovered": True, "final_status": rec["status"], "url": rec["url"], "notes": rec["notes"]})
                             reupload_recovered.append(dict(rec))
                         except Exception as exc:
-                            rec["notes"] = f"Upload gagal (reupload #{r_idx}): {exc}"
+                            rec["notes"] = f"Upload gagal: {exc} (sudah dicoba auto-reupload {r_idx}/{max_rounds}x — masih gagal)"
+                            entry.update({"recovered": False, "final_status": "FAILED", "notes": rec["notes"]})
                 elif plat == "YouTube Shorts (9:16)" and youtube_service:
                     sh_cfg = platforms_cfg.get("youtube_shorts", {})
                     s_p = Path(assets["shorts_reels_tiktok"]["video_path"]) if assets.get("shorts_reels_tiktok", {}).get("video_path") else None
@@ -635,10 +676,15 @@ def publish_all_platforms(
                             rec["status"] = "SCHEDULED" if (mode == "scheduled" and yt_shorts_publish_at) else ("PUBLISHED" if mode == "publish" else "DRAFTED")
                             rec["external_id"] = up["video_id"]
                             rec["url"] = up["watch_url"] if mode == "publish" else up["studio_url"]
-                            rec["notes"] = f"Upload Shorts sukses (auto-reupload #{r_idx} sukses)."
+                            rec["notes"] = f"Upload Shorts sukses (auto-reupload #{r_idx} sukses, ronde {r_idx}/{max_rounds})."
+                            entry.update({"recovered": True, "final_status": rec["status"], "url": rec["url"], "notes": rec["notes"]})
                             reupload_recovered.append(dict(rec))
                         except Exception as exc:
-                            rec["notes"] = f"Upload Shorts gagal (reupload #{r_idx}): {exc}"
+                            rec["notes"] = f"Upload Shorts gagal: {exc} (sudah dicoba auto-reupload {r_idx}/{max_rounds}x — masih gagal)"
+                            entry.update({"recovered": False, "final_status": "FAILED", "notes": rec["notes"]})
+
+    reupload_log = list(reupload_tracker.values())
+    reupload_failed_names = [e["platform"] for e in reupload_log if not e.get("recovered")]
 
     if reupload_recovered:
         still_failed = [r for r in results if r.get("status") == "FAILED"]
@@ -654,6 +700,8 @@ def publish_all_platforms(
         "executed_at": datetime.now(timezone.utc).isoformat(),
         "payload_snapshot": str(payload_file),
         "auto_reupload_recovered": [str(r.get("platform", "")) for r in reupload_recovered],
+        "auto_reupload_failed": reupload_failed_names,
+        "auto_reupload_log": reupload_log,
         "results": results,
         "counts": {
             "total": len(results),
@@ -692,12 +740,30 @@ def _format_telegram_report_html(report_summary: dict[str, Any]) -> str:
     }
 
     recovered_list = pub.get("auto_reupload_recovered") or []
+    reupload_log = pub.get("auto_reupload_log") or []
+    reupload_summary_lines: list[str] = []
+    if reupload_log:
+        parts = []
+        for entry in reupload_log:
+            ep = html.escape(str(entry.get("platform", "")))
+            att = int(entry.get("attempts", 0))
+            mx = int(entry.get("max_rounds", 0))
+            if entry.get("recovered"):
+                parts.append(f"✅ {ep} (pulih ronde #{att}/{mx})")
+            elif entry.get("skipped_permanent"):
+                parts.append(f"⏭ {ep} (tidak diulang: error permanen)")
+            else:
+                parts.append(f"❌ {ep} (sudah diulang {att}/{mx}x, tetap gagal)")
+        reupload_summary_lines.append("🔄 <b>Status Auto-Reupload:</b> " + "; ".join(parts))
+    elif recovered_list:
+        reupload_summary_lines.append(f"🔄 <b>Auto-Reupload Pulih:</b> {html.escape(', '.join(recovered_list))}")
+
     pillar_lbl = html.escape(str(report_summary.get("pillar_label") or report_summary.get("pillar") or ""))
     lines = [
         "<b>🎬 HabitSains Studio — Laporan Produksi</b>",
         f"📌 <b>Topik:</b> {topic}",
         *([f"🧭 <b>Pillar Jadwal:</b> {pillar_lbl}"] if pillar_lbl else []),
-        *([f"🔄 <b>Auto-Reupload Pulih:</b> {html.escape(', '.join(recovered_list))}"] if recovered_list else []),
+        *reupload_summary_lines,
         f"⚙️ <b>Mode:</b> <code>{mode}</code> | <b>QA:</b> {'✅ LOLOS' if qa_ok else '⚠️ CEK'} | ⏱ {dur_txt}",
         (
             f"📊 <b>Ringkasan:</b> "
