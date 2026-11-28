@@ -298,5 +298,34 @@
       "failed": 0
     },
     "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-28_022031_a-needle-in-the-ocean-why-we-should/PUBLISH_REPORT.md"
+  },
+  {
+    "run_id": "2026-11-28_090037_the-prophetic-dua-against-worry-over",
+    "slug": "the-prophetic-dua-against-worry-overthinking-and",
+    "topic": "The Prophetic Dua Against Worry, Overthinking, and Feeling Stuck",
+    "pillar": "minute_wisdom_dua",
+    "pillar_label": "Minute Wisdom & Healing Duas",
+    "generated_at_wib": "2026-11-28 09:10:46 WIB",
+    "publish_mode": "scheduled",
+    "visual_style_long": "islamic_nature_transform",
+    "visual_style_short": "islamic_nature_transform",
+    "external_ids": {
+      "YouTube Long (16:9)": "DvVr3oCl-Bw",
+      "YouTube Shorts (9:16)": "E-pLAl4244o",
+      "Instagram Reels": "18654453385062177",
+      "Instagram Carousel": "18137708509780239",
+      "X & Threads": "threads:18126340543944817",
+      "Facebook Page Reels": "1090882473996836"
+    },
+    "counts": {
+      "total": 8,
+      "published": 2,
+      "scheduled": 3,
+      "drafted": 0,
+      "dry_run_ready": 0,
+      "pending_setup": 2,
+      "failed": 1
+    },
+    "report_md": "/home/runner/work/habitscience-content-studio/habitscience-content-studio/output/2026-11-28_090037_the-prophetic-dua-against-worry-over/PUBLISH_REPORT.md"
   }
 ]
