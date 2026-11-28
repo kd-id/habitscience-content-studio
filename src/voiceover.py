@@ -200,7 +200,8 @@ async def _synthesize_single_scene_edge(
     pitch: str,
     out_mp3: Path,
 ) -> list[dict[str, Any]]:
-    communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate, pitch=pitch)
+    # edge-tts >= 7.0 defaults to SentenceBoundary; explicitly request WordBoundary for exact millisecond word sync!
+    communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate, pitch=pitch, boundary="WordBoundary")
     timings: list[dict[str, Any]] = []
     with out_mp3.open("wb") as audio_fh:
         async for chunk in communicate.stream():
@@ -359,20 +360,37 @@ def _chunk_text_into_captions(text: str, start_offset: float, duration: float, w
 def _build_srt_entries(
     scene_results: list[SceneAudioResult],
     pause_sec: float,
-    words_per_chunk: int = 6,
+    words_per_chunk: int = 5,
 ) -> list[tuple[float, float, str]]:
     entries: list[tuple[float, float, str]] = []
     cursor = 0.0
     for sr in scene_results:
         word_events = [t for t in sr.word_timings if t.get("type") == "WordBoundary" and t.get("text")]
         if word_events:
-            for i in range(0, len(word_events), words_per_chunk):
-                group = word_events[i : i + words_per_chunk]
-                st = cursor + float(group[0]["start"])
-                en = cursor + float(group[-1]["end"])
-                caption = " ".join(g["text"] for g in group).strip()
+            # Break naturally on chunk size, punctuation, or spoken pauses > 0.35s so subtitles never drift
+            buf: list[dict[str, Any]] = []
+            for idx_w, we in enumerate(word_events):
+                buf.append(we)
+                txt = str(we["text"]).strip()
+                nxt_gap = (
+                    float(word_events[idx_w + 1]["start"]) - float(we["end"])
+                    if idx_w + 1 < len(word_events)
+                    else 0.0
+                )
+                ends_clause = txt.endswith((".", "!", "?", "—", ";")) or (len(buf) >= max(words_per_chunk - 1, 2) and txt.endswith(","))
+                if len(buf) >= words_per_chunk or ends_clause or nxt_gap > 0.35:
+                    st = cursor + max(0.0, min(float(buf[0]["start"]), sr.duration_sec))
+                    en = cursor + max(0.0, min(float(buf[-1]["end"]), sr.duration_sec))
+                    caption = " ".join(str(g["text"]).strip() for g in buf).strip()
+                    if caption:
+                        entries.append((st, max(en, st + 0.28), caption))
+                    buf = []
+            if buf:
+                st = cursor + max(0.0, min(float(buf[0]["start"]), sr.duration_sec))
+                en = cursor + max(0.0, min(float(buf[-1]["end"]), sr.duration_sec))
+                caption = " ".join(str(g["text"]).strip() for g in buf).strip()
                 if caption:
-                    entries.append((st, max(en, st + 0.3), caption))
+                    entries.append((st, max(en, st + 0.28), caption))
         else:
             entries.extend(_chunk_text_into_captions(sr.text, cursor, sr.duration_sec, words_per_chunk=words_per_chunk))
         cursor += sr.duration_sec + pause_sec

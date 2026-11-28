@@ -609,6 +609,75 @@ def build_topic_matched_pov_3d_episode(
     if stat_match:
         extracted_num = stat_match.group(1).upper().replace("MINUTES", "MIN").replace("HOURS", "HRS").strip()
 
+    is_islamic_qa = (
+        pillar == "islamic_science_qa_pov"
+        or any(k in low for k in ("fajr", "sujood", "prostration", "wudu", "sunnah fasting", "dhikr", "islamic science", "prophetic", "qur'an", "quran"))
+    )
+    if is_islamic_qa:
+        is_fajr = "fajr" in low or "early morning" in low
+        is_fast = "fast" in low or "14 hour" in low or "1894" in low
+        is_sujood = "sujood" in low or "prostrat" in low or "482" in low
+        is_wudu = "wudu" in low or "cool water" in low or "223" in low
+        if is_fajr:
+            q_loc, q_time, q_stat, q_why = "YOUR BEDROOM • 5:10 AM", "05:10", "3X CLARITY", "Waking before noise aligns your body clock and locks in calm morning barakah."
+            opt_a, opt_b = "Wake for Fajr & stay off phone", "Hit snooze for 40 more minutes"
+        elif is_fast:
+            q_loc, q_time, q_stat, q_why = "STUDY DESK • HOUR 12", "12:15", "SHARP MIND", "Steady fasting stops sugar crashes and flips your brain into clean repair mode."
+            opt_a, opt_b = "Keep the Sunnah fast steady", "Break rhythm for quick snacks"
+        elif is_sujood:
+            q_loc, q_time, q_stat, q_why = "QUIET ROOM • STRESS PEAK", "16:30", "CALM RESET", "Lowering your forehead slows your breathing and signals instant safety to your brain."
+            opt_a, opt_b = "Take 2 quiet minutes in Sujood", "Keep scrolling through stress"
+        elif is_wudu:
+            q_loc, q_time, q_stat, q_why = "MORNING RESET • 30 SEC", "08:05", "COOL SWITCH", "Cool water on your face and wrists triggers your body's natural calm reflex fast."
+            opt_a, opt_b = "Pause & make calm Wudu", "Push through with brain fog"
+        else:
+            q_loc, q_time, q_stat, q_why = "QUIET EVENING • 9:15 PM", "21:15", "CALM HEART", "Slow rhythmic Dhikr lengthens your exhale and shuts down racing worry loops."
+            opt_a, opt_b = "Whisper 60 seconds of Dhikr", "Keep overthinking in bed"
+
+        props = {
+            "loc_main": q_loc,
+            "loc_sub": f"{handle} • Islamic Science Q&A",
+            "series_eyebrow": "ISLAMIC SCIENCE Q&A",
+            "series_title": series_title,
+            "timer_label": "SUNNAH WINDOW",
+            "phone_time": q_time,
+            "phone_norm_hdr": "CURIOUS QUESTION",
+            "phone_norm_cards": [
+                ["#0EA5E9", "THE QUESTION", _clamp_prop(spoken_topic, 26, "Why Sunnah Works")],
+                ["#10B981", "PROPHETIC WISDOM", "Authentic Sunnah habit"],
+                ["#F59E0B", "BRAIN SCIENCE", "Measured calm & clarity"],
+            ],
+            "phone_cta_norm": "SEE THE SCIENCE",
+            "phone_urgent_hdr": "DAILY DISTRACTIONS!",
+            "phone_urgent_cards": [
+                ["#E11D48", "AUTO-SCROLL", "Steals your quiet window"],
+                ["#F59E0B", "NOISE SPIKE", "Stress climbs right back up"],
+                ["#3B82F6", "YOUR CHOICE", "Sunnah calm or autopilot?"],
+            ],
+            "phone_cta_urgent": "CHOOSE CALM",
+            "swarm_badges": ["NOISE", "STRESS", "RUSH", "FOG", "DOUBT", "SCROLL"],
+            "scan_hdr": "SUNNAH × BRAIN SCAN",
+            "scan_stat": q_stat,
+            "scan_note": "Verified Sunnah + Calm Mind",
+            "laptop_title": clean_laptop_title,
+            "laptop_status": "CLEAR MIND • PEACEFUL FOCUS",
+            "end_title": "WHICH ONE WILL YOU TRY?",
+            "opt_a": opt_a,
+            "opt_b": opt_b,
+            "end_sub": end_sub_line,
+        }
+        dialogue = [
+            {"beat": "intro", "speaker": "pov", "text": f"Wait a second — {spoken_topic}? Does it really change how my brain feels?"},
+            {"beat": "trap", "speaker": "partner", "text": "Yes! Most people miss this, so they stay stuck in nonstop noise and fatigue."},
+            {"beat": "explain", "speaker": "partner", "text": q_why},
+            {"beat": "timer_react", "speaker": "pov", "text": "No way — so that simple Sunnah habit was protecting our mind all along?"},
+            {"beat": "scan", "speaker": "partner", "text": f"Look at the scan: {q_stat.lower()} — calm breathing, lower stress, sharper focus."},
+            {"beat": "desk", "speaker": "partner", "text": "Try it calmly once today before touching your phone and feel the shift yourself."},
+            {"beat": "agree", "speaker": "pov", "text": "Okay, I am actually trying this today — no more running on autopilot."},
+            {"beat": "ping", "speaker": "partner", "text": "Hold on — what will you choose right now? Comment A or B below!"},
+        ]
+        return {"props": props, "dialogue": dialogue}
+
     is_survival = (
         pillar == "pov_survival"
         or any(k in low for k in ("72 hour", "24 hour", "survive", "challenge", "resets the clock", "locked in", "brain battery", "zero screen", "no phone"))

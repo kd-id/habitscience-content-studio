@@ -90,6 +90,9 @@ def resolve_high_ctr_hook(
         (("25:63", "petty arguments"), ["WALK AWAY", "FROM", "THE NOISE"], 0, "QUR'AN 25:63", "PROTECT PEACE"),
         (("sleep", "isha", "78:9", "bedtime", "6324"), ["STOP LATE", "SCROLLING!"], 1, "NIGHT RESET", "DEEP HEALING"),
         (("istiqamah", "6464", "small daily"), ["WHY BIG", "GOALS FAIL"], 1, "BUKHARI 6464", "1 TINY HABIT"),
+        (("sujood", "prostration", "482"), ["WHY SUJOOD", "CALMS", "YOUR BRAIN"], 1, "ISLAMIC SCIENCE", "STRESS DROP"),
+        (("wudu", "cool water", "223"), ["30-SEC WUDU", "RESETS", "YOUR MIND"], 1, "ISLAMIC SCIENCE", "CALM REFLEX"),
+        (("14 hours", "1894", "sunnah fasting"), ["14H FASTING", "REBUILDS", "YOUR BRAIN"], 1, "ISLAMIC SCIENCE", "BRAIN REPAIR"),
     ]
     for keys, lines, hi_idx, badge, right_tag in curated:
         if any(k in t_low for k in keys):
@@ -121,6 +124,7 @@ def _resolve_thumb_theme(blueprint: dict[str, Any], config: dict[str, Any] | Non
         "quran_mental_peace",
         "sunnah_particle_map",
         "hadith_cinematic_story",
+        "islamic_science_qa_pov",
     ):
         return pillar
     style_map = {
@@ -130,6 +134,7 @@ def _resolve_thumb_theme(blueprint: dict[str, Any], config: dict[str, Any] | Non
         "islamic_gold_visualizer": "quran_mental_peace",
         "islamic_particle_map": "sunnah_particle_map",
         "islamic_cinematic_metaphor": "hadith_cinematic_story",
+        "pov_3d_toon": "islamic_science_qa_pov",
     }
     for k in ("visual_style_short", "visual_style_long"):
         v = str(meta.get(k) or "").strip().lower()
@@ -364,6 +369,34 @@ def _right_visual_html(theme: str, dalil: dict[str, Any], hook: dict[str, Any], 
             <text x="340" y="162" text-anchor="middle" fill="#FFFFFF" font-family="Arial Black, sans-serif" font-size="36">98% CLEAR</text>
           </svg>
           <div class="r-chip" style="background:#FFD452;color:#0A1328;">{rtag}</div>
+        </div>"""
+        return vis, pal
+
+    if theme == "islamic_science_qa_pov" and kit:
+        pal = {
+            "bg": "radial-gradient(circle at 74% 50%, #0E3A5C 0%, #091B30 46%, #040B16 100%)",
+            "hi": "#38BDF8",
+            "badge_bg": "#38BDF8",
+            "badge_fg": "#040B16",
+            "glow": "rgba(56, 189, 248, 0.44)",
+        }
+        brain_uri = kit.get("brain_bloom_3d") or kit.get("sunburst_3d") or ""
+        vis = f"""
+        <div class="right-stage">
+          <svg class="t-svg-full" viewBox="0 0 640 720" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="sciGlow" cx="55%" cy="48%" r="50%">
+                <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.62"/><stop offset="100%" stop-color="#040B16" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <circle cx="345" cy="345" r="285" fill="url(#sciGlow)"/>
+            <circle cx="345" cy="345" r="215" fill="none" stroke="#38BDF8" stroke-width="3" stroke-dasharray="14 10" opacity="0.65"/>
+            <circle cx="345" cy="345" r="255" fill="none" stroke="#FFD659" stroke-width="2" stroke-dasharray="8 14" opacity="0.50"/>
+          </svg>
+          <img style="position:absolute;right:58px;top:92px;width:470px;filter:drop-shadow(0 18px 34px rgba(0,0,0,0.65));" src="{brain_uri}" alt="">
+          <div style="position:absolute;right:48px;top:64px;padding:12px 24px;border-radius:16px;background:#FFD659;color:#040B16;font-family:'Arial Black',sans-serif;font-size:32px;box-shadow:0 10px 24px rgba(0,0,0,0.5);">3D POV Q&amp;A</div>
+          <svg class="t-arrow" style="left:-34px;top:375px;" viewBox="0 0 220 140"><path d="M12 108 Q96 36 184 44" fill="none" stroke="#FFD659" stroke-width="14" stroke-linecap="round"/><polygon points="178,18 212,48 172,72" fill="#FFD659"/></svg>
+          <div class="r-chip" style="background:#38BDF8;color:#040B16;">{rtag}</div>
         </div>"""
         return vis, pal
 

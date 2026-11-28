@@ -706,6 +706,7 @@ def generate_carousel_slides(
             "quran_mental_peace",
             "sunnah_particle_map",
             "hadith_cinematic_story",
+            "islamic_science_qa_pov",
         }
         or vis_style == "islamic_luminous"
         or bgm_mode == "nature_only"

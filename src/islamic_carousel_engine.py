@@ -191,6 +191,31 @@ CAROUSEL_THEMES: dict[str, dict[str, Any]] = {
         "key_glow": "rgba(255, 236, 198, 0.38)",
         "star_opacity": "0",
     },
+    "islamic_science_qa_pov": {
+        "theme_id": "diorama_cobalt_science",
+        "edition_label": "ISLAMIC SCIENCE Q&A",
+        "dark": True,
+        "wall_top": "#102A43",
+        "wall_mid": "#0C2136",
+        "wall_bot": "#071525",
+        "floor_top": "#0A1C2E",
+        "floor_bot": "#06111D",
+        "title_fill": "#F8FAFC",
+        "title_stroke": "#0A1C2E",
+        "title_bevel": "#040C14",
+        "cap_fill": "#F8FAFC",
+        "cap_hi": "#38BDF8",
+        "cap_stroke": "#071525",
+        "pill_bg": "#38BDF8",
+        "pill_fg": "#071525",
+        "accent": "#38BDF8",
+        "ribbon_bg": "#0284C7",
+        "frame_primary": "#0F3D5E",
+        "frame_secondary": "#38BDF8",
+        "scene4_sprite": "night_courtyard_fg",
+        "key_glow": "rgba(56, 189, 248, 0.24)",
+        "star_opacity": "0.60",
+    },
 }
 
 _STYLE_TO_PILLAR: dict[str, str] = {
@@ -200,6 +225,7 @@ _STYLE_TO_PILLAR: dict[str, str] = {
     "islamic_gold_visualizer": "quran_mental_peace",
     "islamic_particle_map": "sunnah_particle_map",
     "islamic_cinematic_metaphor": "hadith_cinematic_story",
+    "pov_3d_toon": "islamic_science_qa_pov",
 }
 
 

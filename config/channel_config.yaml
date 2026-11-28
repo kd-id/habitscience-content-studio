@@ -203,6 +203,11 @@ content_pillars:
       description: "Atmospheric scene-by-scene cinematic visual metaphors (needle in the ocean, twilight plains, warm sunset clouds) with crisp centered storytelling subtitles."
       visual_style_long: "islamic_cinematic_metaphor"
       visual_style_short: "islamic_cinematic_metaphor"
+    - id: "islamic_science_qa_pov"
+      label: "Islamic Science Q&A (3D POV)"
+      description: "Interactive 3D Cel-Shaded First-Person POV Q&A dialogue answering curious Islamic Science & Sunnah questions (Fajr circadian clock, 14-hour fasting brain renewal, Sujood stress reset, Dhikr calm, cool-water Wudu) with verified Qur'an/Hadith wisdom + everyday brain science."
+      visual_style_long: "islamic_particle_map"
+      visual_style_short: "pov_3d_toon"
 
 trends:
   locale_hl: "en-US"

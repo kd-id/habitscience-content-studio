@@ -133,9 +133,9 @@ class TestPov3DSyncAndPillars(unittest.TestCase):
 
         cfg = load_config()
         rot = (cfg.get("content_pillars") or {}).get("rotation") or []
-        self.assertEqual(len(rot), 6)
+        self.assertEqual(len(rot), 7)
         short_styles = [p.get("visual_style_short") for p in rot]
-        self.assertEqual(len(set(short_styles)), 6, f"Expected 6 distinct short visual styles across pillars, got {short_styles}")
+        self.assertEqual(len(set(short_styles)), 7, f"Expected 7 distinct short visual styles across pillars, got {short_styles}")
         self.assertEqual(
             short_styles,
             [
@@ -145,6 +145,7 @@ class TestPov3DSyncAndPillars(unittest.TestCase):
                 "islamic_gold_visualizer",
                 "islamic_particle_map",
                 "islamic_cinematic_metaphor",
+                "pov_3d_toon",
             ],
         )
 

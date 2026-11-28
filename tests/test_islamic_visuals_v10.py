@@ -33,6 +33,7 @@ class TestIslamicVisualsV10(unittest.TestCase):
                 "quran_mental_peace",
                 "sunnah_particle_map",
                 "hadith_cinematic_story",
+                "islamic_science_qa_pov",
             },
         )
         total = 0
@@ -51,8 +52,8 @@ class TestIslamicVisualsV10(unittest.TestCase):
                 cit = dalil.get("citation", "")
                 self.assertTrue(len(cit) >= 8, f"Expected verified citation in {item['topic']}")
                 seen_citations.add(cit)
-        self.assertEqual(total, 30)
-        self.assertGreaterEqual(len(seen_citations), 28)
+        self.assertEqual(total, 35)
+        self.assertGreaterEqual(len(seen_citations), 32)
 
     def test_amiri_calligraphy_fonts_bundled_and_embeddable(self) -> None:
         css = _load_amiri_font_css()
@@ -109,10 +110,12 @@ class TestIslamicVisualsV10(unittest.TestCase):
                 "quran_mental_peace",
                 "sunnah_particle_map",
                 "hadith_cinematic_story",
+                "islamic_science_qa_pov",
             ],
         )
-        self.assertEqual([p["visual_style_short"] for p in rot], list(ISLAMIC_VISUAL_MODES))
-        self.assertEqual([p["visual_style_long"] for p in rot], list(ISLAMIC_VISUAL_MODES))
+        self.assertEqual([p["visual_style_short"] for p in rot], list(ISLAMIC_VISUAL_MODES) + ["pov_3d_toon"])
+        self.assertEqual([p["visual_style_long"] for p in rot][:6], list(ISLAMIC_VISUAL_MODES))
+        self.assertEqual(rot[6]["visual_style_short"], "pov_3d_toon")
 
     def test_select_topic_and_fallback_blueprint_preserve_verified_dalil(self) -> None:
         cfg = load_config()
@@ -297,7 +300,7 @@ class TestIslamicVisualsV10(unittest.TestCase):
                 self.assertIn(f'id="slide_0{s_idx}"', html_doc)
             if pillar_id == "sunnah_paper_story":
                 self.assertIn("data:image/png;base64,", html_doc)
-        self.assertEqual(len(seen_themes), 6)
+        self.assertEqual(len(seen_themes), 7)
         self.assertEqual(set(CAROUSEL_THEMES.keys()), set(PILLAR_TOPIC_BANKS.keys()))
 
     def test_v13_high_ctr_thumbnails_and_zero_internal_act_hook_debug_labels(self) -> None:
@@ -330,7 +333,7 @@ class TestIslamicVisualsV10(unittest.TestCase):
             seen_t.add(t_theme)
             self.assertIn("1280px", t_html)
             self.assertIn("AmiriCalligraphy", t_html)
-        self.assertEqual(len(seen_t), 6)
+        self.assertEqual(len(seen_t), 7)
 
     def test_v135_topic_specific_carousel_assets_vary_across_titles_and_pillars(self) -> None:
         from src.islamic_carousel_engine import build_islamic_carousel_html, resolve_carousel_asset_kit
@@ -375,9 +378,26 @@ class TestIslamicVisualsV10(unittest.TestCase):
                     self.assertIn(f'data-fg="{plan["slide4_fg"]}"', html_doc)
             self.assertGreaterEqual(len(pillar_s1_props), 4, f"Pillar {pillar_id} reused too many Slide 1 assets: {pillar_s1_props}")
 
-        self.assertEqual(len(flagship_s1_props), 6, f"Expected 6 distinct flagship Slide 1 props, got {flagship_s1_props}")
+        self.assertEqual(len(flagship_s1_props), 7, f"Expected 7 distinct flagship Slide 1 props, got {flagship_s1_props}")
         self.assertEqual(len(seen_s2_frames), 3, f"Expected all 3 Arabic calligraphy frames used, got {seen_s2_frames}")
         self.assertGreaterEqual(len(seen_s4_fgs), 3, f"Expected >=3 distinct Slide 4 foregrounds, got {seen_s4_fgs}")
+
+    def test_v14_edge_tts_word_boundary_sync_and_pillar7_3d_pov_schedule(self) -> None:
+        import inspect
+        from src import voiceover
+
+        src_edge = inspect.getsource(voiceover._synthesize_single_scene_edge)
+        self.assertIn('boundary="WordBoundary"', src_edge)
+
+        # Verify Pillar #7 3D POV Q&A script builds cleanly for Islamic Science topics
+        from src.scriptwriter import build_topic_matched_pov_3d_episode
+        ep = build_topic_matched_pov_3d_episode(
+            topic="Why Does Prostration (Sujood) Instantly Lower Mental Stress?",
+            pillar="islamic_science_qa_pov",
+        )
+        self.assertEqual(len(ep["dialogue"]), 8)
+        self.assertEqual(ep["dialogue"][0]["beat"], "intro")
+        self.assertIn("ISLAMIC SCIENCE", ep["props"]["series_eyebrow"])
 
     def test_four_act_storytelling_staging_across_all_30_topics_and_6_modes(self) -> None:
         # Every single curated topic must resolve a valid 4-Act visual plan

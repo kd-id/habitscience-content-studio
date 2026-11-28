@@ -1789,6 +1789,8 @@ def _assemble_bilingual_voice_and_timeline(
             capture_output=True, check=True,
         )
         s_dur = probe_duration_sec(en_wav)
+        orig_dur = probe_duration_sec(Path(sr.audio_path))
+        actual_scale = s_dur / max(orig_dur, 0.1)
         meta = scenes_meta[idx] if idx < len(scenes_meta) else {}
         headline = str(meta.get("visual_headline") or meta.get("section") or f"Step {idx + 1}").strip()
         badge = str(meta.get("badge") or meta.get("section") or f"STEP {idx + 1}").strip()
@@ -1798,11 +1800,15 @@ def _assemble_bilingual_voice_and_timeline(
         scene_start = cursor
         concat_files.append(en_wav)
 
-        # Word-timed captions for this English scene
+        # Millisecond-calibrated word-timed captions for this English scene (zero cumulative drift!)
         word_events = [t for t in (sr.word_timings or []) if t.get("type") == "WordBoundary" and t.get("text")]
         if word_events:
             words_timed = [
-                {"w": str(we["text"]).strip(), "s": round(cursor + float(we["start"]) * scale, 3), "e": round(cursor + float(we["end"]) * scale, 3)}
+                {
+                    "w": str(we["text"]).strip(),
+                    "s": round(cursor + min(float(we["start"]) * actual_scale, s_dur), 3),
+                    "e": round(cursor + min(float(we["end"]) * actual_scale, s_dur), 3),
+                }
                 for we in word_events
             ]
         else:
@@ -1816,15 +1822,21 @@ def _assemble_bilingual_voice_and_timeline(
                 words_timed.append({"w": w, "s": round(wc, 3), "e": round(wc + wd, 3)})
                 wc += wd
 
+        max_words_line = 4 if is_short else 5
         chunk_buf: list[dict[str, Any]] = []
-        for wt in words_timed:
+        for idx_w, wt in enumerate(words_timed):
             chunk_buf.append(wt)
-            ends_clause = wt["w"].endswith((".", "!", "?", "—", ";")) or (len(chunk_buf) >= 4 and wt["w"].endswith(","))
-            if len(chunk_buf) >= 6 or ends_clause:
-                captions.append({"start": chunk_buf[0]["s"], "end": max(chunk_buf[-1]["e"], chunk_buf[0]["s"] + 0.35), "words": chunk_buf})
+            nxt_gap = (
+                float(words_timed[idx_w + 1]["s"]) - float(wt["e"])
+                if idx_w + 1 < len(words_timed)
+                else 0.0
+            )
+            ends_clause = wt["w"].endswith((".", "!", "?", "—", ";")) or (len(chunk_buf) >= 3 and wt["w"].endswith(","))
+            if len(chunk_buf) >= max_words_line or ends_clause or nxt_gap > 0.35:
+                captions.append({"start": chunk_buf[0]["s"], "end": max(chunk_buf[-1]["e"], chunk_buf[0]["s"] + 0.30), "words": chunk_buf})
                 chunk_buf = []
         if chunk_buf:
-            captions.append({"start": chunk_buf[0]["s"], "end": max(chunk_buf[-1]["e"], chunk_buf[0]["s"] + 0.35), "words": chunk_buf})
+            captions.append({"start": chunk_buf[0]["s"], "end": max(chunk_buf[-1]["e"], chunk_buf[0]["s"] + 0.30), "words": chunk_buf})
 
         cursor += s_dur
 
@@ -1923,6 +1935,30 @@ def render_islamic_visual_video_for_pipeline(
         is_short=is_short,
         safe_cap=safe_cap,
     )
+
+    # Keep exported subtitles.srt 100% synced with the final bilingual audio timeline (including Arabic recitation!)
+    try:
+        srt_path_str = getattr(audio_bundle, "srt_path", "")
+        if srt_path_str:
+            from src.voiceover import _format_srt_time
+            srt_items: list[tuple[float, float, str]] = []
+            for c in captions:
+                txt = " ".join(str(w.get("w", "")).strip() for w in (c.get("words") or [])).strip()
+                if txt:
+                    srt_items.append((float(c["start"]), float(c["end"]), txt))
+            if arabic_window and arabic_window.get("end", 0) > arabic_window.get("start", 0):
+                ar_tr = str(dalil_payload.get("translation") or "").strip()
+                ar_cit = str(dalil_payload.get("citation") or "").strip()
+                if ar_tr:
+                    srt_items.append((float(arabic_window["start"]), float(arabic_window["end"]), f"{ar_tr} ({ar_cit})" if ar_cit else ar_tr))
+            srt_items.sort(key=lambda x: x[0])
+            srt_blocks = [
+                f"{i}\n{_format_srt_time(st)} --> {_format_srt_time(max(en, st + 0.28))}\n{txt}\n"
+                for i, (st, en, txt) in enumerate(srt_items, start=1)
+            ]
+            Path(srt_path_str).write_text("\n".join(srt_blocks), encoding="utf-8")
+    except Exception:
+        pass
 
     mixed_m4a = work_dir / f"mixed_{mode}.m4a"
     nature_preset = _nature_preset_for_mode(mode)

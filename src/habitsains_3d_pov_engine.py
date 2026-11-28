@@ -1898,9 +1898,14 @@ def render_pov_3d_toon_video_for_pipeline(
     target_h = int(vid_cfg.get("height", 1920 if is_short else 1080))
     max_short_sec = float(vid_cfg.get("max_duration_sec", 59.0)) if is_short else 9999.0
 
-    # Render Three.js WebGL at crisp 720p (2.25x faster headless SwiftShader) -> Lanczos upscale to target 1080p!
+    # Render Three.js WebGL at crisp 720p (adaptive FPS + dsf in GitHub Actions Cloud -> Lanczos upscale to 1080p!)
+    import os as _os
     gl_w, gl_h = (720, 1280) if target_h >= target_w else (1280, 720)
-    fps = 24
+    is_cloud = _os.getenv("HEADLESS_CLOUD", "").strip() == "1"
+    render_fps = (16 if is_short else 12) if is_cloud else 24
+    out_fps = 30
+    dsf = 0.75 if is_cloud else 1.0
+    fps = render_fps
 
     # Resolve & sanitize beat-locked 2-speaker POV episode matched to TODAY'S EXACT TOPIC!
     meta = topic_meta or {}
@@ -1985,16 +1990,43 @@ def render_pov_3d_toon_video_for_pipeline(
     total_dur = timings["total_dur"]
 
     mixed_m4a = work_dir / "mixed_v9_pov.m4a"
-    _build_habitsains_soundscape(
-        dialogue_events=dialogue_events,
-        total_dur=total_dur,
-        trap_time=t_trap,
-        timer_time=t_timer,
-        ping_time=t_ping,
-        endcard_time=t_endcard,
-        out_m4a=mixed_m4a,
-        work_dir=work_dir,
-    )
+    bgm_mode = str(config.get("video", {}).get("ambient_bgm_mode", "")).strip().lower()
+    if bgm_mode == "nature_only":
+        # 100% instrument-free nature ambience + crystal-clear 2-speaker POV dialogue (strict HabitSains adab!)
+        from src.sfx_engine import mix_nature_voice_soundscape
+        dlg_wav = work_dir / "_pov_voice_only.wav"
+        v_inputs: list[str] = ["-f", "lavfi", "-t", f"{total_dur:.2f}", "-i", "anullsrc=r=48000:cl=stereo"]
+        v_filters: list[str] = []
+        v_mix: list[str] = ["[0:a]"]
+        for d_i, ev in enumerate(dialogue_events, start=1):
+            v_inputs.extend(["-i", ev["wav_path"]])
+            ms = max(int(round(ev["start"] * 1000)), 0)
+            v_filters.append(f"[{d_i}:a]loudnorm=I=-15:TP=-1.5:LRA=9,adelay={ms}:all=1,aformat=sample_rates=48000:channel_layouts=stereo[v{d_i}]")
+            v_mix.append(f"[v{d_i}]")
+        v_filters.append(f"{''.join(v_mix)}amix=inputs={len(v_mix)}:duration=longest:normalize=0,alimiter=limit=0.95[vout]")
+        subprocess.run(
+            ["ffmpeg", "-y", *v_inputs, "-filter_complex", ";".join(v_filters), "-map", "[vout]", "-c:a", "pcm_s16le", str(dlg_wav)],
+            capture_output=True, check=True,
+        )
+        mix_nature_voice_soundscape(
+            master_voice=dlg_wav,
+            duration_sec=total_dur,
+            out_audio=mixed_m4a,
+            config=config,
+            preset="dawn_breeze",
+            tempo=1.0,
+        )
+    else:
+        _build_habitsains_soundscape(
+            dialogue_events=dialogue_events,
+            total_dur=total_dur,
+            trap_time=t_trap,
+            timer_time=t_timer,
+            ping_time=t_ping,
+            endcard_time=t_endcard,
+            out_m4a=mixed_m4a,
+            work_dir=work_dir,
+        )
 
     # Keep pipeline subtitles.srt & audio_bundle metadata synced with the real spoken 2-speaker POV script!
     srt_path_str = getattr(audio_bundle, "srt_path", "") if audio_bundle is not None else ""
@@ -2027,13 +2059,14 @@ def render_pov_3d_toon_video_for_pipeline(
     silent_mp4 = work_dir / "video_v9_pov_silent.mp4"
 
     print(
-        f"[video] Rendering Story-Synced Studio v9 3D POV ({gl_w}x{gl_h} -> {target_w}x{target_h} @ {fps}fps, {total_dur:.1f}s)...",
+        f"[video] Rendering Story-Synced Studio v9 3D POV ({gl_w}x{gl_h} dsf={dsf} -> {target_w}x{target_h} @ {fps}->{out_fps}fps, {total_dur:.1f}s)...",
         flush=True,
     )
     cmd = [
         "ffmpeg", "-y",
         "-f", "image2pipe", "-vcodec", "mjpeg", "-r", str(fps), "-i", "pipe:0",
         "-vf", f"scale={target_w}:{target_h}:flags=lanczos:in_range=full:out_range=tv,format=yuv420p",
+        "-r", str(out_fps),
         "-c:v", "libx264", "-profile:v", "main", "-level:v", "4.0", "-preset", "veryfast", "-crf", "21",
         "-pix_fmt", "yuv420p", "-color_range", "tv", "-an",
         str(silent_mp4),
@@ -2050,7 +2083,7 @@ def render_pov_3d_toon_video_for_pipeline(
         if chrome:
             launch_kw["executable_path"] = chrome
         br = pw.chromium.launch(**launch_kw)
-        page = br.new_page(viewport={"width": gl_w, "height": gl_h}, device_scale_factor=1)
+        page = br.new_page(viewport={"width": gl_w, "height": gl_h}, device_scale_factor=dsf)
         page.set_content(html_doc, wait_until="load")
 
         last_end_jpg: bytes | None = None
