@@ -411,7 +411,7 @@ def _build_luminous_sky_html(payload: dict[str, Any], width: int, height: int) -
 <canvas id="bgCanvas" width="{width}" height="{height}"></canvas>
 
 <div class="stage">
-  <div class="act-pill" id="actPill">ACT 1 • HOOK</div>
+  <div class="act-pill" id="actPill"></div>
   <div class="headline-pill" id="headline"></div>
   <div class="mini-cit" id="miniCit"></div>
 </div>
@@ -430,7 +430,7 @@ def _build_luminous_sky_html(payload: dict[str, Any], width: int, height: int) -
 </div>
 
 <div class="step-pill">
-  <span id="stepLabel">HOOK</span>
+  <span id="stepLabel">REFLECT</span>
   <span class="dots" id="dotsWrap"></span>
 </div>
 
@@ -728,30 +728,30 @@ window.renderAt = function(t) {{
   animateActCard(climaxBox, act.name === 'CLIMAX', act.localT, climDurSec, true);
 
   if (act.name === 'HOOK') {{
-    actPill.textContent = 'ACT 1 • ' + (STORY.hook_kicker || 'THE HOOK');
+    actPill.textContent = STORY.hook_kicker || 'PAUSE & REFLECT';
     actPill.style.borderColor = '#F87171'; actPill.style.color = '#FCA5A5';
     headEl.textContent = (CFG.scenes[0] && CFG.scenes[0].headline) || CFG.dalil.topic;
     miniCit.textContent = '';
-    stepLabel.textContent = '1. THE HOOK';
+    stepLabel.textContent = 'REFLECT';
   }} else if (act.name === 'DALIL') {{
-    actPill.textContent = (arWin && arWin.is_qari) ? `ACT 2 • TILAWAH (${{arWin.reciter}})` : 'ACT 2 • PROPHETIC SUNNAH';
+    actPill.textContent = (arWin && arWin.is_qari) ? arWin.reciter.toUpperCase() : CFG.dalil.citation;
     actPill.style.borderColor = '#F5D076'; actPill.style.color = '#F5D076';
     headEl.textContent = CFG.dalil.citation;
     miniCit.textContent = '';
-    stepLabel.textContent = '2. VERIFIED DALIL';
+    stepLabel.textContent = 'WISDOM';
     updateArabicKaraokeAt(t, arWin, AR_BUILT.count, 'sky_ar', 'arw', act.localT);
   }} else if (act.name === 'EXPLAINER') {{
-    actPill.textContent = 'ACT 3 • THE SCIENCE';
+    actPill.textContent = 'MIND & SUNNAH';
     actPill.style.borderColor = '#34D399'; actPill.style.color = '#6EE7B7';
     headEl.textContent = (cur && cur.headline) || 'HOW IT REWIRES YOUR DAY';
     miniCit.textContent = '✦  ' + CFG.dalil.citation + '  ✦';
-    stepLabel.textContent = '3. MIND SCIENCE';
+    stepLabel.textContent = 'SCIENCE';
   }} else {{
-    actPill.textContent = 'ACT 4 • THE LESSON';
+    actPill.textContent = 'REMEMBER THIS';
     actPill.style.borderColor = '#F5D076'; actPill.style.color = '#FDE68A';
     headEl.textContent = (cur && cur.headline) || 'START TODAY';
     miniCit.textContent = '';
-    stepLabel.textContent = '4. THE LESSON';
+    stepLabel.textContent = 'PRACTICE';
   }}
 
   const dots = dotsWrap.children;
@@ -937,7 +937,7 @@ def _build_gold_visualizer_html(payload: dict[str, Any], width: int, height: int
 <canvas id="bgCanvas" width="{width}" height="{height}"></canvas>
 
 <div class="act-header" id="actHeader">
-  <div class="act-pill" id="actPill">ACT 1 • HOOK</div>
+  <div class="act-pill" id="actPill"></div>
   <div class="act-title" id="actTitle"></div>
   <div class="mini-cit" id="miniCit"></div>
 </div>
@@ -1147,7 +1147,7 @@ window.renderAt = function(t) {{
   let activeArIdx = -1;
   if (act.name === 'HOOK') {{
     actHeader.style.display = 'flex';
-    actPill.textContent = 'ACT 1 • ' + (STORY.hook_kicker || 'STILL LOUD INSIDE?');
+    actPill.textContent = STORY.hook_kicker || 'STILL LOUD INSIDE?';
     actPill.style.borderColor = '#F87171'; actPill.style.color = '#FCA5A5';
     actTitle.textContent = (CFG.scenes[0] && CFG.scenes[0].headline) || CFG.dalil.topic;
     miniCit.textContent = '';
@@ -1156,13 +1156,13 @@ window.renderAt = function(t) {{
     activeArIdx = updateArabicKaraokeAt(t, arWin, AR_BUILT.count, 'arw', 'ar-w', act.localT);
   }} else if (act.name === 'EXPLAINER') {{
     actHeader.style.display = 'flex';
-    actPill.textContent = 'ACT 3 • THE SCIENCE';
+    actPill.textContent = 'MIND & PEACE';
     actPill.style.borderColor = '#34D399'; actPill.style.color = '#6EE7B7';
     actTitle.textContent = (cur && cur.headline) || 'HOW IT CALMS YOUR MIND';
     miniCit.textContent = '✦  ' + CFG.dalil.citation + '  ✦';
   }} else {{
     actHeader.style.display = 'flex';
-    actPill.textContent = 'ACT 4 • THE LESSON';
+    actPill.textContent = 'KEY REMINDER';
     actPill.style.borderColor = '#F4C95D'; actPill.style.color = '#F4C95D';
     actTitle.textContent = (cur && cur.headline) || 'PEACE OF MIND';
     miniCit.textContent = '';
@@ -1197,7 +1197,7 @@ window.renderAt = function(t) {{
 
   document.getElementById('insightPill').textContent = act.name === 'DALIL'
     ? (arWin && arWin.is_qari ? `✦  Tilawah • ${{arWin.reciter}}` : `✦  ${{CFG.dalil.citation}}`)
-    : `✦  ACT ${{act.num}} OF 4  •  ${{act.name}}`;
+    : `✦  ${{CFG.dalil.citation}}  •  ${{(STORY.stat_badge || CFG.dalil.pillar_label).toUpperCase()}}`;
 }};
 </script>
 </body>
@@ -1360,7 +1360,7 @@ def _build_particle_map_html(payload: dict[str, Any], width: int, height: int) -
 
 <div class="top-bar">
   <div class="prog-track"><div id="progFill"></div></div>
-  <div class="act-chip" id="actChip">ACT 1 • HOOK</div>
+  <div class="act-chip" id="actChip"></div>
 </div>
 
 <div class="hero-block">
@@ -1408,7 +1408,7 @@ document.getElementById('climaxCit').textContent = '✦  ' + CFG.dalil.citation 
 document.getElementById('brandFoot').textContent = CFG.dalil.handle + '  •  SUNNAH & MODERN BRAIN SCIENCE';
 
 const bucketsWrap = document.getElementById('bucketsWrap');
-const BKT_LABELS = ['1. HOOK', '2. DALIL', '3. SCIENCE', '4. LESSON'];
+const BKT_LABELS = ['REFLECT', 'WISDOM', 'SCIENCE', 'HABIT'];
 BKT_LABELS.forEach((lbl, i) => {{
   const el = document.createElement('div');
   el.className = 'bkt'; el.id = 'bkt_' + i; el.textContent = lbl;
@@ -1631,23 +1631,23 @@ window.renderAt = function(t) {{
   animateActCard(climaxCosmic, act.name === 'CLIMAX', act.localT, climDurSec, true);
 
   if (act.name === 'HOOK') {{
-    actChip.textContent = 'ACT 1 • ' + (STORY.hook_kicker || 'THE FRAMEWORK');
+    actChip.textContent = STORY.hook_kicker || 'PAUSE & REFLECT';
     actChip.style.borderColor = '#F87171'; actChip.style.color = '#FCA5A5';
     titleEl.textContent = (CFG.scenes[0] && CFG.scenes[0].headline) || CFG.dalil.topic;
     miniCit.textContent = '';
   }} else if (act.name === 'DALIL') {{
-    actChip.textContent = (arWin && arWin.is_qari) ? `ACT 2 • TILAWAH (${{arWin.reciter}})` : 'ACT 2 • VERIFIED WISDOM';
+    actChip.textContent = (arWin && arWin.is_qari) ? arWin.reciter.toUpperCase() : CFG.dalil.citation;
     actChip.style.borderColor = '#F4C95D'; actChip.style.color = '#F4C95D';
     titleEl.textContent = CFG.dalil.citation;
     miniCit.textContent = '';
     updateArabicKaraokeAt(t, arWin, AR_BUILT.count, 'pm_ar', 'arw', act.localT);
   }} else if (act.name === 'EXPLAINER') {{
-    actChip.textContent = 'ACT 3 • THE SCIENCE';
+    actChip.textContent = 'MIND & SUNNAH';
     actChip.style.borderColor = '#34D399'; actChip.style.color = '#6EE7B7';
     titleEl.textContent = (cur && cur.headline) || 'HOW IT WORKS';
     miniCit.textContent = '✦  ' + CFG.dalil.citation + '  ✦';
   }} else {{
-    actChip.textContent = 'ACT 4 • THE LESSON';
+    actChip.textContent = 'KEY TAKEAWAY';
     actChip.style.borderColor = '#38BDF8'; actChip.style.color = '#7DD3FC';
     titleEl.textContent = (cur && cur.headline) || 'YOUR DAILY SHIFT';
     miniCit.textContent = '';

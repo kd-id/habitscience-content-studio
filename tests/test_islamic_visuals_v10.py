@@ -300,6 +300,38 @@ class TestIslamicVisualsV10(unittest.TestCase):
         self.assertEqual(len(seen_themes), 6)
         self.assertEqual(set(CAROUSEL_THEMES.keys()), set(PILLAR_TOPIC_BANKS.keys()))
 
+    def test_v13_high_ctr_thumbnails_and_zero_internal_act_hook_debug_labels(self) -> None:
+        from src.islamic_thumbnail_engine import build_high_ctr_thumbnail_html
+
+        cfg = load_config()
+        # 1) All 6 video engines must NEVER leak internal 'ACT 1', '1. HOOK', '1. THE HOOK', or 'ACT ${act.num}' onto screen
+        sample = PILLAR_TOPIC_BANKS["quran_mental_peace"][0]
+        dalil_p = _resolve_dalil_payload(
+            topic_meta={"topic": sample["topic"], "pillar_label": "Qur'an Peace", "channel_handle": "@HabitSains", "dalil": sample["dalil"]},
+            scenes_meta=[],
+        )
+        payload = {
+            "fps": 24, "total_dur": 30.0, "dalil": dalil_p,
+            "scenes": [{"idx": 0, "start": 0.0, "end": 30.0, "badge": "REFLECT", "headline": "Quiet Mind"}],
+            "captions": [], "rms": [0.3] * 24,
+        }
+        forbidden_ui = ("ACT 1 •", "ACT 2 •", "ACT 3 •", "ACT 4 •", "1. HOOK", "1. THE HOOK", "2. VERIFIED DALIL", "ACT ${act.num}")
+        for mode in ISLAMIC_VISUAL_MODES:
+            html_doc = build_islamic_visual_html(mode, payload, 720, 1280)
+            for bad in forbidden_ui:
+                self.assertNotIn(bad, html_doc, f"Internal script label '{bad}' leaked into {mode}")
+
+        # 2) High-CTR Thumbnail engine covers all 6 Islamic pillars + secular fallback
+        seen_t: set[str] = set()
+        for pid, bank in PILLAR_TOPIC_BANKS.items():
+            item = bank[0]
+            bp = {"meta": {"topic": item["topic"], "pillar": pid, "dalil": item["dalil"]}, "youtube_long": {"thumbnail": {}}}
+            t_html, t_theme = build_high_ctr_thumbnail_html(bp, cfg)
+            seen_t.add(t_theme)
+            self.assertIn("1280px", t_html)
+            self.assertIn("AmiriCalligraphy", t_html)
+        self.assertEqual(len(seen_t), 6)
+
     def test_four_act_storytelling_staging_across_all_30_topics_and_6_modes(self) -> None:
         # Every single curated topic must resolve a valid 4-Act visual plan
         valid_hooks = {"phone_chaos", "anger_heat", "heavy_wall", "rushing_calendar", "comparison_scroll", "needle_ocean", "racing_mind"}

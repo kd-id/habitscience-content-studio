@@ -199,7 +199,7 @@ def build_nature_transform_html(payload: dict[str, Any], font_css: str, width: i
 <canvas id="bgCanvas" width="{width}" height="{height}"></canvas>
 
 <div class="top-stage" id="topStage">
-  <div class="act-pill" id="actPill">ACT 1 • HOOK</div>
+  <div class="act-pill" id="actPill"></div>
   <div class="scene-head" id="sceneHead"></div>
   <div class="mini-cit" id="miniCit"></div>
 </div>
@@ -624,26 +624,26 @@ window.renderAt = function(t) {{
   animateActCard(climaxCard, act.name === 'CLIMAX', act.localT, climDurSec, true);
 
   if (act.name === 'HOOK') {{
-    actPill.textContent = 'ACT 1 • ' + (STORY.hook_kicker || 'THE HOOK');
+    actPill.textContent = STORY.hook_kicker || 'PAUSE & REFLECT';
     actPill.style.borderColor = '#F87171';
     actPill.style.color = '#FCA5A5';
     headEl.textContent = (CFG.scenes[0] && CFG.scenes[0].headline) || CFG.dalil.topic;
     miniCit.textContent = '';
   }} else if (act.name === 'DALIL') {{
-    actPill.textContent = (arWin && arWin.is_qari) ? `ACT 2 • TILAWAH (${{arWin.reciter}})` : 'ACT 2 • VERIFIED PROPHETIC WISDOM';
+    actPill.textContent = (arWin && arWin.is_qari) ? arWin.reciter.toUpperCase() : CFG.dalil.citation;
     actPill.style.borderColor = '#FDE68A';
     actPill.style.color = '#FDE68A';
     headEl.textContent = CFG.dalil.citation;
     miniCit.textContent = '';
     updateArabicKaraokeAt(t, arWin, AR_BUILT.count, 'nat_ar', 'arw', act.localT);
   }} else if (act.name === 'EXPLAINER') {{
-    actPill.textContent = 'ACT 3 • THE SCIENCE';
+    actPill.textContent = 'MIND & SUNNAH';
     actPill.style.borderColor = '#34D399';
     actPill.style.color = '#6EE7B7';
     headEl.textContent = (cur && cur.headline) || 'HOW IT RESETS YOUR MIND';
     miniCit.textContent = '✦  ' + CFG.dalil.citation + '  ✦';
   }} else {{
-    actPill.textContent = 'ACT 4 • THE TAKEAWAY';
+    actPill.textContent = 'REMEMBER THIS';
     actPill.style.borderColor = '#34D399';
     actPill.style.color = '#A7F3D0';
     headEl.textContent = (cur && cur.headline) || 'DAILY BLOOM';
@@ -835,7 +835,7 @@ def build_cinematic_metaphor_html(payload: dict[str, Any], font_css: str, width:
 <canvas id="bgCanvas" width="{width}" height="{height}"></canvas>
 
 <div class="top-head">
-  <div class="act-chip" id="actChip">ACT 1 • HOOK</div>
+  <div class="act-chip" id="actChip"></div>
   <div class="hook-head" id="hookHead"></div>
   <div class="mini-cit" id="miniCit"></div>
 </div>
@@ -1175,20 +1175,20 @@ window.renderAt = function(t) {{
   animateActCard(climaxCard, act.name === 'CLIMAX', act.localT, climDurSec, true);
 
   if (act.name === 'HOOK') {{
-    actChip.textContent = 'ACT 1 • ' + (STORY.hook_kicker || 'PICTURE THIS');
+    actChip.textContent = STORY.hook_kicker || 'PICTURE THIS';
     hookHead.textContent = (CFG.scenes[0] && CFG.scenes[0].headline) || CFG.dalil.topic;
     miniCit.textContent = '';
   }} else if (act.name === 'DALIL') {{
-    actChip.textContent = (arWin && arWin.is_qari) ? `ACT 2 • TILAWAH (${{arWin.reciter}})` : 'ACT 2 • SACRED WISDOM';
+    actChip.textContent = (arWin && arWin.is_qari) ? arWin.reciter.toUpperCase() : CFG.dalil.citation;
     hookHead.textContent = CFG.dalil.citation;
     miniCit.textContent = '';
     updateArabicKaraokeAt(t, arWin, AR_BUILT.count, 'cin_ar', 'arw', act.localT);
   }} else if (act.name === 'EXPLAINER') {{
-    actChip.textContent = 'ACT 3 • THE MIND SHIFT';
+    actChip.textContent = 'THE MIND SHIFT';
     hookHead.textContent = (cur && cur.headline) || 'HOW IT TRANSFORMS YOU';
     miniCit.textContent = '✦  ' + CFG.dalil.citation + '  ✦';
   }} else {{
-    actChip.textContent = 'ACT 4 • THE LESSON';
+    actChip.textContent = 'REMEMBER THIS';
     hookHead.textContent = (cur && cur.headline) || 'QUIET SURRENDER';
     miniCit.textContent = '';
   }}

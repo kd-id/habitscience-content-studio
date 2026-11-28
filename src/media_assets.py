@@ -394,6 +394,18 @@ def generate_youtube_thumbnail(
     out_path: Path,
     custom_bg: Path | None = None,
 ) -> Path:
+    if not custom_bg:
+        try:
+            from src.islamic_thumbnail_engine import render_high_ctr_youtube_thumbnail
+
+            return render_high_ctr_youtube_thumbnail(blueprint=blueprint, config=config, out_path=out_path)
+        except Exception as exc:
+            print(
+                f"[thumbnail] Studio v13 Chromium thumbnail unavailable ({type(exc).__name__}): {str(exc)[:140]}; "
+                "falling back to Pillow.",
+                flush=True,
+            )
+
     branding = config.get("branding", {})
     style = config.get("visual", {}).get("style", "minimalist_ink_sketch")
     thumb = blueprint.get("youtube_long", {}).get("thumbnail", {})

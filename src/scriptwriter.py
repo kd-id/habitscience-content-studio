@@ -148,10 +148,10 @@ Return ONLY valid JSON with this exact schema:
     "description": "Warm YouTube description with reflective hook, verified citation, everyday science takeaways, chapter timestamps, CTA, and hashtags",
     "tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8"],
     "thumbnail": {{
-      "badge": "SHORT BADGE (2-3 words)",
-      "headline": "PUNCHY THUMBNAIL TEXT (2-4 words)",
-      "subheadline": "Short reflective subtitle (4-7 words)",
-      "visual_prompt": "Serene luminous Islamic architectural/nature editorial illustration (strictly NO prophets, NO faces, NO text)"
+      "badge": "1-2 word micro stamp (e.g. QUR'AN 13:28, 1400 YRS AGO, 3-SEC RESET)",
+      "headline": "ULTRA-PUNCHY 2-4 WORD CURIOSITY HOOK that NEVER repeats the full title (e.g. STILL LOUD INSIDE?, STOP ASKING TOO SMALL!, 4 HIDDEN TRAPS, ANGRY? SIT DOWN!)",
+      "subheadline": "Short 2-word right-side visual stamp (e.g. 1 DROP VS OCEAN, BRAIN REWIRE)",
+      "visual_prompt": "High-contrast dramatic luminous Islamic visual metaphor (strictly NO prophets, NO faces, NO text)"
     }},
     "scenes": [
       {{
