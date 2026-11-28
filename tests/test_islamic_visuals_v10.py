@@ -332,6 +332,53 @@ class TestIslamicVisualsV10(unittest.TestCase):
             self.assertIn("AmiriCalligraphy", t_html)
         self.assertEqual(len(seen_t), 6)
 
+    def test_v135_topic_specific_carousel_assets_vary_across_titles_and_pillars(self) -> None:
+        from src.islamic_carousel_engine import build_islamic_carousel_html, resolve_carousel_asset_kit
+
+        # 1) All 11 new topic-specific 3D paper-cutout sprites exist in assets/papercraft_kit/
+        kit_dir = Path(__file__).resolve().parent.parent / "assets" / "papercraft_kit"
+        new_sprites = {
+            "ocean_needle_3d.png", "lantern_heart_3d.png", "storm_to_bloom_3d.png",
+            "compass_arch_3d.png", "fajr_mosque_3d.png", "crescent_window_3d.png",
+            "water_pitcher_3d.png", "balance_scale_3d.png", "hourglass_focus_3d.png",
+            "growing_sapling_3d.png", "brain_bloom_3d.png",
+        }
+        present = {p.name for p in kit_dir.glob("*.png")}
+        self.assertTrue(new_sprites.issubset(present), f"Missing v13.5 sprites: {new_sprites - present}")
+
+        # 2) Across the 6 flagship pillar posts (bank[0]), ALL 6 Slide 1 hero props MUST be 100% distinct!
+        cfg = load_config()
+        flagship_s1_props: set[str] = set()
+        seen_s2_frames: set[str] = set()
+        seen_s4_fgs: set[str] = set()
+        for pillar_id, bank in PILLAR_TOPIC_BANKS.items():
+            # Also verify titles WITHIN the same pillar get multiple distinct Slide 1 assets!
+            pillar_s1_props: set[str] = set()
+            for idx, item in enumerate(bank):
+                bp = {
+                    "meta": {"topic": item["topic"], "angle": item["angle"], "hook": item["hook"], "pillar": pillar_id, "keywords": item["keywords"], "dalil": item["dalil"]},
+                    "carousel_social": {"slides": [{"slide_no": i, "headline": item["topic"], "body": item["hook"]} for i in range(1, 6)]},
+                }
+                acts = resolve_story_acts(bp["meta"], scenes_meta=[])
+                plan = resolve_carousel_asset_kit(bp, pillar_id, item["dalil"], acts)
+                pillar_s1_props.add(plan["slide1_prop"])
+                # Never duplicate Slide 1 prop onto Slide 3 or Slide 5 inside the same carousel!
+                self.assertNotEqual(plan["slide1_prop"], plan["slide3_prop"], f"Duplicate S1/S3 prop on {item['topic']}")
+                self.assertNotEqual(plan["slide1_prop"], plan["slide5_prop"], f"Duplicate S1/S5 prop on {item['topic']}")
+                if idx == 0:
+                    flagship_s1_props.add(plan["slide1_prop"])
+                    seen_s2_frames.add(plan["slide2_frame"])
+                    seen_s4_fgs.add(plan["slide4_fg"])
+                    html_doc, _ = build_islamic_carousel_html(bp, cfg)
+                    self.assertIn(f'data-prop="{plan["slide1_prop"]}"', html_doc)
+                    self.assertIn(f'data-frame="{plan["slide2_frame"]}"', html_doc)
+                    self.assertIn(f'data-fg="{plan["slide4_fg"]}"', html_doc)
+            self.assertGreaterEqual(len(pillar_s1_props), 4, f"Pillar {pillar_id} reused too many Slide 1 assets: {pillar_s1_props}")
+
+        self.assertEqual(len(flagship_s1_props), 6, f"Expected 6 distinct flagship Slide 1 props, got {flagship_s1_props}")
+        self.assertEqual(len(seen_s2_frames), 3, f"Expected all 3 Arabic calligraphy frames used, got {seen_s2_frames}")
+        self.assertGreaterEqual(len(seen_s4_fgs), 3, f"Expected >=3 distinct Slide 4 foregrounds, got {seen_s4_fgs}")
+
     def test_four_act_storytelling_staging_across_all_30_topics_and_6_modes(self) -> None:
         # Every single curated topic must resolve a valid 4-Act visual plan
         valid_hooks = {"phone_chaos", "anger_heat", "heavy_wall", "rushing_calendar", "comparison_scroll", "needle_ocean", "racing_mind"}
